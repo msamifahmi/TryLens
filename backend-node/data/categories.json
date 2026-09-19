@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Frame Pria",
+    "count": "120+ pilihan",
+    "style": "square",
+    "color": "black"
+  },
+  {
+    "name": "Frame Wanita",
+    "count": "143+ pilihan",
+    "style": "cateye",
+    "color": "tort"
+  },
+  {
+    "name": "Frame Anak",
+    "count": "58+ pilihan",
+    "style": "round",
+    "color": "blue"
+  },
+  {
+    "name": "Aviator",
+    "count": "64+ pilihan",
+    "style": "aviator",
+    "color": "gold"
+  },
+  {
+    "name": "Round",
+    "count": "77+ pilihan",
+    "style": "round",
+    "color": "clear"
+  },
+  {
+    "name": "Square",
+    "count": "91+ pilihan",
+    "style": "square",
+    "color": "brown"
+  },
+  {
+    "name": "Cat Eye",
+    "count": "49+ pilihan",
+    "style": "cateye",
+    "color": "red"
+  },
+  {
+    "name": "Minimalist",
+    "count": "66+ pilihan",
+    "style": "rect",
+    "color": "navy"
+  }
+]
