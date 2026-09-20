@@ -4,6 +4,7 @@ import { MERCHANTS, PRODUCTS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import ProductCard from "../components/ProductCard.jsx";
 import PromoAdBanners from "../components/PromoAdBanners.jsx";
+import FlashSaleSection from "../components/FlashSaleSection.jsx";
 import FilterSortBar from "../components/FilterSortBar.jsx";
 import SocialCommerceSection from "../components/SocialCommerceSection.jsx";
 
@@ -98,6 +99,7 @@ export default function MerchantPage() {
 
   const hasLinks = Object.values(merchant?.links || {}).some(Boolean);
 
+  const flashItems = products.filter((p) => p.flash);
   const promoItems = products.filter((p) => !!p.oldPrice);
   const newItems = products.filter((p) => p.isNew);
   const maxDiscount = promoItems.reduce((max, p) => Math.max(max, Math.round(discountOf(p) * 100)), 0);
@@ -175,9 +177,16 @@ export default function MerchantPage() {
       </div>
 
       {/* ===== IKLAN: PROMO & KATALOG TERBARU ===== */}
-      <div className="mb-8">
+      <div className="mb-5">
         <PromoAdBanners ads={ads} />
       </div>
+
+      {/* ===== FLASH SALE ===== */}
+      {flashItems.length > 0 && (
+        <div className="mb-8">
+          <FlashSaleSection products={flashItems} />
+        </div>
+      )}
 
       {/* ===== CATALOG ===== */}
       <h2 id="katalog" className="text-xl font-bold text-ink tracking-tight mb-3 scroll-mt-32">Katalog {merchant.name}</h2>

@@ -73,8 +73,11 @@ function buildProducts() {
     const colorKey = colorKeys[i % colorKeys.length];
     const merchant = MERCHANTS[i % MERCHANTS.length];
     const basePrice = 189000 + Math.floor(seededRand(i + 1) * 18) * 10000;
-    const hasDiscount = i % 3 === 0;
-    const oldPrice = hasDiscount ? Math.round((basePrice * 1.4) / 1000) * 1000 : null;
+    // Flash sale: 2 frame per merchant (produk urutan ke-2 dan ke-4 tiap merchant).
+    // Produk flash selalu berdiskon, jadi harganya konsisten di kartu, detail, dan wishlist.
+    const flash = Math.floor(i / MERCHANTS.length) % 2 === 1;
+    const hasDiscount = i % 3 === 0 || flash;
+    const oldPrice = hasDiscount ? Math.round((basePrice * (flash ? 1.5 : 1.4)) / 1000) * 1000 : null;
     const cat = i % 12 === 6 ? "Anak" : CATS[i % CATS.length];
     const isNew = i % 5 === 1;
     products.push({
@@ -90,6 +93,8 @@ function buildProducts() {
       cat,
       isNew,
       order: i, // makin besar = makin baru masuk katalog
+      flash,
+      flashSold: flash ? 35 + Math.floor(seededRand(i + 50) * 60) : 0, // % stok terjual (mock)
       badge: hasDiscount ? `-${Math.round((1 - basePrice / oldPrice) * 100)}%` : isNew ? "BARU" : null
     });
   }

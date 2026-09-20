@@ -10,6 +10,10 @@
     "merchantId": "m1",
     "city": "Surakarta",
     "cat": "Pria",
+    "isNew": false,
+    "order": 0,
+    "flash": false,
+    "flashSold": 0,
     "badge": "-29%"
   },
   {
@@ -23,6 +27,10 @@
     "merchantId": "m2",
     "city": "Yogyakarta",
     "cat": "Wanita",
+    "isNew": true,
+    "order": 1,
+    "flash": false,
+    "flashSold": 0,
     "badge": "BARU"
   },
   {
@@ -36,6 +44,10 @@
     "merchantId": "m3",
     "city": "Solo",
     "cat": "Anak",
+    "isNew": false,
+    "order": 2,
+    "flash": false,
+    "flashSold": 0,
     "badge": null
   },
   {
@@ -49,6 +61,10 @@
     "merchantId": "m4",
     "city": "Semarang",
     "cat": "Pria",
+    "isNew": false,
+    "order": 3,
+    "flash": false,
+    "flashSold": 0,
     "badge": "-29%"
   },
   {
@@ -62,6 +78,10 @@
     "merchantId": "m5",
     "city": "Malang",
     "cat": "Wanita",
+    "isNew": false,
+    "order": 4,
+    "flash": false,
+    "flashSold": 0,
     "badge": null
   },
   {
@@ -75,6 +95,10 @@
     "merchantId": "m6",
     "city": "Bandung",
     "cat": "Anak",
+    "isNew": false,
+    "order": 5,
+    "flash": false,
+    "flashSold": 0,
     "badge": null
   },
   {
@@ -83,12 +107,16 @@
     "style": "aviator",
     "colorKey": "navy",
     "price": 339000,
-    "oldPrice": 475000,
+    "oldPrice": 509000,
     "merchant": "Optik Kusuma",
     "merchantId": "m1",
     "city": "Surakarta",
     "cat": "Anak",
-    "badge": "-29%"
+    "isNew": true,
+    "order": 6,
+    "flash": true,
+    "flashSold": 64,
+    "badge": "-33%"
   },
   {
     "id": "f7",
@@ -96,12 +124,16 @@
     "style": "round",
     "colorKey": "red",
     "price": 289000,
-    "oldPrice": null,
+    "oldPrice": 434000,
     "merchant": "Optik Sehat",
     "merchantId": "m2",
     "city": "Yogyakarta",
     "cat": "Wanita",
-    "badge": null
+    "isNew": false,
+    "order": 7,
+    "flash": true,
+    "flashSold": 73,
+    "badge": "-33%"
   },
   {
     "id": "f8",
@@ -109,12 +141,16 @@
     "style": "square",
     "colorKey": "brown",
     "price": 219000,
-    "oldPrice": null,
+    "oldPrice": 329000,
     "merchant": "Vision Optic",
     "merchantId": "m3",
     "city": "Solo",
     "cat": "Pria",
-    "badge": null
+    "isNew": false,
+    "order": 8,
+    "flash": true,
+    "flashSold": 78,
+    "badge": "-33%"
   },
   {
     "id": "f9",
@@ -122,12 +158,16 @@
     "style": "cateye",
     "colorKey": "black",
     "price": 329000,
-    "oldPrice": 461000,
+    "oldPrice": 494000,
     "merchant": "Optik Maju",
     "merchantId": "m4",
     "city": "Semarang",
     "cat": "Wanita",
-    "badge": "-29%"
+    "isNew": false,
+    "order": 9,
+    "flash": true,
+    "flashSold": 57,
+    "badge": "-33%"
   },
   {
     "id": "f10",
@@ -135,12 +175,16 @@
     "style": "rect",
     "colorKey": "gold",
     "price": 199000,
-    "oldPrice": null,
+    "oldPrice": 299000,
     "merchant": "Optik Prima",
     "merchantId": "m5",
     "city": "Malang",
     "cat": "Anak",
-    "badge": null
+    "isNew": false,
+    "order": 10,
+    "flash": true,
+    "flashSold": 88,
+    "badge": "-33%"
   },
   {
     "id": "f11",
@@ -148,12 +192,16 @@
     "style": "browline",
     "colorKey": "tort",
     "price": 229000,
-    "oldPrice": null,
+    "oldPrice": 344000,
     "merchant": "Lensa Kita",
     "merchantId": "m6",
     "city": "Bandung",
     "cat": "Pria",
-    "badge": "BARU"
+    "isNew": true,
+    "order": 11,
+    "flash": true,
+    "flashSold": 84,
+    "badge": "-33%"
   },
   {
     "id": "f12",
@@ -166,6 +214,10 @@
     "merchantId": "m1",
     "city": "Surakarta",
     "cat": "Wanita",
+    "isNew": false,
+    "order": 12,
+    "flash": false,
+    "flashSold": 0,
     "badge": "-29%"
   },
   {
@@ -179,6 +231,10 @@
     "merchantId": "m2",
     "city": "Yogyakarta",
     "cat": "Anak",
+    "isNew": false,
+    "order": 13,
+    "flash": false,
+    "flashSold": 0,
     "badge": null
   },
   {
@@ -192,6 +248,10 @@
     "merchantId": "m3",
     "city": "Solo",
     "cat": "Pria",
+    "isNew": false,
+    "order": 14,
+    "flash": false,
+    "flashSold": 0,
     "badge": null
   },
   {
@@ -205,6 +265,10 @@
     "merchantId": "m4",
     "city": "Semarang",
     "cat": "Wanita",
+    "isNew": false,
+    "order": 15,
+    "flash": false,
+    "flashSold": 0,
     "badge": "-29%"
   },
   {
@@ -218,6 +282,10 @@
     "merchantId": "m5",
     "city": "Malang",
     "cat": "Pria",
+    "isNew": true,
+    "order": 16,
+    "flash": false,
+    "flashSold": 0,
     "badge": "BARU"
   },
   {
@@ -231,6 +299,10 @@
     "merchantId": "m6",
     "city": "Bandung",
     "cat": "Wanita",
+    "isNew": false,
+    "order": 17,
+    "flash": false,
+    "flashSold": 0,
     "badge": null
   },
   {
@@ -239,12 +311,16 @@
     "style": "aviator",
     "colorKey": "gold",
     "price": 319000,
-    "oldPrice": 447000,
+    "oldPrice": 479000,
     "merchant": "Optik Kusuma",
     "merchantId": "m1",
     "city": "Surakarta",
     "cat": "Anak",
-    "badge": "-29%"
+    "isNew": false,
+    "order": 18,
+    "flash": true,
+    "flashSold": 78,
+    "badge": "-33%"
   },
   {
     "id": "f19",
@@ -252,12 +328,16 @@
     "style": "round",
     "colorKey": "tort",
     "price": 269000,
-    "oldPrice": null,
+    "oldPrice": 404000,
     "merchant": "Optik Sehat",
     "merchantId": "m2",
     "city": "Yogyakarta",
     "cat": "Pria",
-    "badge": null
+    "isNew": false,
+    "order": 19,
+    "flash": true,
+    "flashSold": 44,
+    "badge": "-33%"
   },
   {
     "id": "f20",
@@ -265,12 +345,16 @@
     "style": "square",
     "colorKey": "clear",
     "price": 289000,
-    "oldPrice": null,
+    "oldPrice": 434000,
     "merchant": "Vision Optic",
     "merchantId": "m3",
     "city": "Solo",
     "cat": "Wanita",
-    "badge": null
+    "isNew": false,
+    "order": 20,
+    "flash": true,
+    "flashSold": 89,
+    "badge": "-33%"
   },
   {
     "id": "f21",
@@ -278,12 +362,16 @@
     "style": "cateye",
     "colorKey": "blue",
     "price": 269000,
-    "oldPrice": 377000,
+    "oldPrice": 404000,
     "merchant": "Optik Maju",
     "merchantId": "m4",
     "city": "Semarang",
     "cat": "Anak",
-    "badge": "-29%"
+    "isNew": true,
+    "order": 21,
+    "flash": true,
+    "flashSold": 67,
+    "badge": "-33%"
   },
   {
     "id": "f22",
@@ -291,12 +379,16 @@
     "style": "rect",
     "colorKey": "navy",
     "price": 329000,
-    "oldPrice": null,
+    "oldPrice": 494000,
     "merchant": "Optik Prima",
     "merchantId": "m5",
     "city": "Malang",
     "cat": "Pria",
-    "badge": null
+    "isNew": false,
+    "order": 22,
+    "flash": true,
+    "flashSold": 49,
+    "badge": "-33%"
   },
   {
     "id": "f23",
@@ -304,11 +396,15 @@
     "style": "browline",
     "colorKey": "red",
     "price": 219000,
-    "oldPrice": null,
+    "oldPrice": 329000,
     "merchant": "Lensa Kita",
     "merchantId": "m6",
     "city": "Bandung",
     "cat": "Wanita",
-    "badge": null
+    "isNew": false,
+    "order": 23,
+    "flash": true,
+    "flashSold": 51,
+    "badge": "-33%"
   }
 ]
