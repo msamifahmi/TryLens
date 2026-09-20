@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import TopPromoBar from "../components/TopPromoBar.jsx";
 import MainNav from "../components/MainNav.jsx";
 import CategoryNav from "../components/CategoryNav.jsx";
@@ -12,6 +12,12 @@ export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showToast = useToastContext();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  // Halaman baru selalu mulai dari atas (tanpa ini, /mitra terbuka di posisi scroll halaman sebelumnya).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   function handleTryOn(product) {
     navigate(`/try-on/${product.id}`);
@@ -33,18 +39,15 @@ export default function Layout() {
     }, 60);
   }
 
-  function scrollToMerchantSection() {
-    navigate("/");
-    setTimeout(() => {
-      document.getElementById("merchant")?.scrollIntoView({ behavior: "smooth" });
-    }, 60);
+  function goToMitra() {
+    navigate("/mitra");
   }
 
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
       <TopPromoBar />
       <MainNav onOpenWishlist={() => setDrawerOpen(true)} onSelectProduct={goToProduct} onSelectMerchant={goToMerchant} />
-      <CategoryNav onJumpToFeed={jumpToFeed} onJumpToMerchant={scrollToMerchantSection} />
+      <CategoryNav onJumpToFeed={jumpToFeed} onJumpToMerchant={goToMitra} />
 
       <main>
         <Outlet context={{ onTryOn: handleTryOn, showToast, goToProduct, jumpToFeed }} />

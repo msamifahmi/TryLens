@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MERCHANTS } from "../data/mockData.js";
 
 function StarIcon() {
@@ -27,10 +27,10 @@ export default function MerchantSection({ id }) {
           <h2 className="text-[21px] font-bold text-ink tracking-tight mb-1">Toko Optik Pilihan</h2>
           <p className="text-[13.5px] text-ink-muted m-0">Belanja dari merchant optik lokal yang tersedia di TryLens.</p>
         </div>
-        <a href="#" className="text-[13.5px] font-semibold text-blue hover:underline flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
+        <Link to="/mitra" className="text-[13.5px] font-semibold text-blue hover:underline flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
           Lihat semua toko
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </a>
+        </Link>
       </div>
 
       <div className="flex gap-3.5 overflow-x-auto scrollbar-none pb-1">

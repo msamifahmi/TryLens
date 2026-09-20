@@ -1,6 +1,8 @@
+import { Link } from "react-router-dom";
+
 export default function Logo({ compact = false }) {
   return (
-    <a href="#" className="flex items-center gap-2 flex-shrink-0" aria-label="TryLens beranda">
+    <Link to="/" className="flex items-center gap-2 flex-shrink-0" aria-label="TryLens beranda">
       <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
         <circle cx="12" cy="20" r="9" stroke="#427AB5" strokeWidth="3.2" />
         <circle cx="28" cy="20" r="9" stroke="#427AB5" strokeWidth="3.2" />
@@ -13,6 +15,6 @@ export default function Logo({ compact = false }) {
           Try<span className="text-blue">Lens</span>
         </span>
       )}
-    </a>
+    </Link>
   );
 }

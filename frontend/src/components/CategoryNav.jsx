@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useFilter } from "../store/useFilter.js";
 
 const ITEMS = [
@@ -14,6 +15,9 @@ const ITEMS = [
 export default function CategoryNav({ onJumpToFeed, onJumpToMerchant }) {
   const [active, setActive] = useState(0);
   const setCategory = useFilter((s) => s.setCategory);
+  const { pathname } = useLocation();
+  // Tab "Toko Optik" menyala di halaman Mitra & halaman toko; tab lain padam di sana.
+  const inMerchantArea = pathname.startsWith("/mitra") || pathname.startsWith("/toko");
 
   function handleClick(idx, item) {
     setActive(idx);
@@ -34,7 +38,9 @@ export default function CategoryNav({ onJumpToFeed, onJumpToMerchant }) {
               key={item.label}
               onClick={() => handleClick(idx, item)}
               className={`text-sm font-semibold whitespace-nowrap pb-2.5 border-b-2 flex-shrink-0 ${
-                active === idx ? "text-blue border-blue" : "text-ink-muted border-transparent hover:text-ink-text"
+                (item.cat === "__merchant__" ? inMerchantArea : !inMerchantArea && active === idx)
+                  ? "text-blue border-blue"
+                  : "text-ink-muted border-transparent hover:text-ink-text"
               }`}
             >
               {item.label}
