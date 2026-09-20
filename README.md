@@ -76,10 +76,27 @@ Setiap frame punya halaman detail di `/produk/:id`, dan setiap merchant
 punya halaman katalog di `/toko/:id`.
 
 **Halaman detail produk** — judul besar, pilihan warna, deskripsi, harga +
-jumlah, tombol "Coba Sekarang", galeri foto + thumbnail. Cara masuk:
+jumlah, tombol "Coba Sekarang", tombol **"Checkout — Hubungkan ke Mitra"**,
+galeri foto + thumbnail. Cara masuk:
 - Klik gambar atau nama frame di kartu produk manapun
 - Pilih hasil pencarian frame di search bar
 - Klik item di drawer wishlist
+
+### Checkout terhubung ke mitra (bukan payment gateway)
+
+TryLens adalah marketplace penghubung, bukan penjual langsung — jadi
+tombol **"Checkout — Hubungkan ke Mitra"** di halaman detail produk tidak
+memproses pembayaran sendiri. Begitu diklik, muncul modal dengan tiga cara
+menghubungi toko optik pemilik frame tersebut:
+
+1. **Chat via WhatsApp** — membuka `wa.me` dengan pesan otomatis berisi
+   nama frame, jumlah, dan total harga
+2. **Telepon toko** — membuka dialer HP (`tel:`) dengan nomor toko
+3. **Lihat Katalog Toko** — menuju halaman `/toko/:id` merchant tersebut
+
+Nomor WhatsApp & telepon tiap toko ada di `src/data/mockData.js`
+(`MERCHANTS[].whatsapp` dan `.phone`) — **saat ini masih nomor contoh**,
+ganti dengan nomor asli tiap mitra optik sebelum dipakai produksi.
 
 **Halaman katalog toko** — header toko (logo, kota, rating, jumlah produk)
 diikuti grid semua frame dari merchant itu. Cara masuk:

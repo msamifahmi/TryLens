@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useParams, useOutletContext } from "react-router-dom";
-import { PRODUCTS, FRAME_COLORS, formatRp } from "../data/mockData.js";
+import { PRODUCTS, MERCHANTS, FRAME_COLORS, formatRp } from "../data/mockData.js";
 import { useWishlist } from "../store/useWishlist.js";
 import ProductImage from "../components/ProductImage.jsx";
+import ConnectMerchantModal from "../components/ConnectMerchantModal.jsx";
 
 const SWATCH_ORDER = ["brown", "black", "navy", "blue", "tort", "gold", "red", "clear"];
 
@@ -30,10 +31,12 @@ export default function ProductDetailPage() {
   const { id } = useParams();
   const { onTryOn, showToast } = useOutletContext();
   const product = PRODUCTS.find((p) => p.id === id);
+  const merchant = MERCHANTS.find((m) => m.id === product?.merchantId);
 
   const [activeColor, setActiveColor] = useState(product?.colorKey);
   const [activeVariant, setActiveVariant] = useState("main");
   const [qty, setQty] = useState(1);
+  const [connectOpen, setConnectOpen] = useState(false);
 
   const isWished = useWishlist((s) => (product ? s.isWished(product.id) : false));
   const toggle = useWishlist((s) => s.toggle);
@@ -122,7 +125,7 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-3">
             <button
               onClick={() => onTryOn(product)}
               className="flex-1 h-14 rounded-full bg-ink text-white font-bold text-[15px] hover:bg-black transition-colors"
@@ -140,6 +143,20 @@ export default function ProductDetailPage() {
               <HeartIcon active={isWished} />
             </button>
           </div>
+
+          {merchant && (
+            <button
+              onClick={() => setConnectOpen(true)}
+              className="flex items-center justify-center gap-2 h-14 rounded-full border-2 border-blue text-blue font-bold text-[15px] hover:bg-surface-blue transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 9l1-5h14l1 5" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <path d="M4 9a2 2 0 004 0 2 2 0 004 0 2 2 0 004 0 2 2 0 004 0" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <path d="M5 9v10h14V9" stroke="currentColor" strokeWidth="1.8" />
+              </svg>
+              Checkout — Hubungkan ke {merchant.name}
+            </button>
+          )}
         </div>
 
         {/* ===== RIGHT: GALLERY ===== */}
@@ -177,6 +194,14 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConnectMerchantModal
+        open={connectOpen}
+        onClose={() => setConnectOpen(false)}
+        merchant={merchant}
+        product={product}
+        qty={qty}
+      />
     </div>
   );
 }

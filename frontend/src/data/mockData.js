@@ -13,12 +13,12 @@ export const FRAME_COLORS = {
 };
 
 export const MERCHANTS = [
-  { id: "m1", name: "Optik Kusuma", city: "Surakarta, Jawa Tengah", count: "120+ frame", rating: "4.9", initials: "OK", color: "#427AB5" },
-  { id: "m2", name: "Optik Sehat", city: "Yogyakarta", count: "85+ frame", rating: "4.7", initials: "OS", color: "#406AAF" },
-  { id: "m3", name: "Vision Optic", city: "Solo, Jawa Tengah", count: "64+ frame", rating: "4.8", initials: "VO", color: "#5B8FC2" },
-  { id: "m4", name: "Optik Maju", city: "Semarang, Jawa Tengah", count: "96+ frame", rating: "4.6", initials: "OM", color: "#35608F" },
-  { id: "m5", name: "Optik Prima", city: "Malang, Jawa Timur", count: "73+ frame", rating: "4.8", initials: "OP", color: "#5C7FA6" },
-  { id: "m6", name: "Lensa Kita", city: "Bandung, Jawa Barat", count: "110+ frame", rating: "4.9", initials: "LK", color: "#3E6A9C" }
+  { id: "m1", name: "Optik Kusuma", city: "Surakarta, Jawa Tengah", count: "120+ frame", rating: "4.9", initials: "OK", color: "#427AB5", whatsapp: "6281234500001", phone: "0812-3450-0001" },
+  { id: "m2", name: "Optik Sehat", city: "Yogyakarta", count: "85+ frame", rating: "4.7", initials: "OS", color: "#406AAF", whatsapp: "6281234500002", phone: "0812-3450-0002" },
+  { id: "m3", name: "Vision Optic", city: "Solo, Jawa Tengah", count: "64+ frame", rating: "4.8", initials: "VO", color: "#5B8FC2", whatsapp: "6281234500003", phone: "0812-3450-0003" },
+  { id: "m4", name: "Optik Maju", city: "Semarang, Jawa Tengah", count: "96+ frame", rating: "4.6", initials: "OM", color: "#35608F", whatsapp: "6281234500004", phone: "0812-3450-0004" },
+  { id: "m5", name: "Optik Prima", city: "Malang, Jawa Timur", count: "73+ frame", rating: "4.8", initials: "OP", color: "#5C7FA6", whatsapp: "6281234500005", phone: "0812-3450-0005" },
+  { id: "m6", name: "Lensa Kita", city: "Bandung, Jawa Barat", count: "110+ frame", rating: "4.9", initials: "LK", color: "#3E6A9C", whatsapp: "6281234500006", phone: "0812-3450-0006" }
 ];
 
 export const QUICK_CATEGORIES = [

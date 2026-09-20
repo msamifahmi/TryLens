@@ -11,7 +11,7 @@ header("Content-Type: application/json; charset=UTF-8");
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
-}   
+}
 
 define('DATA_DIR', __DIR__ . '/data');
 
