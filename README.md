@@ -70,10 +70,36 @@ Endpoint sama persis dengan versi Node, dalam bentuk file PHP murni:
 
 Cocok untuk deployment di shared hosting cPanel yang hanya mendukung PHP.
 
-## 4. Halaman Detail Produk & Katalog Toko
+## 4. Halaman Try-On, Detail Produk & Katalog Toko
 
-Setiap frame punya halaman detail di `/produk/:id`, dan setiap merchant
-punya halaman katalog di `/toko/:id`.
+Setiap frame punya halaman detail di `/produk/:id` dan halaman coba
+virtual di `/try-on/:id?merchantId=`, setiap merchant punya halaman
+katalog di `/toko/:id`.
+
+**Halaman Coba Virtual (`/try-on/:id`)** — inilah rute inti yang
+diamanatkan PRD dan sebelumnya belum ada. Klik tombol **"Coba Sekarang"**
+di mana pun (kartu produk, halaman detail, drawer wishlist) sekarang
+membuka halaman ini, bukan cuma toast. Isinya:
+- Video kamera langsung (`getUserMedia`), dengan overlay ilustrasi frame
+- Permintaan izin kamera + catatan privasi ("kamera hanya aktif selama
+  sesi ini, tidak direkam/disimpan")
+- Fallback kalau kamera ditolak/tidak didukung (tampilkan foto produk +
+  tombol coba lagi / lihat detail)
+- Strip thumbnail untuk **ganti frame lain dari toko yang sama tanpa
+  keluar dari sesi kamera**
+- Tombol akhir "Cocok! Hubungkan ke {Mitra}" → buka modal WhatsApp/telepon
+  toko yang sama seperti di halaman detail produk
+
+> ⚠️ **Batasan jujur soal AI/AR:** overlay frame saat ini diposisikan
+> tetap di tengah video sebagai simulasi visual — ini BUKAN face-tracking
+> sungguhan yang mengikuti gerak/bentuk wajah, dan halaman ini tidak
+> mengklaim "AI mendeteksi wajahmu". Untuk itu betulan (sesuai pitch deck),
+> langkah nyatanya: pasang model face-landmark seperti **MediaPipe Face
+> Landmarker** (`@mediapipe/tasks-vision`) atau TensorFlow.js
+> `face-landmarks-detection`, lalu hitung posisi/lebar/rotasi overlay dari
+> titik mata kiri-kanan tiap frame video. Ini butuh pekerjaan ML + testing
+> akurasi tersendiri di luar scope UI yang sudah dibangun — catatan teknis
+> lengkap ada di komentar akhir file `src/pages/TryOnPage.jsx`.
 
 **Halaman detail produk** — judul besar, pilihan warna, deskripsi, harga +
 jumlah, tombol "Coba Sekarang", tombol **"Checkout — Hubungkan ke Mitra"**,

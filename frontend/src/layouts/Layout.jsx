@@ -14,7 +14,7 @@ export default function Layout() {
   const navigate = useNavigate();
 
   function handleTryOn(product) {
-    showToast(`Membuka Coba Virtual: ${product.name}`, true);
+    navigate(`/try-on/${product.id}`);
   }
 
   function goToProduct(id) {
