@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ProductImage from "./ProductImage.jsx";
 import { formatRp } from "../data/mockData.js";
@@ -54,7 +54,7 @@ function FlashCard({ product: p, showMerchant }) {
   return (
     <Link
       to={`/produk/${p.id}`}
-      className="flex gap-3 bg-white border border-border rounded-xl p-2.5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+      className="flex w-full gap-3 bg-white border border-border rounded-xl p-2.5 hover:shadow-md hover:-translate-y-0.5 transition-all"
     >
       <div className="relative w-[88px] h-[88px] flex-shrink-0 rounded-lg bg-[#F8FAFC] overflow-hidden p-2.5">
         <span className="absolute top-1 left-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded bg-error text-white">-{discount}%</span>
@@ -92,17 +92,66 @@ function FlashCard({ product: p, showMerchant }) {
   );
 }
 
+function ArrowButton({ dir, disabled, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir < 0 ? "Geser ke kiri" : "Geser ke kanan"}
+      className="hidden md:flex w-8 h-8 rounded-full border border-border bg-white items-center justify-center text-ink-text hover:border-blue hover:text-blue disabled:opacity-35 disabled:pointer-events-none"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d={dir < 0 ? "M15 18l-6-6 6-6" : "M9 6l6 6-6 6"} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
+
 /**
  * Section Flash Sale: judul + hitung mundur + kartu horizontal ringkas.
  * products : produk ber-flag `flash` (maks. `limit`, default 4)
  * showMerchant : tampilkan nama toko di kartu (untuk halaman Mitra dan beranda)
- * columns : 2 (default) atau 3 kolom di layar lebar
+ * layout : "grid" (default, menumpuk ke bawah) atau "slider" (baris tetap, geser ke samping)
+ * rows : jumlah baris pada layout "slider" (default 1). Lebar kolom: 3 kartu per layar di desktop, 2 di tablet, 1 + sedikit kartu berikutnya di HP.
+ * columns : 2 (default) atau 3 kolom di layar lebar, khusus layout "grid"
  * id : dipakai sebagai anchor scroll (mis. dari menu Jelajahi)
  * onSeeAll : bila diisi, tampil tombol "Lihat semua"
  */
-export default function FlashSaleSection({ products, limit = 4, showMerchant = false, columns = 2, id, onSeeAll }) {
+export default function FlashSaleSection({
+  products,
+  limit = 4,
+  showMerchant = false,
+  layout = "grid",
+  rows = 1,
+  columns = 2,
+  id,
+  onSeeAll
+}) {
   const items = (products || []).slice(0, limit);
+  const scrollRef = useRef(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
+
+  function updateEdge() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setEdge({ start: el.scrollLeft <= 2, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2 });
+  }
+
+  useEffect(() => {
+    if (layout !== "slider") return undefined;
+    updateEdge();
+    window.addEventListener("resize", updateEdge);
+    return () => window.removeEventListener("resize", updateEdge);
+  }, [layout, items.length]);
+
+  function slide(dir) {
+    const el = scrollRef.current;
+    // geser satu "halaman" (3 kartu di desktop); snap merapikan posisinya ke awal kartu
+    if (el) el.scrollBy({ left: dir * (el.clientWidth + 12), behavior: "smooth" });
+  }
+
   if (items.length === 0) return null;
+  const isSlider = layout === "slider";
 
   return (
     <section id={id} className="bg-white border border-border rounded-2xl p-4 scroll-mt-24" aria-label="Flash Sale">
@@ -113,20 +162,42 @@ export default function FlashSaleSection({ products, limit = 4, showMerchant = f
           </span>
           <h2 className="text-[17px] font-bold text-ink tracking-tight m-0">Flash Sale</h2>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Countdown />
           {onSeeAll && (
             <button onClick={onSeeAll} className="text-[13px] font-semibold text-blue hover:underline whitespace-nowrap">
               Lihat semua
             </button>
           )}
+          {isSlider && (
+            <div className="flex items-center gap-1.5">
+              <ArrowButton dir={-1} disabled={edge.start} onClick={() => slide(-1)} />
+              <ArrowButton dir={1} disabled={edge.end} onClick={() => slide(1)} />
+            </div>
+          )}
         </div>
       </div>
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${columns === 3 ? "lg:grid-cols-3" : ""} gap-3`}>
-        {items.map((p) => (
-          <FlashCard key={p.id} product={p} showMerchant={showMerchant} />
-        ))}
-      </div>
+
+      {isSlider ? (
+        <div
+          ref={scrollRef}
+          onScroll={updateEdge}
+          className="grid grid-flow-col auto-cols-[85%] md:auto-cols-[calc((100%_-_0.75rem)/2)] lg:auto-cols-[calc((100%_-_1.5rem)/3)] gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1"
+          style={{ gridTemplateRows: `repeat(${Math.min(rows, items.length)}, auto)` }}
+        >
+          {items.map((p) => (
+            <div key={p.id} className="snap-start min-w-0 flex">
+              <FlashCard product={p} showMerchant={showMerchant} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${columns === 3 ? "lg:grid-cols-3" : ""} gap-3`}>
+          {items.map((p) => (
+            <FlashCard key={p.id} product={p} showMerchant={showMerchant} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

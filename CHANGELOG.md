@@ -6,6 +6,32 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 6 — 2026-09-20 — Koreksi Flash Sale beranda: 3 kolom, 1 baris, geser ke samping
+
+Koreksi atas Update 5 (sebelumnya salah dibaca sebagai 3 baris).
+
+### Diubah
+| File | Perubahan |
+|---|---|
+| `frontend/src/pages/HomePage.jsx` | Flash Sale beranda: `rows={1}` (sebelumnya `rows={3}`). |
+| `frontend/src/components/FlashSaleSection.jsx` | Layout `"slider"` sekarang lebar kolomnya menyesuaikan layar: **3 kartu per layar** di desktop (`lg`), 2 di tablet (`md`), 1 kartu + sedikit kartu berikutnya di HP. Default `rows` menjadi 1. Tombol panah menggeser satu "halaman" (±3 kartu), snap merapikan posisinya. Semua 12 produk flash tetap bisa dijangkau dengan geser ke samping. |
+
+---
+
+## Update 5 — 2026-09-20 — Beranda: hapus "Jelajahi Berdasarkan Gaya", Flash Sale model geser 3 baris
+
+### Diubah
+| File | Perubahan |
+|---|---|
+| `frontend/src/pages/HomePage.jsx` | Section "Jelajahi Berdasarkan Gaya" (`QuickCategorySection`) dihapus dari beranda (import dan pemakaian). Urutan beranda sekarang: Hero → Flash Sale → Toko Optik Pilihan → Koleksi Frame Terbaru. Flash Sale memakai `layout="slider"` `rows={3}` `limit={12}`. |
+| `frontend/src/components/FlashSaleSection.jsx` | Layout baru `"slider"`: kartu tersusun 3 baris dan **digeser ke samping** (scroll horizontal, snap per kolom, scrollbar disembunyikan), tidak lagi menumpuk ke bawah. Tombol panah kiri/kanan (desktop) dengan status disabled di ujung. Prop baru `layout` dan `rows`. Layout `"grid"` tetap dipakai di `/toko/:id` dan `/mitra`. |
+
+### Catatan
+- File `frontend/src/components/QuickCategorySection.jsx` dan data `QUICK_CATEGORIES` di `mockData.js` sekarang tidak dipakai; **tidak dihapus** (zip update hanya menimpa/menambah file). Hapus manual bila memang tidak diperlukan.
+- Entri "Berdasarkan Gaya" di menu Jelajahi (`ExploreMenu.jsx`) tidak diubah.
+
+---
+
 ## Update 4 — 2026-09-20 — Beranda: hero lebih kecil + Flash Sale, menu Jelajahi (mega menu)
 
 ### Baru
@@ -103,6 +129,5 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 - `backend-node/data/merchants.json` dan `backend-node/data/products.json` belum disamakan dengan versi PHP; salin isinya bila backend Node dipakai.
 - Waktu berakhir Flash Sale masih mock (akhir hari ini). Ganti dengan field `endsAt` dari backend saat API siap.
 - Filter dan sort belum ada di feed beranda (`RecommendationSection.jsx`); `FilterSortBar` bisa dipakai ulang di sana.
-- Kartu "Jelajahi Berdasarkan Gaya" di beranda (`QuickCategorySection.jsx`) belum bisa diklik; filter gaya sudah tersedia di `useFilter`, tinggal dihubungkan.
 - Menu Jelajahi belum ada di tampilan HP (tombolnya memang disembunyikan di bawah breakpoint `md`); perlu rancangan tersendiri (mis. drawer).
 - Tampilan visual belum diperiksa di browser (baru lolos `vite build` dan uji jsdom): cek ukuran hero di HP, posisi panel Jelajahi, dan latar gelapnya.

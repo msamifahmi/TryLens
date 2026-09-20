@@ -4,7 +4,6 @@ import { PRODUCTS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import HeroCarousel from "../components/HeroCarousel.jsx";
 import FlashSaleSection from "../components/FlashSaleSection.jsx";
-import QuickCategorySection from "../components/QuickCategorySection.jsx";
 import MerchantSection from "../components/MerchantSection.jsx";
 import RecommendationSection from "../components/RecommendationSection.jsx";
 
@@ -30,9 +29,8 @@ export default function HomePage() {
     <>
       <HeroCarousel onCtaClick={scrollToFeed} />
       <div className="max-w-[1280px] mx-auto px-5 pt-2 pb-1">
-        <FlashSaleSection id="flash-sale" products={FLASH_ITEMS} limit={6} columns={3} showMerchant onSeeAll={seeAllFlash} />
+        <FlashSaleSection id="flash-sale" products={FLASH_ITEMS} limit={12} layout="slider" rows={1} showMerchant onSeeAll={seeAllFlash} />
       </div>
-      <QuickCategorySection />
       <MerchantSection id="merchant" />
       <div ref={feedRef}>
         <RecommendationSection
