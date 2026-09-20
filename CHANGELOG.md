@@ -6,6 +6,27 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 4 — 2026-09-20 — Beranda: hero lebih kecil + Flash Sale, menu Jelajahi (mega menu)
+
+### Baru
+| File | Fungsi |
+|---|---|
+| `frontend/src/components/ExploreMenu.jsx` | Mega menu "Jelajahi" bergaya Tokopedia: muncul saat **hover** (juga bisa klik/keyboard), panel selebar layar di bawah header, latar halaman digelapkan. Kiri: 7 kategori (Semua Frame, Frame Pria, Frame Wanita, Frame Anak, Berdasarkan Gaya, Promo & Flash Sale, Toko Optik). Kanan: judul + ikon dan grup link kategori yang di-hover. Link gaya hanya menampilkan gaya yang benar-benar ada per kategori (dengan jumlah), jadi tidak ada link ke hasil kosong. Menutup dengan Escape, klik di luar, atau kursor keluar. Hanya tampil di layar ≥ md (seperti tombol Jelajahi sebelumnya). |
+
+### Diubah
+| File | Perubahan |
+|---|---|
+| `frontend/src/components/HeroCarousel.jsx` | Hero diperkecil: rasio 21:9 → 3:1 (desktop), 4:5 → 5:6 (HP); judul, teks, tombol, dan ilustrasi ikut dikecilkan. |
+| `frontend/src/pages/HomePage.jsx` | Section Flash Sale tepat di bawah hero (6 kartu, 3 kolom di desktop, "Lihat semua" menuju tab Promo). |
+| `frontend/src/components/FlashSaleSection.jsx` | Prop baru: `id` (anchor scroll), `columns` (2/3), `onSeeAll`. |
+| `frontend/src/components/MainNav.jsx` | Tombol "Jelajahi" statis diganti `ExploreMenu`; menerima `onJumpToFeed` dan `onJumpToFlash`. |
+| `frontend/src/layouts/Layout.jsx` | Tambah `jumpToFlash()`; meneruskan handler ke `MainNav`. |
+| `frontend/src/store/useFilter.js` | State baru `activeStyle`, aksi `setView(cat, style)` dan `clearStyle()`. `setCategory` sekarang juga membersihkan filter gaya. |
+| `frontend/src/components/RecommendationSection.jsx` | Feed menerapkan filter gaya; chip "Gaya: … ✕" untuk menghapusnya. |
+| `frontend/src/data/mockData.js` | Ekspor `STYLE_LABELS` (aviator, round, square, cateye, rect = Minimalist, browline). |
+
+---
+
 ## Update 3 — 2026-09-20 — Banner diperkecil + section Flash Sale
 
 **Tujuan:** banner iklan di awal halaman terlalu besar; dikecilkan ±separuh, lalu ditambah section Flash Sale tepat di bawahnya.
@@ -82,4 +103,6 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 - `backend-node/data/merchants.json` dan `backend-node/data/products.json` belum disamakan dengan versi PHP; salin isinya bila backend Node dipakai.
 - Waktu berakhir Flash Sale masih mock (akhir hari ini). Ganti dengan field `endsAt` dari backend saat API siap.
 - Filter dan sort belum ada di feed beranda (`RecommendationSection.jsx`); `FilterSortBar` bisa dipakai ulang di sana.
-- Tampilan visual belum diperiksa di browser (baru lolos `vite build` dan uji jsdom).
+- Kartu "Jelajahi Berdasarkan Gaya" di beranda (`QuickCategorySection.jsx`) belum bisa diklik; filter gaya sudah tersedia di `useFilter`, tinggal dihubungkan.
+- Menu Jelajahi belum ada di tampilan HP (tombolnya memang disembunyikan di bawah breakpoint `md`); perlu rancangan tersendiri (mis. drawer).
+- Tampilan visual belum diperiksa di browser (baru lolos `vite build` dan uji jsdom): cek ukuran hero di HP, posisi panel Jelajahi, dan latar gelapnya.

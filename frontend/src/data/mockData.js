@@ -49,6 +49,16 @@ export const QUICK_CATEGORIES = [
   { name: "Minimalist", count: "66+ pilihan", style: "rect", color: "navy" }
 ];
 
+// Label tampilan untuk properti `style` produk (dipakai menu Jelajahi & filter feed).
+export const STYLE_LABELS = {
+  aviator: "Aviator",
+  round: "Round",
+  square: "Square",
+  cateye: "Cat Eye",
+  rect: "Minimalist",
+  browline: "Browline"
+};
+
 const NAMES = [
   "Aviator Classic", "Round Metal", "Square Essential", "Tortoise Classic", "Minimal Clear Frame",
   "Retro Oval", "Kids Flex", "Modern Square", "Cat Eye Elegan", "Browline Heritage",

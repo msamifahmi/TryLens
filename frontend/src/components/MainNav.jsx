@@ -1,9 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo.jsx";
 import SearchBar from "./SearchBar.jsx";
+import ExploreMenu from "./ExploreMenu.jsx";
 import { useWishlist } from "../store/useWishlist.js";
 
-export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerchant }) {
+export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerchant, onJumpToFeed, onJumpToFlash }) {
   const wishCount = useWishlist((s) => s.count());
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -34,12 +35,7 @@ export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerch
         <div className={isHome ? "flex" : "hidden md:flex"}>
           <Logo />
         </div>
-        <button className="hidden md:flex items-center gap-1 text-sm font-semibold text-ink-text flex-shrink-0 py-2">
-          Jelajahi
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <ExploreMenu onJumpToFeed={onJumpToFeed} onJumpToFlash={onJumpToFlash} />
 
         <SearchBar onSelectProduct={onSelectProduct} onSelectMerchant={onSelectMerchant} />
 

@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { PRODUCTS } from "../data/mockData.js";
+import { PRODUCTS, STYLE_LABELS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import ProductCard from "./ProductCard.jsx";
 
@@ -14,14 +14,18 @@ const TABS = [
 export default function RecommendationSection({ id, onTryOn, showToast, cardRefs, onOpenDetail }) {
   const activeCategory = useFilter((s) => s.activeCategory);
   const setCategory = useFilter((s) => s.setCategory);
+  const activeStyle = useFilter((s) => s.activeStyle);
+  const clearStyle = useFilter((s) => s.clearStyle);
   const visibleCount = useFilter((s) => s.visibleCount);
   const loadMore = useFilter((s) => s.loadMore);
 
   const filtered = useMemo(() => {
-    if (activeCategory === "Semua") return PRODUCTS;
-    if (activeCategory === "Promo") return PRODUCTS.filter((p) => !!p.oldPrice);
-    return PRODUCTS.filter((p) => p.cat === activeCategory);
-  }, [activeCategory]);
+    let list = PRODUCTS;
+    if (activeCategory === "Promo") list = list.filter((p) => !!p.oldPrice);
+    else if (activeCategory !== "Semua") list = list.filter((p) => p.cat === activeCategory);
+    if (activeStyle) list = list.filter((p) => p.style === activeStyle);
+    return list;
+  }, [activeCategory, activeStyle]);
 
   const shown = filtered.slice(0, visibleCount);
 
@@ -48,7 +52,19 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
             </button>
           ))}
         </div>
-        <div className="text-[13px] text-ink-muted flex-shrink-0" aria-live="polite">{filtered.length} frame</div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {activeStyle && (
+            <button
+              onClick={clearStyle}
+              className="h-7 pl-3 pr-2 rounded-full bg-surface-blue text-blue text-[12.5px] font-semibold flex items-center gap-1.5 hover:bg-blue hover:text-white transition-colors"
+              aria-label={`Hapus filter gaya ${STYLE_LABELS[activeStyle]}`}
+            >
+              Gaya: {STYLE_LABELS[activeStyle]}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" /></svg>
+            </button>
+          )}
+          <span className="text-[13px] text-ink-muted" aria-live="polite">{filtered.length} frame</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">

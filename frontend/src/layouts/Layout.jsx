@@ -39,6 +39,13 @@ export default function Layout() {
     }, 60);
   }
 
+  function jumpToFlash() {
+    navigate("/");
+    setTimeout(() => {
+      document.getElementById("flash-sale")?.scrollIntoView({ behavior: "smooth" });
+    }, 60);
+  }
+
   function goToMitra() {
     navigate("/mitra");
   }
@@ -46,7 +53,13 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
       <TopPromoBar />
-      <MainNav onOpenWishlist={() => setDrawerOpen(true)} onSelectProduct={goToProduct} onSelectMerchant={goToMerchant} />
+      <MainNav
+        onOpenWishlist={() => setDrawerOpen(true)}
+        onSelectProduct={goToProduct}
+        onSelectMerchant={goToMerchant}
+        onJumpToFeed={jumpToFeed}
+        onJumpToFlash={jumpToFlash}
+      />
       <CategoryNav onJumpToFeed={jumpToFeed} onJumpToMerchant={goToMitra} />
 
       <main>

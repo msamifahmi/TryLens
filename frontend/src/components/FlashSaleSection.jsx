@@ -95,14 +95,17 @@ function FlashCard({ product: p, showMerchant }) {
 /**
  * Section Flash Sale: judul + hitung mundur + kartu horizontal ringkas.
  * products : produk ber-flag `flash` (maks. `limit`, default 4)
- * showMerchant : tampilkan nama toko di kartu (untuk halaman Mitra)
+ * showMerchant : tampilkan nama toko di kartu (untuk halaman Mitra dan beranda)
+ * columns : 2 (default) atau 3 kolom di layar lebar
+ * id : dipakai sebagai anchor scroll (mis. dari menu Jelajahi)
+ * onSeeAll : bila diisi, tampil tombol "Lihat semua"
  */
-export default function FlashSaleSection({ products, limit = 4, showMerchant = false }) {
+export default function FlashSaleSection({ products, limit = 4, showMerchant = false, columns = 2, id, onSeeAll }) {
   const items = (products || []).slice(0, limit);
   if (items.length === 0) return null;
 
   return (
-    <section className="bg-white border border-border rounded-2xl p-4" aria-label="Flash Sale">
+    <section id={id} className="bg-white border border-border rounded-2xl p-4 scroll-mt-24" aria-label="Flash Sale">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-full bg-error text-white flex items-center justify-center">
@@ -110,9 +113,16 @@ export default function FlashSaleSection({ products, limit = 4, showMerchant = f
           </span>
           <h2 className="text-[17px] font-bold text-ink tracking-tight m-0">Flash Sale</h2>
         </div>
-        <Countdown />
+        <div className="flex items-center gap-4">
+          <Countdown />
+          {onSeeAll && (
+            <button onClick={onSeeAll} className="text-[13px] font-semibold text-blue hover:underline whitespace-nowrap">
+              Lihat semua
+            </button>
+          )}
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${columns === 3 ? "lg:grid-cols-3" : ""} gap-3`}>
         {items.map((p) => (
           <FlashCard key={p.id} product={p} showMerchant={showMerchant} />
         ))}

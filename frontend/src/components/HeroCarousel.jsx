@@ -114,7 +114,7 @@ export default function HeroCarousel({ onCtaClick }) {
   return (
     <section className="max-w-[1280px] mx-auto px-5 pt-4 pb-2">
       <div
-        className="relative rounded-2xl overflow-hidden aspect-[21/9] max-[700px]:aspect-[4/5]"
+        className="relative rounded-2xl overflow-hidden aspect-[3/1] max-[700px]:aspect-[5/6]"
         onMouseEnter={stopAutoplay}
         onMouseLeave={startAutoplay}
         role="region"
@@ -133,27 +133,27 @@ export default function HeroCarousel({ onCtaClick }) {
             >
               <div className="flex items-center w-full h-full px-8 md:px-14 max-[700px]:flex-col-reverse max-[700px]:justify-end max-[700px]:px-7 max-[700px]:pb-7 max-[700px]:text-center">
                 <div className="flex-1 max-w-[480px] relative z-10">
-                  <h1 className="text-[26px] md:text-[38px] font-extrabold text-white leading-tight mb-3.5 tracking-tight">
+                  <h1 className="text-[24px] md:text-[34px] font-extrabold text-white leading-tight mb-3 tracking-tight">
                     {slide.headline}
                   </h1>
-                  <p className="text-[15px] text-white/90 mb-5 leading-relaxed max-w-[400px] max-[700px]:mx-auto">
+                  <p className="text-[14.5px] text-white/90 mb-4 leading-relaxed max-w-[400px] max-[700px]:mx-auto">
                     {slide.sub}
                   </p>
                   <div className="flex gap-2.5 flex-wrap max-[700px]:justify-center">
                     <button
                       onClick={onCtaClick}
-                      className="h-11 px-6 rounded-[10px] text-sm font-bold bg-accent-yellow text-ink hover:-translate-y-0.5 hover:shadow-lg transition-transform"
+                      className="h-10 px-5 rounded-[10px] text-sm font-bold bg-accent-yellow text-ink hover:-translate-y-0.5 hover:shadow-lg transition-transform"
                     >
                       {slide.cta}
                     </button>
                     {slide.cta2 && (
-                      <button className="h-11 px-6 rounded-[10px] text-sm font-bold bg-white/15 text-white border border-white/50 hover:bg-white/25">
+                      <button className="h-10 px-5 rounded-[10px] text-sm font-bold bg-white/15 text-white border border-white/50 hover:bg-white/25">
                         {slide.cta2}
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 w-2/5 max-[700px]:w-2/3 max-[700px]:max-w-[220px] max-[700px]:mb-2 flex items-center justify-center relative z-[1]">
+                <div className="flex-shrink-0 w-1/3 max-[700px]:w-1/2 max-[700px]:max-w-[150px] max-[700px]:mb-2 flex items-center justify-center relative z-[1]">
                   <Illustration />
                 </div>
               </div>
