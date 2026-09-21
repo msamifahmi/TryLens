@@ -2,9 +2,73 @@
 
 Catatan progres per update. Entri terbaru di paling atas. Jalur file relatif terhadap root `trylens-project/`.
 
-Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel, Merchant Slider, Recommendation Feed dengan Category Tabs, Wishlist).
+Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel, Merchant Slider, Recommendation Feed dengan Category Tabs, Wishlist) + **Dashboard Mitra** (Update 7).
 
 ---
+
+## Update 7 — 2026-09-21 — Dashboard Mitra (Partner), alur login → langganan → setup toko, skema database SQL
+
+Fitur baru: area **Mitra** (`/partner/*`). Alurnya: Beranda → **ikon user di header** → Partner Login → autentikasi →
+(belum berlangganan: Onboarding → Pilih Paket → Checkout → Payment Success → Setup Toko) atau (sudah berlangganan) → Dashboard.
+
+### Wajib setelah ekstrak
+1. `cd frontend && npm install` — ada dependensi baru **`lucide-react`** (dipakai komponen login dan seluruh dashboard).
+2. Opsional, untuk database: `mysql -u root -p < backend-php/database/schema.sql` lalu `mysql -u root -p trylens < backend-php/database/seed.sql`.
+
+### Akun demo (password semua: `Partner123!`)
+| Email | Kondisi |
+|---|---|
+| `basic@optikkusuma.id` | Paket Basic, toko Optik Kusuma → langsung ke dashboard |
+| `pro@lensakita.id` | Paket Pro, toko Lensa Kita → langsung ke dashboard |
+| `baru@optikbaru.id` | Belum berlangganan → menjalani alur onboarding penuh |
+
+### Baru — halaman & alur
+| File | Fungsi |
+|---|---|
+| `frontend/src/components/ui/sign-in-page.jsx` | Komponen `LoginPage` dua panel (dari task paste), mode `login` / `register`. |
+| `frontend/src/components/PartnerAccountButton.jsx` | Ikon user di header beranda: belum masuk → `/partner/login`; sudah masuk → menu (dashboard / lanjutkan setup / keluar). |
+| `frontend/src/pages/partner/PartnerLoginPage.jsx`, `PartnerRegisterPage.jsx` | `/partner/login`, `/partner/register` (login memuat panel akun demo). |
+| `frontend/src/pages/partner/OnboardingPage.jsx` | Langkah 1 — pilih paket Basic / Pro. |
+| `frontend/src/pages/partner/CheckoutPage.jsx` | Langkah 2 — metode pembayaran + ringkasan (pembayaran **simulasi**). |
+| `frontend/src/pages/partner/PaymentSuccessPage.jsx` | Langkah 3 — invoice & tagihan berikutnya. |
+| `frontend/src/pages/partner/StoreSetupPage.jsx` | Langkah 4 — setup toko (memakai `StoreForm`). |
+| `frontend/src/components/partner/Gate.jsx` | Penjaga rute: tahap akun `guest → onboarding → setup → dashboard`, mengarahkan ke halaman yang benar. |
+| `frontend/src/components/partner/PartnerFlowShell.jsx` | Kerangka halaman onboarding + indikator langkah + logo Partner. |
+
+### Baru — dashboard (gaya mengikuti referensi: monokrom, kartu KPI, grafik garis dengan tooltip, kartu permintaan)
+| File | Fungsi |
+|---|---|
+| `frontend/src/layouts/PartnerLayout.jsx` | Header: logo, menu pil (Dashboard · Toko · Virtual Try-On · Analitik · Promosi · Langganan), chip paket, lonceng, gear (Settings), menu akun. |
+| `frontend/src/pages/partner/DashboardPage.jsx` | KPI (Kunjungan Toko, Sesi Try-On, Klik Frame, Hubungi Toko) dengan periode Hari ini / Minggu ini / Bulan ini, grafik Ikhtisar Kunjungan, Promosi Aktif, Permintaan Terbaru (Tanggapi / Abaikan), kartu Paket Anda. |
+| `frontend/src/pages/partner/SectionPage.jsx` | Peta menu → sub-menu → halaman (`/partner/:section/:tab`). |
+| `frontend/src/pages/partner/StoreTabs.jsx` | Store Profile, Products / Frames (CRUD + kuota), Collections, Store Preview. |
+| `frontend/src/pages/partner/VtoTabs.jsx` | Frame Library, Try-On Analytics, VTO Settings. |
+| `frontend/src/pages/partner/AnalyticsTabs.jsx` | Overview (semua paket); Store Visitors, Product Performance, Try-On Performance (**Pro**). |
+| `frontend/src/pages/partner/PromotionTabs.jsx` | Banner Ads (kuota per paket); Highlighted Brand dan Sponsored Frame (**Pro**, maks. 3 frame). |
+| `frontend/src/pages/partner/SubscriptionTabs.jsx` | Current Plan, Billing (riwayat invoice), Upgrade Plan. |
+| `frontend/src/pages/partner/SettingsTabs.jsx` | Account (+ ganti password), Store Settings, Notifications. |
+| `frontend/src/components/partner/ui.jsx`, `PlanCard.jsx`, `LineChart.jsx`, `StoreForm.jsx` | Primitif UI, kartu paket + `ProLock` + `PlanPicker`, grafik SVG, formulir profil toko. |
+| `frontend/src/data/partnerMock.js`, `frontend/src/store/usePartner.js` | Data mock + state (Zustand, disimpan di localStorage `trylens-partner`). |
+
+### Basic vs Pro di UI
+- Kartu **PAKET ANDA**: Basic menampilkan harga, tagihan berikutnya, tombol Kelola Langganan, daftar terkunci "Tersedia di Pro" (Analitik Lanjutan, Featured Store, Sponsored Frame) dan ajakan "Buka Analitik Lanjutan dengan Pro → Upgrade ke Pro". Pro menampilkan semua fitur aktif.
+- Fitur Pro di Basic tidak disembunyikan: kontennya diburamkan (tidak bisa difokus/diklik) dengan kartu ajakan upgrade. Menu Pro diberi ikon mahkota.
+- Kuota: Basic maks. 50 frame dan 1 banner aktif; Pro tanpa batas frame dan 5 banner.
+- **Harga tidak hanya muncul saat daftar:** upgrade/downgrade selalu bisa diakses lewat chip "Basic · Upgrade" di header, kartu paket, overlay fitur terkunci, dan Langganan → Upgrade Plan. Upgrade masuk Checkout, downgrade dijadwalkan ke akhir periode.
+
+### Baru — database (folder baru `backend-php/database/`)
+| File | Fungsi |
+|---|---|
+| `schema.sql` | 21 tabel + 2 view (MySQL 8 / MariaDB 10.5+). Peta tabel → menu dashboard ada di komentar kepala file. Aturan yang ditegakkan di database: satu langganan aktif per user, `compare_at_price >= price`, `ends_on >= starts_on`. |
+| `seed.sql` | Paket, 3 akun demo, 6 toko, 24 frame, koleksi, promosi, leads, statistik 60 hari (dihasilkan dari data mock agar konsisten). |
+| `dashboard_queries.sql` | Query acuan untuk endpoint API dashboard (KPI, grafik bulanan, frame teratas, kuota, aktivasi langganan). |
+
+### Catatan penting
+- **Frontend berjalan dengan data mock (localStorage), belum memanggil database.** Endpoint PHP untuk auth, langganan, dan CRUD belum dibuat; struktur data mock sudah mengikuti tabel SQL sehingga tinggal diganti pemanggilan API. Password di mode mock disimpan apa adanya; di database wajib memakai `password_hash()` (seed sudah berisi hash bcrypt).
+- **Harga Pro Rp599.000 adalah angka sementara.** Ubah di `partnerMock.js` (`PLANS.pro.price`) dan tabel `plans`.
+- **TypeScript / shadcn:** project ini JavaScript (tanpa `tsconfig`, tanpa alias `@/`, tanpa `shadcn init`), jadi komponen `sign-in-page.tsx` dikonversi ke `.jsx` dan diletakkan di `frontend/src/components/ui/` sesuai instruksi task. Gambar CDN diganti ilustrasi lokal, tombol Google/GitHub dihapus (belum ada OAuth), teks diterjemahkan. Bila kelak project dimigrasi ke TypeScript + shadcn: `npm i -D typescript @types/react @types/react-dom`, tambahkan `tsconfig.json` dengan alias `@/* → src/*` (dan `resolve.alias` di `vite.config.js`), lalu `npx shadcn@latest init`. Folder `components/ui` penting karena shadcn CLI memasang komponen ke sana dan impor `@/components/ui/...` bergantung pada lokasi tersebut.
+- Folder baru: `components/ui/`, `components/partner/`, `pages/partner/`, `backend-php/database/`. Struktur folder lama tidak diubah.
+- Fitur Pro-only saat ini hanya dikunci di UI; saat API dibuat, wajib dicek ulang di server lewat `v_store_entitlements`.
 
 ## Update 6 — 2026-09-20 — Koreksi Flash Sale beranda: 3 kolom, 1 baris, geser ke samping
 

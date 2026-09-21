@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo.jsx";
 import SearchBar from "./SearchBar.jsx";
 import ExploreMenu from "./ExploreMenu.jsx";
+import PartnerAccountButton from "./PartnerAccountButton.jsx";
 import { useWishlist } from "../store/useWishlist.js";
 
 export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerchant, onJumpToFeed, onJumpToFlash }) {
@@ -59,9 +60,7 @@ export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerch
             <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-error text-white rounded-full text-[10px] font-bold flex items-center justify-center">{wishCount}</span>
           </button>
 
-          <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-blue to-blue-deep text-white font-bold text-[13px] flex items-center justify-center flex-shrink-0" title="Ameeyyyyy">
-            A
-          </div>
+          <PartnerAccountButton />
         </nav>
       </div>
     </header>
