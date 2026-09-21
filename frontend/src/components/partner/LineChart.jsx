@@ -68,55 +68,55 @@ export default function LineChart({ data, title = "Kunjungan", currentLabel = "B
       >
         <defs>
           <linearGradient id="lc-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#18181b" stopOpacity="0.07" />
-            <stop offset="100%" stopColor="#18181b" stopOpacity="0" />
+            <stop offset="0%" stopColor="#406AAF" stopOpacity="0.07" />
+            <stop offset="100%" stopColor="#406AAF" stopOpacity="0" />
           </linearGradient>
         </defs>
 
         {ticks.map((t, i) => (
           <g key={i}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#e4e4e7" strokeWidth="1" strokeDasharray={i === 0 ? "0" : "3 4"} />
-            <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#a1a1aa">
+            <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#DDE8F4" strokeWidth="1" strokeDasharray={i === 0 ? "0" : "3 4"} />
+            <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#6B7280">
               {compact(t)}
             </text>
           </g>
         ))}
 
         <path d={area} fill="url(#lc-fill)" />
-        <path d={smooth(prev)} fill="none" stroke="#d4d4d8" strokeWidth="2" strokeLinecap="round" />
-        <path d={curPath} fill="none" stroke="#18181b" strokeWidth="2.2" strokeLinecap="round" />
+        <path d={smooth(prev)} fill="none" stroke="#B9CCE6" strokeWidth="2" strokeLinecap="round" />
+        <path d={curPath} fill="none" stroke="#406AAF" strokeWidth="2.2" strokeLinecap="round" />
 
-        <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H - PAD.b} stroke="#a1a1aa" strokeWidth="1" strokeDasharray="3 3" />
-        <circle cx={x(hover)} cy={y(h.previous)} r="4" fill="#fff" stroke="#d4d4d8" strokeWidth="2" />
-        <circle cx={x(hover)} cy={y(h.current)} r="4.5" fill="#fff" stroke="#18181b" strokeWidth="2.2" />
+        <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H - PAD.b} stroke="#6B7280" strokeWidth="1" strokeDasharray="3 3" />
+        <circle cx={x(hover)} cy={y(h.previous)} r="4" fill="#fff" stroke="#B9CCE6" strokeWidth="2" />
+        <circle cx={x(hover)} cy={y(h.current)} r="4.5" fill="#fff" stroke="#406AAF" strokeWidth="2.2" />
 
         {data.map((d, i) => (
-          <text key={d.label} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11.5" fill={i === hover ? "#18181b" : "#a1a1aa"}>
+          <text key={d.label} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11.5" fill={i === hover ? "#406AAF" : "#6B7280"}>
             {d.label}
           </text>
         ))}
       </svg>
 
       <div
-        className="absolute top-2 pointer-events-none rounded-xl border border-zinc-200 bg-white shadow-lg px-3 py-2.5 min-w-[150px]"
+        className="absolute top-2 pointer-events-none rounded-xl border border-[#DDE8F4] bg-white shadow-lg px-3 py-2.5 min-w-[150px]"
         style={{ left: `${leftPct}%`, transform: flip ? "translateX(calc(-100% - 12px))" : "translateX(12px)" }}
         role="status"
       >
         <div className="flex items-center justify-between gap-4 text-[12px] mb-1.5">
-          <span className="text-zinc-500">{title}</span>
-          <span className="font-semibold text-zinc-900">{h.current.toLocaleString("id-ID")}</span>
+          <span className="text-ink-muted">{title}</span>
+          <span className="font-semibold text-ink">{h.current.toLocaleString("id-ID")}</span>
         </div>
         <div className="flex items-center justify-between gap-4 text-[11.5px] mb-1">
-          <span className="flex items-center gap-1.5 text-zinc-700">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-zinc-900 bg-white" /> {currentLabel}
+          <span className="flex items-center gap-1.5 text-ink-text">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-blue-deep bg-white" /> {currentLabel}
           </span>
-          <span className="font-medium text-zinc-900">{h.current.toLocaleString("id-ID")}</span>
+          <span className="font-medium text-ink">{h.current.toLocaleString("id-ID")}</span>
         </div>
         <div className="flex items-center justify-between gap-4 text-[11.5px]">
-          <span className="flex items-center gap-1.5 text-zinc-400">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-zinc-300 bg-white" /> {previousLabel}
+          <span className="flex items-center gap-1.5 text-ink-muted">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-[#C5D6EA] bg-white" /> {previousLabel}
           </span>
-          <span className="font-medium text-zinc-500">{h.previous.toLocaleString("id-ID")}</span>
+          <span className="font-medium text-ink-muted">{h.previous.toLocaleString("id-ID")}</span>
         </div>
       </div>
     </div>

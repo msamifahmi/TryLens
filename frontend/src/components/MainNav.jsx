@@ -3,6 +3,7 @@ import Logo from "./Logo.jsx";
 import SearchBar from "./SearchBar.jsx";
 import ExploreMenu from "./ExploreMenu.jsx";
 import PartnerAccountButton from "./PartnerAccountButton.jsx";
+import { MessageCircle } from "lucide-react";
 import { useWishlist } from "../store/useWishlist.js";
 
 export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerchant, onJumpToFeed, onJumpToFlash }) {
@@ -41,6 +42,14 @@ export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerch
         <SearchBar onSelectProduct={onSelectProduct} onSelectMerchant={onSelectMerchant} />
 
         <nav className="flex items-center gap-2 md:gap-3 flex-shrink-0 ml-auto" aria-label="Aksi pengguna">
+          <button
+            onClick={() => navigate("/konsultasi")}
+            className="h-10 px-2.5 md:px-3.5 flex items-center gap-1.5 rounded-lg text-[13px] font-semibold text-blue-deep hover:bg-surface-blue flex-shrink-0"
+            aria-label="Konsultasi dengan optik dan scan wajah"
+          >
+            <MessageCircle size={20} strokeWidth={1.8} />
+            <span className="hidden lg:inline">Konsultasi</span>
+          </button>
           <button className="relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-text hover:bg-surface-blue flex-shrink-0" aria-label="Notifikasi, 5 belum dibaca">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />

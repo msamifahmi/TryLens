@@ -6,7 +6,7 @@ import StoreForm from "../../components/partner/StoreForm.jsx";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Flash, Meter, Tile, Toggle, UpgradeLink, inputCls, useFlash } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount } from "../../store/usePartner.js";
 import { FRAME_COLORS, STYLE_LABELS } from "../../data/mockData.js";
-import { PLANS, fmtRp } from "../../data/partnerMock.js";
+import { PLANS, activeHighlight, fmtRp, sponsoredIds } from "../../data/partnerMock.js";
 import { InstagramIcon, XIcon, ShopBagIcon } from "../../components/icons/SocialIcons.jsx";
 
 /* ------------------------------------------------------------ Profil Toko */
@@ -65,7 +65,6 @@ export function ProductsTab() {
     patch((a) => ({
       ...a,
       frames: a.frames.filter((f) => f.id !== id),
-      sponsored: a.sponsored.filter((x) => x !== id),
       collections: a.collections.map((c) => ({ ...c, frameIds: c.frameIds.filter((x) => x !== id) }))
     }));
 
@@ -84,15 +83,15 @@ export function ProductsTab() {
         <Meter label={`Kuota frame paket ${PLANS[plan].name}`} value={acc.frames.length} max={limit} />
       </div>
       {atLimit && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[13px] text-amber-900 m-0">Kuota frame paket Basic penuh. Upgrade ke Pro untuk frame tanpa batas.</p>
+        <div className="rounded-xl border border-accent-yellow bg-surface-cream px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-[13px] text-ink-text m-0">Kuota frame paket Basic penuh. Upgrade ke Pro untuk frame tanpa batas.</p>
           <UpgradeLink size="sm" />
         </div>
       )}
 
       {form && (
-        <form onSubmit={save} className="rounded-xl border border-zinc-300 bg-white p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <p className="col-span-full text-[14px] font-semibold text-zinc-900 m-0">{form.id ? "Ubah frame" : "Frame baru"}</p>
+        <form onSubmit={save} className="rounded-xl border border-[#C5D6EA] bg-white p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <p className="col-span-full text-[14px] font-semibold text-ink m-0">{form.id ? "Ubah frame" : "Frame baru"}</p>
           <Field label="Nama frame *" className="col-span-2"><input className={inputCls} value={form.name} onChange={set("name")} required /></Field>
           <Field label="Gaya">
             <select className={inputCls} value={form.style} onChange={set("style")}>
@@ -122,38 +121,38 @@ export function ProductsTab() {
       {acc.frames.length === 0 ? (
         <EmptyState title="Belum ada frame" text="Tambahkan frame pertama agar toko Anda tampil lengkap." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-[#DDE8F4] bg-white">
           <table className="w-full text-[13px] border-collapse min-w-[720px]">
             <thead>
-              <tr className="text-left text-zinc-500 text-[12px]">
+              <tr className="text-left text-ink-muted text-[12px]">
                 {["Frame", "Kategori", "Harga", "Stok", "Try-On", "Tayang", ""].map((h) => (
-                  <th key={h} className="font-medium px-4 py-3 border-b border-zinc-100">{h}</th>
+                  <th key={h} className="font-medium px-4 py-3 border-b border-[#E8F0F8]">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {acc.frames.map((f) => (
-                <tr key={f.id} className="border-b border-zinc-100 last:border-0">
+                <tr key={f.id} className="border-b border-[#E8F0F8] last:border-0">
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3">
                       <span className="w-14 h-8 flex-shrink-0"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></span>
                       <span>
-                        <span className="block font-medium text-zinc-900">{f.name}</span>
-                        <span className="block text-[11.5px] text-zinc-500">{STYLE_LABELS[f.style]}</span>
+                        <span className="block font-medium text-ink">{f.name}</span>
+                        <span className="block text-[11.5px] text-ink-muted">{STYLE_LABELS[f.style]}</span>
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-2.5">{f.category}</td>
                   <td className="px-4 py-2.5">
                     <span className="font-medium">{fmtRp(f.price)}</span>
-                    {f.oldPrice && <span className="block text-[11.5px] text-zinc-400 line-through">{fmtRp(f.oldPrice)}</span>}
+                    {f.oldPrice && <span className="block text-[11.5px] text-ink-muted line-through">{fmtRp(f.oldPrice)}</span>}
                   </td>
                   <td className="px-4 py-2.5">{f.stock <= 5 ? <Badge tone="amber">{f.stock} tersisa</Badge> : f.stock}</td>
                   <td className="px-4 py-2.5"><Badge tone={f.vto ? "green" : "gray"}>{f.vto ? "Aktif" : "Nonaktif"}</Badge></td>
                   <td className="px-4 py-2.5"><Toggle checked={f.published} onChange={(v) => update(f.id, { published: v })} label={`Tayangkan ${f.name}`} /></td>
                   <td className="px-4 py-2.5">
                     <div className="flex gap-1 justify-end">
-                      <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center text-zinc-600" aria-label={`Ubah ${f.name}`} onClick={() => setForm({ ...f, oldPrice: f.oldPrice ?? "" })}><Pencil size={15} /></button>
+                      <button className="w-8 h-8 rounded-lg hover:bg-surface-blue flex items-center justify-center text-ink-text" aria-label={`Ubah ${f.name}`} onClick={() => setForm({ ...f, oldPrice: f.oldPrice ?? "" })}><Pencil size={15} /></button>
                       <button className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-red-500" aria-label={`Hapus ${f.name}`} onClick={() => remove(f.id)}><Trash2 size={15} /></button>
                     </div>
                   </td>
@@ -199,11 +198,11 @@ export function CollectionsTab() {
             <Tile key={c.id} className="p-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <p className="text-[14.5px] font-semibold text-zinc-900 m-0">{c.name}</p>
-                  <p className="text-[12px] text-zinc-500 m-0">{c.frameIds.length} frame</p>
+                  <p className="text-[14.5px] font-semibold text-ink m-0">{c.name}</p>
+                  <p className="text-[12px] text-ink-muted m-0">{c.frameIds.length} frame</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-2 text-[12.5px] text-zinc-600">
+                  <span className="flex items-center gap-2 text-[12.5px] text-ink-text">
                     Tayang <Toggle checked={c.published} onChange={(v) => upd(c.id, { published: v })} label={`Tayangkan ${c.name}`} />
                   </span>
                   <Btn size="sm" variant="outline" onClick={() => setOpenId(openId === c.id ? null : c.id)}>{openId === c.id ? "Tutup" : "Pilih frame"}</Btn>
@@ -211,14 +210,14 @@ export function CollectionsTab() {
                 </div>
               </div>
               {openId === c.id && (
-                <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto">
+                <div className="mt-3 pt-3 border-t border-[#E8F0F8] grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto">
                   {acc.frames.map((f) => (
-                    <label key={f.id} className="flex items-center gap-2.5 text-[13px] text-zinc-800 py-1 cursor-pointer">
+                    <label key={f.id} className="flex items-center gap-2.5 text-[13px] text-ink-text py-1 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={c.frameIds.includes(f.id)}
                         onChange={(e) => upd(c.id, { frameIds: e.target.checked ? [...c.frameIds, f.id] : c.frameIds.filter((x) => x !== f.id) })}
-                        className="w-4 h-4 accent-zinc-900"
+                        className="w-4 h-4 accent-blue-deep"
                       />
                       {f.name}
                     </label>
@@ -238,6 +237,7 @@ export function PreviewTab() {
   const acc = useAccount();
   const s = acc.store;
   const published = acc.frames.filter((f) => f.published);
+  const sponsored = new Set(sponsoredIds(acc));
   const links = s.links || {};
 
   return (
@@ -253,13 +253,13 @@ export function PreviewTab() {
         <div className="w-16 h-16 rounded-2xl text-white font-extrabold text-xl flex items-center justify-center flex-shrink-0" style={{ background: s.color }}>{s.initials}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-[20px] font-bold text-zinc-900 m-0">{s.name}</h3>
-            {acc.highlighted.active && <Badge tone="dark">Featured Store</Badge>}
+            <h3 className="text-[20px] font-bold text-ink m-0">{s.name}</h3>
+            {activeHighlight(acc) && <Badge tone="gold">Highlighted Brand</Badge>}
           </div>
-          <p className="text-[13px] text-zinc-500 m-0 mb-1">{[s.city, s.province].filter(Boolean).join(", ")}</p>
-          <p className="text-[13px] text-zinc-600 m-0 line-clamp-2">{s.description}</p>
+          <p className="text-[13px] text-ink-muted m-0 mb-1">{[s.city, s.province].filter(Boolean).join(", ")}</p>
+          <p className="text-[13px] text-ink-text m-0 line-clamp-2">{s.description}</p>
         </div>
-        <div className="flex gap-2 text-zinc-500">
+        <div className="flex gap-2 text-ink-muted">
           {links.instagram && <InstagramIcon size={18} />}
           {links.x && <XIcon size={16} />}
           {(links.tokopedia || links.shopee) && <ShopBagIcon size={18} />}
@@ -272,11 +272,11 @@ export function PreviewTab() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {published.map((f) => (
             <Tile key={f.id} className="p-3 relative">
-              {acc.sponsored.includes(f.id) && <Badge tone="amber" className="absolute top-2 left-2">Sponsored</Badge>}
-              <div className="bg-zinc-50 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
-              <p className="text-[13px] font-medium text-zinc-900 m-0 truncate">{f.name}</p>
-              <p className="text-[13px] font-semibold text-zinc-900 m-0">{fmtRp(f.price)}</p>
-              {f.vto && <p className="flex items-center gap-1 text-[11.5px] text-zinc-500 m-0 mt-1"><Glasses size={12} /> Try-On</p>}
+              {sponsored.has(f.id) && <Badge tone="gold" className="absolute top-2 left-2">Sponsored</Badge>}
+              <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
+              <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
+              <p className="text-[13px] font-semibold text-ink m-0">{fmtRp(f.price)}</p>
+              {f.vto && <p className="flex items-center gap-1 text-[11.5px] text-ink-muted m-0 mt-1"><Glasses size={12} /> Try-On</p>}
             </Tile>
           ))}
         </div>

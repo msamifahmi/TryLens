@@ -13,12 +13,12 @@ export default function OnboardingPage() {
     <PartnerFlowShell
       step={0}
       title={`Halo ${acc.name.split(" ")[0]}, pilih paket untuk toko Anda`}
-      subtitle="Tagihan bulanan, bisa upgrade atau berhenti kapan saja dari menu Langganan."
+      subtitle="Pilih tagihan bulanan atau tahunan (hemat 2 bulan). Bisa upgrade kapan saja dari menu Langganan."
     >
       <PlanPicker
         current={null}
-        onSelect={(plan) => {
-          startCheckout(plan);
+        onSelect={(plan, interval) => {
+          startCheckout({ kind: "subscription", plan, interval, upgrade: false });
           navigate("/partner/checkout");
         }}
       />

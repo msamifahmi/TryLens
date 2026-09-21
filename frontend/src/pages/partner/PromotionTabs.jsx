@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Pause, Play, Plus, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Pause, Play, Trash2 } from "lucide-react";
 import FrameIcon from "../../components/icons/FrameIcon.jsx";
 import { ProLock } from "../../components/partner/PlanCard.jsx";
-import { Badge, Btn, Card, CardHeader, EmptyState, Field, Meter, Tile, Toggle, UpgradeLink, inputCls } from "../../components/partner/ui.jsx";
+import { Badge, Btn, Card, CardHeader, EmptyState, Field, Tile, inputCls } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount } from "../../store/usePartner.js";
-import { PLANS, fmtDate, fmtNum, fmtRp } from "../../data/partnerMock.js";
+import { AD_TYPES, MAX_WEEKS, activeHighlight, dayStr, endsOn, fmtDate, fmtNum, fmtRp, orderStatus } from "../../data/partnerMock.js";
+
+/* Iklan & Premium dibeli PER MINGGU (bukan bagian langganan). Alur: isi pesanan → Checkout → aktif. */
 
 const STATUS = {
   active: { label: "Aktif", tone: "green" },
@@ -13,148 +16,236 @@ const STATUS = {
   ended: { label: "Selesai", tone: "gray" },
   rejected: { label: "Ditolak", tone: "red" }
 };
+const ORDER_STATUS = { active: { label: "Tayang", tone: "green" }, scheduled: { label: "Terjadwal", tone: "amber" }, ended: { label: "Selesai", tone: "gray" } };
+const shortDate = { day: "numeric", month: "short", year: "numeric" };
+
+/** Bagian bersama: minggu + tanggal mulai + ringkasan harga + tombol lanjut. */
+function OrderFooter({ unit, qty = 1, weeks, setWeeks, startsOn, setStartsOn, disabled, onOrder, note }) {
+  const total = unit * weeks * qty;
+  return (
+    <div className="rounded-xl border border-[#DDE8F4] bg-white p-4 mt-4">
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <Field label="Durasi">
+          <select className={inputCls} value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+            {Array.from({ length: MAX_WEEKS }, (_, i) => i + 1).map((w) => <option key={w} value={w}>{w} minggu</option>)}
+          </select>
+        </Field>
+        <Field label="Mulai tayang">
+          <input type="date" className={inputCls} min={dayStr()} value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-[12.5px] text-ink-muted m-0">
+            {fmtRp(unit)} × {weeks} minggu{qty > 1 ? ` × ${qty} frame` : ""} · berakhir {fmtDate(endsOn(startsOn || dayStr(), weeks), shortDate)}
+          </p>
+          <p className="text-[22px] font-extrabold text-ink m-0">{fmtRp(total)}</p>
+          {note && <p className="text-[12px] text-ink-muted m-0">{note}</p>}
+        </div>
+        <Btn size="lg" disabled={disabled || !startsOn} onClick={() => onOrder(total)}>Lanjut ke Pembayaran</Btn>
+      </div>
+    </div>
+  );
+}
+
+function Placements({ options, value, onChange }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Penempatan">
+      {options.map((o) => (
+        <button key={o.key} type="button" role="radio" aria-checked={value === o.key} onClick={() => onChange(o.key)}
+          className={`text-left rounded-xl border px-4 py-3 transition-colors ${value === o.key ? "border-blue-deep bg-surface-blue" : "border-[#DDE8F4] bg-white hover:border-blue"}`}>
+          <span className="block text-[13.5px] font-semibold text-ink">{o.label}</span>
+          <span className="block text-[12.5px] text-ink-muted">{fmtRp(o.price)} / minggu</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function OrderHistory({ type }) {
+  const acc = useAccount();
+  const orders = acc.adOrders.filter((o) => o.type === type);
+  if (!orders.length) return null;
+  return (
+    <div className="mt-6">
+      <h3 className="text-[14px] font-semibold text-ink m-0 mb-2">Riwayat pesanan</h3>
+      <div className="flex flex-col gap-2">
+        {orders.map((o) => {
+          const st = ORDER_STATUS[orderStatus(o)] || ORDER_STATUS.ended;
+          return (
+            <Tile key={o.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-[13.5px] font-medium text-ink m-0">{o.label}</p>
+                <p className="text-[12px] text-ink-muted m-0">{fmtDate(o.startsOn, shortDate)} – {fmtDate(o.endsOn, shortDate)} · {o.weeks} minggu · {fmtRp(o.total)}</p>
+              </div>
+              <Badge tone={st.tone}>{st.label}</Badge>
+            </Tile>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------- Banner Ads */
 export function BannersTab() {
   const acc = useAccount();
   const patch = usePartner((s) => s.patch);
-  const plan = acc.subscription.plan;
-  const limit = PLANS[plan].limits.banners;
-  const live = acc.banners.filter((b) => ["active", "pending_review"].includes(b.status)).length;
-  const atLimit = live >= limit;
-  const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState(null);
-  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
-
-  function save(e) {
-    e.preventDefault();
-    patch((a) => ({
-      ...a,
-      banners: [{ id: `b-${Date.now().toString(36)}`, ...form, status: "pending_review", impressions: 0, clicks: 0 }, ...a.banners]
-    }));
-    setForm(null);
-  }
+  const startCheckout = usePartner((s) => s.startCheckout);
+  const navigate = useNavigate();
+  const T = AD_TYPES.banner;
+  const [placement, setPlacement] = useState(T.placements[0].key);
+  const [weeks, setWeeks] = useState(1);
+  const [startsOn, setStartsOn] = useState(dayStr());
+  const [f, setF] = useState({ title: "", subtitle: "", cta: "Lihat Koleksi" });
+  const pl = T.placements.find((p) => p.key === placement);
+  const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const upd = (id, part) => patch((a) => ({ ...a, banners: a.banners.map((b) => (b.id === id ? { ...b, ...part } : b)) }));
 
+  function order(total) {
+    startCheckout({ kind: "ad", adType: "banner", placement, weeks, unit: pl.price, qty: 1, total, startsOn, label: `${T.label} — ${pl.label}`, banner: { ...f }, backTo: "/partner/promotion/banners" });
+    navigate("/partner/checkout");
+  }
+
   return (
-    <Card>
-      <CardHeader
-        title="Banner Ads"
-        subtitle="Banner tampil di beranda dan halaman Mitra TryLens setelah disetujui."
-        right={<Btn size="sm" disabled={atLimit} onClick={() => setForm({ title: "", subtitle: "", cta: "Lihat Koleksi", startsAt: today, endsAt: today })}><Plus size={15} /> Buat banner</Btn>}
-      />
-      <div className="max-w-[360px] mb-4"><Meter label={`Banner aktif paket ${PLANS[plan].name}`} value={live} max={limit} /></div>
-      {atLimit && plan === "basic" && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[13px] text-amber-900 m-0">Paket Basic dibatasi 1 banner aktif. Jeda banner lama atau upgrade ke Pro (hingga 5 banner).</p>
-          <UpgradeLink size="sm" />
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5 items-start">
+      <Card>
+        <CardHeader title="Pesan Slot Banner" subtitle="Sewa slot per minggu, mulai Rp500.000. Banner ditinjau tim TryLens sebelum tayang." />
+        <Placements options={T.placements} value={placement} onChange={setPlacement} />
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Field label="Judul *" className="col-span-2 sm:col-span-1"><input className={inputCls} value={f.title} onChange={set("title")} maxLength={40} placeholder="mis. Diskon Frame Akhir Tahun" /></Field>
+          <Field label="Teks tombol"><input className={inputCls} value={f.cta} onChange={set("cta")} maxLength={20} /></Field>
+          <Field label="Sub-judul" className="col-span-2"><input className={inputCls} value={f.subtitle} onChange={set("subtitle")} maxLength={80} /></Field>
         </div>
-      )}
+        <OrderFooter unit={pl.price} weeks={weeks} setWeeks={setWeeks} startsOn={startsOn} setStartsOn={setStartsOn} disabled={!f.title.trim()} onOrder={order} />
+        <OrderHistory type="banner" />
+      </Card>
 
-      {form && (
-        <form onSubmit={save} className="rounded-xl border border-zinc-300 bg-white p-4 mb-4 grid grid-cols-2 gap-3">
-          <p className="col-span-full text-[14px] font-semibold text-zinc-900 m-0">Banner baru</p>
-          <Field label="Judul *" className="col-span-2 sm:col-span-1"><input className={inputCls} value={form.title} onChange={set("title")} maxLength={40} required /></Field>
-          <Field label="Teks tombol"><input className={inputCls} value={form.cta} onChange={set("cta")} maxLength={20} /></Field>
-          <Field label="Sub-judul" className="col-span-2"><input className={inputCls} value={form.subtitle} onChange={set("subtitle")} maxLength={80} /></Field>
-          <Field label="Mulai"><input type="date" className={inputCls} value={form.startsAt} onChange={set("startsAt")} required /></Field>
-          <Field label="Berakhir"><input type="date" className={inputCls} min={form.startsAt} value={form.endsAt} onChange={set("endsAt")} required /></Field>
-          <div className="col-span-full flex gap-2">
-            <Btn type="submit" size="sm">Ajukan banner</Btn>
-            <Btn type="button" variant="ghost" size="sm" onClick={() => setForm(null)}>Batal</Btn>
+      <Card>
+        <CardHeader title="Banner Anda" subtitle={`${acc.banners.length} banner`} />
+        {acc.banners.length === 0 ? (
+          <EmptyState title="Belum ada banner" text="Pesan slot di sebelah untuk membuat banner pertama." />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {acc.banners.map((b) => {
+              const st = STATUS[b.status] || STATUS.paused;
+              return (
+                <Tile key={b.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <div className="min-w-0">
+                      <p className="text-[14.5px] font-semibold text-ink m-0">{b.title}</p>
+                      <p className="text-[12.5px] text-ink-muted m-0">{b.subtitle}</p>
+                    </div>
+                    <Badge tone={st.tone}>{st.label}</Badge>
+                  </div>
+                  <p className="text-[12px] text-ink-muted m-0 mb-3">
+                    {AD_TYPES.banner.placements.find((p) => p.key === b.placement)?.label || "—"} · {fmtDate(b.startsAt, shortDate)} – {fmtDate(b.endsAt, shortDate)} · {fmtNum(b.impressions)} tayangan · {fmtNum(b.clicks)} klik
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {b.status === "active" && <Btn size="sm" variant="outline" onClick={() => upd(b.id, { status: "paused" })}><Pause size={13} /> Jeda</Btn>}
+                    {b.status === "paused" && <Btn size="sm" variant="outline" onClick={() => upd(b.id, { status: "active" })}><Play size={13} /> Aktifkan</Btn>}
+                    <button className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-error" aria-label={`Hapus banner ${b.title}`} onClick={() => patch((a) => ({ ...a, banners: a.banners.filter((x) => x.id !== b.id) }))}><Trash2 size={15} /></button>
+                  </div>
+                </Tile>
+              );
+            })}
           </div>
-        </form>
-      )}
-
-      {acc.banners.length === 0 ? (
-        <EmptyState title="Belum ada banner" text="Buat banner pertama untuk menjangkau lebih banyak pelanggan." />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {acc.banners.map((b) => {
-            const st = STATUS[b.status] || STATUS.paused;
-            return (
-              <Tile key={b.id} className="p-4 flex items-center justify-between gap-4 flex-wrap">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5"><p className="text-[14.5px] font-semibold text-zinc-900 m-0">{b.title}</p><Badge tone={st.tone}>{st.label}</Badge></div>
-                  <p className="text-[12.5px] text-zinc-500 m-0">{b.subtitle}</p>
-                  <p className="text-[12px] text-zinc-400 m-0 mt-1">{fmtDate(b.startsAt, { day: "numeric", month: "short", year: "numeric" })} – {fmtDate(b.endsAt, { day: "numeric", month: "short", year: "numeric" })} · {fmtNum(b.impressions)} tayangan · {fmtNum(b.clicks)} klik</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {b.status === "active" && <Btn size="sm" variant="outline" onClick={() => upd(b.id, { status: "paused" })}><Pause size={13} /> Jeda</Btn>}
-                  {b.status === "paused" && <Btn size="sm" variant="outline" disabled={atLimit} onClick={() => upd(b.id, { status: "active" })}><Play size={13} /> Aktifkan</Btn>}
-                  <button className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-red-500" aria-label={`Hapus banner ${b.title}`} onClick={() => patch((a) => ({ ...a, banners: a.banners.filter((x) => x.id !== b.id) }))}><Trash2 size={15} /></button>
-                </div>
-              </Tile>
-            );
-          })}
-        </div>
-      )}
-    </Card>
+        )}
+      </Card>
+    </div>
   );
 }
 
 /* ------------------------------------------------------- Highlighted Brand */
 export function HighlightedTab() {
   const acc = useAccount();
-  const patch = usePartner((s) => s.patch);
-  const [days, setDays] = useState(14);
-  const h = acc.highlighted;
-  const set = (active) =>
-    patch((a) => ({ ...a, highlighted: { active, until: active ? new Date(Date.now() + days * 864e5).toISOString() : null } }));
+  const startCheckout = usePartner((s) => s.startCheckout);
+  const navigate = useNavigate();
+  const T = AD_TYPES.highlighted;
+  const own = activeHighlight(acc);
+  const [slot, setSlot] = useState(null);
+  const [weeks, setWeeks] = useState(1);
+  const [startsOn, setStartsOn] = useState(dayStr());
+
+  function order(total) {
+    startCheckout({ kind: "ad", adType: "highlighted", slot, weeks, unit: T.price, qty: 1, total, startsOn, label: `${T.label} — Slot ${slot}`, backTo: "/partner/promotion/highlighted" });
+    navigate("/partner/checkout");
+  }
 
   return (
-    <ProLock feature="featuredStore" title="Highlighted Brand adalah fitur Pro" text="Buka Featured Store dengan Pro agar toko Anda tampil sebagai brand unggulan di beranda TryLens.">
-      <Card className="max-w-[720px]">
-        <CardHeader title="Highlighted Brand" subtitle="Tampilkan toko Anda sebagai Featured Store di bagian “Toko Optik Pilihan”." />
-        <div className="rounded-xl border border-zinc-200/80 bg-white p-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[14px] font-medium text-zinc-900 m-0">Featured Store {h.active && <Badge tone="green" className="ml-1">Aktif</Badge>}</p>
-              <p className="text-[12.5px] text-zinc-500 m-0">{h.active ? `Aktif sampai ${fmtDate(h.until)}` : "Belum diaktifkan."}</p>
-            </div>
-            <Toggle checked={h.active} onChange={set} label="Aktifkan Featured Store" />
+    <ProLock feature={T.feature} title="Highlighted Brand adalah fitur Pro" text="Upgrade ke Pro untuk memesan slot Highlighted Brand dan tampil sebagai brand unggulan di beranda TryLens.">
+      <Card className="max-w-[820px]">
+        <CardHeader title="Highlighted Brand" subtitle={`Tampil di bagian “Toko Optik Pilihan” beranda. ${fmtRp(T.price)} per slot per minggu.`} />
+        {own && (
+          <div className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 mb-4 text-[13px] text-ink-text">
+            Toko Anda tampil di <strong>Slot {own.slot}</strong> sampai {fmtDate(own.endsOn)}.
           </div>
-          <Field label="Durasi penayangan">
-            <select className={`${inputCls} max-w-[220px]`} value={days} onChange={(e) => setDays(Number(e.target.value))} disabled={h.active}>
-              {[7, 14, 30].map((d) => <option key={d} value={d}>{d} hari</option>)}
-            </select>
-          </Field>
+        )}
+        <p className="text-[13px] font-medium text-ink-text m-0 mb-2">Pilih slot</p>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5" role="radiogroup" aria-label="Slot Highlighted Brand">
+          {Array.from({ length: T.slots }, (_, i) => i + 1).map((n) => {
+            const taken = T.takenSlots.includes(n) || (own && own.slot === n);
+            return (
+              <button key={n} type="button" role="radio" aria-checked={slot === n} disabled={taken} onClick={() => setSlot(n)}
+                className={`rounded-xl border py-3 text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${slot === n ? "border-blue-deep bg-surface-blue" : "border-[#DDE8F4] bg-white hover:border-blue"}`}>
+                <span className="block text-[15px] font-bold text-ink">Slot {n}</span>
+                <span className="block text-[11.5px] text-ink-muted">{taken ? "Terisi" : "Tersedia"}</span>
+              </button>
+            );
+          })}
         </div>
+        <OrderFooter unit={T.price} weeks={weeks} setWeeks={setWeeks} startsOn={startsOn} setStartsOn={setStartsOn} disabled={!slot} onOrder={order} note={!slot ? "Pilih slot terlebih dahulu." : null} />
+        <OrderHistory type="highlighted" />
       </Card>
     </ProLock>
   );
 }
 
 /* --------------------------------------------------------- Sponsored Frame */
-const MAX_SPONSORED = 3;
 export function SponsoredTab() {
   const acc = useAccount();
-  const patch = usePartner((s) => s.patch);
-  const toggle = (id) =>
-    patch((a) => ({ ...a, sponsored: a.sponsored.includes(id) ? a.sponsored.filter((x) => x !== id) : [...a.sponsored, id].slice(0, MAX_SPONSORED) }));
+  const startCheckout = usePartner((s) => s.startCheckout);
+  const navigate = useNavigate();
+  const T = AD_TYPES.sponsored;
+  const [placement, setPlacement] = useState(T.placements[1].key);
+  const [frameIds, setFrameIds] = useState([]);
+  const [weeks, setWeeks] = useState(1);
+  const [startsOn, setStartsOn] = useState(dayStr());
+  const pl = T.placements.find((p) => p.key === placement);
+  const toggle = (id) => setFrameIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= T.maxFrames ? cur : [...cur, id]));
+
+  function order(total) {
+    startCheckout({ kind: "ad", adType: "sponsored", placement, frameIds, weeks, unit: pl.price, qty: frameIds.length, total, startsOn, label: `${T.label} — ${pl.label}`, backTo: "/partner/promotion/sponsored" });
+    navigate("/partner/checkout");
+  }
 
   return (
-    <ProLock feature="sponsoredFrame" title="Sponsored Frame adalah fitur Pro" text="Buka Sponsored Frame dengan Pro agar frame pilihan Anda tampil di posisi teratas hasil pencarian dan beranda.">
+    <ProLock feature={T.feature} title="Sponsored Frame adalah fitur Pro" text="Upgrade ke Pro untuk memesan Sponsored Frame dan menampilkan frame pilihan di posisi teratas.">
       <Card>
-        <CardHeader title="Sponsored Frame" subtitle={`Pilih hingga ${MAX_SPONSORED} frame untuk ditampilkan di posisi teratas. Terpilih: ${acc.sponsored.length}/${MAX_SPONSORED}.`} />
+        <CardHeader title="Sponsored Frame" subtitle={`Tampilkan hingga ${T.maxFrames} frame di posisi teratas. Rp200.000–800.000 per frame per minggu, tergantung penempatan.`} />
+        <Placements options={T.placements} value={placement} onChange={setPlacement} />
+        <p className="text-[13px] font-medium text-ink-text mt-5 mb-2">Pilih frame ({frameIds.length}/{T.maxFrames})</p>
         {acc.frames.length === 0 ? (
           <EmptyState title="Belum ada frame" />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {acc.frames.map((f) => {
-              const on = acc.sponsored.includes(f.id);
-              const full = !on && acc.sponsored.length >= MAX_SPONSORED;
+              const on = frameIds.includes(f.id);
+              const full = !on && frameIds.length >= T.maxFrames;
               return (
-                <button key={f.id} disabled={full} onClick={() => toggle(f.id)} aria-pressed={on} className={`text-left rounded-xl border bg-white p-3 transition-colors disabled:opacity-40 ${on ? "border-zinc-900 ring-1 ring-zinc-900" : "border-zinc-200/80 hover:border-zinc-400"}`}>
-                  <div className="bg-zinc-50 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
-                  <p className="text-[13px] font-medium text-zinc-900 m-0 truncate">{f.name}</p>
-                  <p className="text-[12px] text-zinc-500 m-0 mb-1.5">{fmtRp(f.price)}</p>
-                  {on ? <Badge tone="dark">Sponsored</Badge> : <span className="text-[11.5px] text-zinc-400">Klik untuk sponsori</span>}
+                <button key={f.id} type="button" disabled={full} onClick={() => toggle(f.id)} aria-pressed={on}
+                  className={`text-left rounded-xl border bg-white p-3 transition-colors disabled:opacity-40 ${on ? "border-blue-deep ring-1 ring-blue-deep" : "border-[#DDE8F4] hover:border-blue"}`}>
+                  <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
+                  <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
+                  <p className="text-[12px] text-ink-muted m-0 mb-1.5">{fmtRp(f.price)}</p>
+                  {on ? <Badge tone="dark">Dipilih</Badge> : <span className="text-[11.5px] text-ink-muted">Klik untuk memilih</span>}
                 </button>
               );
             })}
           </div>
         )}
+        <OrderFooter unit={pl.price} qty={Math.max(1, frameIds.length)} weeks={weeks} setWeeks={setWeeks} startsOn={startsOn} setStartsOn={setStartsOn} disabled={frameIds.length === 0} onOrder={order} note={frameIds.length === 0 ? "Pilih minimal 1 frame." : null} />
+        <OrderHistory type="sponsored" />
       </Card>
     </ProLock>
   );

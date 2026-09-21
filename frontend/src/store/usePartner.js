@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { PLANS, seedAccounts, addMonths } from "../data/partnerMock.js";
+import { AD_TYPES, INTERVALS, addMonths, endsOn, planLabel, planPrice, seedAccounts } from "../data/partnerMock.js";
 
 // Sementara semua data mitra disimpan di localStorage (mode demo tanpa backend).
 // Setiap aksi di bawah nanti diganti dengan pemanggilan API PHP; bentuk datanya
@@ -52,9 +52,7 @@ export const usePartner = create(
           frames: [],
           collections: [],
           banners: [],
-          sponsored: [],
-          highlighted: { active: false, until: null },
-          leads: [],
+          adOrders: [],
           invoices: [],
           vto: { enabled: true, share: true, tint: "clear" },
           storeSettings: { visible: true, showContact: true, autoReply: "Terima kasih sudah menghubungi kami!", hours: "Senin–Sabtu, 09.00–20.00" },
@@ -86,38 +84,57 @@ export const usePartner = create(
           return { accounts: { ...s.accounts, [key]: fn(s.accounts[key]) } };
         }),
 
-      startCheckout: (plan, upgrade = false) => set({ checkout: { plan, upgrade } }),
+      /**
+       * Mulai checkout. item = { kind:"subscription", plan, interval, upgrade }
+       *                     atau { kind:"ad", adType, placement, slot, frameIds, weeks, unit, total, startsOn, label, banner, backTo }
+       */
+      startCheckout: (item) => set({ checkout: item }),
       cancelCheckout: () => set({ checkout: null }),
 
-      /** Simulasi pembayaran sukses → langganan aktif + invoice. */
+      /** Simulasi pembayaran sukses → langganan aktif / pesanan iklan aktif + invoice. */
       completePayment: (method) => {
         const { session, accounts, checkout } = get();
         const acc = accounts[session.email];
-        const now = new Date();
-        const iso = now.toISOString();
+        const iso = new Date().toISOString();
         const stamp = iso.slice(0, 10).replace(/-/g, "");
-        const invoice = {
-          id: `INV-${stamp}-${String(acc.invoices.length + 1).padStart(4, "0")}`,
-          date: iso.slice(0, 10),
-          plan: checkout.plan,
-          amount: PLANS[checkout.plan].price,
-          status: "paid",
-          method
-        };
-        const subscription = {
-          plan: checkout.plan,
-          status: "active",
-          startedAt: iso,
-          currentPeriodEnd: addMonths(iso, 1),
-          nextBillingAt: addMonths(iso, 1),
-          cancelAtPeriodEnd: false,
-          pendingPlan: null
-        };
-        set((s) => ({
-          accounts: { ...s.accounts, [acc.email]: { ...acc, subscription, invoices: [invoice, ...acc.invoices] } },
-          checkout: null,
-          lastInvoiceId: invoice.id
-        }));
+        const all = Object.values(accounts);
+        const taken = (id) => all.some((a) => a.invoices.some((i) => i.id === id));
+        let n = all.reduce((sum, a) => sum + a.invoices.length, 0) + 1;
+        while (taken(`INV-${stamp}-${String(n).padStart(4, "0")}`)) n += 1;
+        const invNo = `INV-${stamp}-${String(n).padStart(4, "0")}`;
+        let next;
+        let invoice;
+
+        if (checkout.kind === "ad") {
+          const c = checkout;
+          const order = {
+            id: `AO-${stamp}-${String(n).padStart(4, "0")}`,
+            type: c.adType,
+            placement: c.placement || null,
+            label: c.label,
+            weeks: c.weeks,
+            unit: c.unit,
+            total: c.total,
+            startsOn: c.startsOn,
+            endsOn: endsOn(c.startsOn, c.weeks),
+            status: "paid",
+            frameIds: c.frameIds || [],
+            slot: c.slot || null
+          };
+          invoice = { id: invNo, date: iso.slice(0, 10), kind: "ad", label: `${c.label} (${c.weeks} minggu)`, amount: c.total, status: "paid", method, tab: AD_TYPES[c.adType].tab };
+          const banner =
+            c.adType === "banner"
+              ? { id: `b-${Date.now().toString(36)}`, ...c.banner, placement: c.placement, orderId: order.id, status: "pending_review", startsAt: c.startsOn, endsAt: order.endsOn, impressions: 0, clicks: 0 }
+              : null;
+          next = { ...acc, adOrders: [order, ...acc.adOrders], banners: banner ? [banner, ...acc.banners] : acc.banners, invoices: [invoice, ...acc.invoices] };
+        } else {
+          const { plan, interval } = checkout;
+          const end = addMonths(iso, INTERVALS[interval].months);
+          invoice = { id: invNo, date: iso.slice(0, 10), kind: "subscription", label: planLabel(plan, interval), plan, amount: planPrice(plan, interval), status: "paid", method };
+          const subscription = { plan, interval, status: "active", startedAt: iso, currentPeriodEnd: end, nextBillingAt: end, cancelAtPeriodEnd: false, pendingPlan: null };
+          next = { ...acc, subscription, invoices: [invoice, ...acc.invoices] };
+        }
+        set((s) => ({ accounts: { ...s.accounts, [acc.email]: next }, checkout: null, lastInvoiceId: invoice.id }));
         return invoice;
       },
 
@@ -133,7 +150,11 @@ export const usePartner = create(
           }
         }))
     }),
-    { name: "trylens-partner", version: 1 }
+    {
+      name: "trylens-partner",
+      version: 2, // v2: harga tahunan, pesanan iklan mingguan, konsultasi pindah ke store terpisah
+      migrate: () => ({ accounts: seedAccounts(), session: null, checkout: null, lastInvoiceId: null })
+    }
   )
 );
 

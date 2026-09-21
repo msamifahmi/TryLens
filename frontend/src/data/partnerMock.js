@@ -6,48 +6,117 @@ import { PRODUCTS, MERCHANTS } from "./mockData.js";
 
 /* ---------------------------------------------------------------- paket */
 
-// Harga Pro (Rp599.000) adalah angka sementara — sesuaikan dengan keputusan bisnis.
+// Harga paket dari keputusan bisnis: Basic Rp299.000/bln atau Rp2.990.000/thn (hemat 2 bulan),
+// Pro Rp799.000/bln atau Rp7.990.000/thn (hemat 2 bulan).
 export const PLANS = {
   basic: {
     code: "basic",
     name: "Basic",
-    price: 299000,
+    priceMonth: 299000,
+    priceYear: 2990000,
     tagline: "Untuk toko yang baru mulai tampil di TryLens",
-    limits: { frames: 50, banners: 1 },
+    limits: { frames: 50 },
     features: { advancedAnalytics: false, featuredStore: false, sponsoredFrame: false },
     perks: [
       "Profil toko & etalase hingga 50 frame",
       "Virtual Try-On untuk semua frame",
+      "Permintaan konsultasi + hasil scan wajah pelanggan",
       "Analitik dasar (ikhtisar)",
-      "1 banner iklan aktif",
-      "Notifikasi permintaan pelanggan"
+      "Bisa memesan slot iklan banner (per minggu)"
     ]
   },
   pro: {
     code: "pro",
     name: "Pro",
-    price: 599000,
+    priceMonth: 799000,
+    priceYear: 7990000,
     tagline: "Untuk toko yang ingin tumbuh lebih cepat",
-    limits: { frames: 9999, banners: 5 },
+    limits: { frames: 9999 },
     features: { advancedAnalytics: true, featuredStore: true, sponsoredFrame: true },
     perks: [
       "Semua fitur Basic",
       "Frame tanpa batas",
       "Analitik Lanjutan (pengunjung, produk, try-on)",
-      "Featured Store — toko tampil sebagai brand unggulan",
-      "Sponsored Frame — frame tampil di posisi teratas",
-      "Hingga 5 banner iklan aktif"
+      "Bisa memesan Highlighted Brand (per minggu)",
+      "Bisa memesan Sponsored Frame (per minggu)"
     ]
   }
 };
 
+export const INTERVALS = {
+  month: { key: "month", label: "Bulanan", per: "bulan", months: 1 },
+  year: { key: "year", label: "Tahunan", per: "tahun", months: 12 }
+};
+
+export const planPrice = (code, interval = "month") => (interval === "year" ? PLANS[code].priceYear : PLANS[code].priceMonth);
+/** Penghematan paket tahunan dibanding 12× bulanan. */
+export const yearlySaving = (code) => PLANS[code].priceMonth * 12 - PLANS[code].priceYear;
+export const planLabel = (code, interval) => `Paket ${PLANS[code].name} (${INTERVALS[interval].label})`;
+
 export const LOCKED_FEATURES = [
   { key: "advancedAnalytics", label: "Analitik Lanjutan" },
-  { key: "featuredStore", label: "Featured Store" },
+  { key: "featuredStore", label: "Highlighted Brand" },
   { key: "sponsoredFrame", label: "Sponsored Frame" }
 ];
 
 export const can = (planCode, feature) => !!PLANS[planCode]?.features[feature];
+
+/* ------------------------------------------------- Iklan & Premium (per minggu) */
+// Angka awal dari keputusan bisnis: banner mulai Rp500.000/mgg, Highlighted Brand Rp350.000/mgg per slot,
+// Sponsored Frame Rp200.000–800.000/mgg. Harga penempatan di antaranya adalah placeholder — sesuaikan.
+export const AD_TYPES = {
+  banner: {
+    key: "banner",
+    label: "Slot Iklan Banner",
+    tab: "banners",
+    placements: [
+      { key: "mitra", label: "Halaman Mitra", price: 500000 },
+      { key: "beranda", label: "Beranda TryLens", price: 900000 }
+    ]
+  },
+  highlighted: {
+    key: "highlighted",
+    label: "Highlighted Brand",
+    tab: "highlighted",
+    feature: "featuredStore",
+    price: 350000,
+    slots: 6,
+    takenSlots: [2, 5] // slot yang sudah dipesan toko lain (mock)
+  },
+  sponsored: {
+    key: "sponsored",
+    label: "Sponsored Frame",
+    tab: "sponsored",
+    feature: "sponsoredFrame",
+    maxFrames: 3,
+    placements: [
+      { key: "kategori", label: "Halaman Kategori", price: 200000 },
+      { key: "pencarian", label: "Hasil Pencarian", price: 450000 },
+      { key: "beranda", label: "Rekomendasi Beranda", price: 800000 }
+    ]
+  }
+};
+export const MAX_WEEKS = 8;
+
+export const dayStr = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+export const addDays = (yyyyMmDd, n) => {
+  const d = new Date(yyyyMmDd + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+/** Tanggal berakhir = mulai + (minggu × 7 − 1) hari. */
+export const endsOn = (startsOn, weeks) => addDays(startsOn, weeks * 7 - 1);
+
+export function orderStatus(order, today = dayStr()) {
+  if (order.status !== "paid") return order.status;
+  if (order.endsOn < today) return "ended";
+  if (order.startsOn > today) return "scheduled";
+  return "active";
+}
+/** Pesanan iklan yang sedang tayang untuk satu jenis. */
+export const activeOrders = (acc, type) => (acc.adOrders || []).filter((o) => o.type === type && orderStatus(o) === "active");
+export const activeHighlight = (acc) => activeOrders(acc, "highlighted")[0] || null;
+export const sponsoredIds = (acc) => [...new Set(activeOrders(acc, "sponsored").flatMap((o) => o.frameIds))].filter((id) => acc.frames.some((f) => f.id === id));
 
 /* ---------------------------------------------------------------- util */
 
@@ -73,9 +142,7 @@ function defaultData() {
     frames: [],
     collections: [],
     banners: [],
-    sponsored: [],
-    highlighted: { active: false, until: null },
-    leads: [],
+    adOrders: [],
     invoices: [],
     vto: { enabled: true, share: true, tint: "clear" },
     storeSettings: {
@@ -122,6 +189,7 @@ function partnerAccount({ id, name, email, merchantId, plan }) {
       plan,
       status: "active",
       startedAt: "2026-09-20T00:00:00.000Z",
+      interval: "month",
       currentPeriodEnd: "2026-10-20T00:00:00.000Z",
       nextBillingAt: "2026-10-20T00:00:00.000Z",
       cancelAtPeriodEnd: false,
@@ -147,18 +215,26 @@ function partnerAccount({ id, name, email, merchantId, plan }) {
       { id: "c2", name: "Promo Bulan Ini", published: true, frameIds: ids.slice(1, 4) }
     ],
     banners: [
-      { id: "b1", title: "Promo Frame Terbaru", subtitle: "Diskon hingga 33% untuk frame pilihan", cta: "Lihat Promo", status: "active", startsAt: "2026-09-01", endsAt: "2026-09-30", impressions: 12840, clicks: 412 }
+      { id: "b1", title: "Promo Frame Terbaru", subtitle: "Diskon hingga 33% untuk frame pilihan", cta: "Lihat Promo", placement: "mitra", orderId: `AO-20260901-${String(id.slice(1)).padStart(4, "0")}`, status: "active", startsAt: "2026-09-01", endsAt: "2026-09-28", impressions: 12840, clicks: 412 }
     ],
-    sponsored: plan === "pro" ? ids.slice(0, 1) : [],
-    highlighted: plan === "pro" ? { active: true, until: "2026-10-20T00:00:00.000Z" } : { active: false, until: null },
-    leads: [
-      { id: "l1", name: "Rina Wulandari", date: "2026-09-19", topic: "Frame Wanita · Cat Eye", message: "Tertarik dengan frame cat eye, apakah bisa dipasangi lensa minus 2,5 dan silinder?", status: "new" },
-      { id: "l2", name: "Budi Hartono", date: "2026-09-18", topic: "Frame Pria · Aviator", message: "Frame aviator warna gold masih ada stok? Saya ingin ambil hari Sabtu.", status: "new" },
-      { id: "l3", name: "Citra Maharani", date: "2026-09-16", topic: "Frame Anak · Round", message: "Untuk anak usia 7 tahun, ukuran frame yang cocok yang mana ya?", status: "new" },
-      { id: "l4", name: "Andi Pratama", date: "2026-09-14", topic: "Promo · Flash Sale", message: "Flash sale frame Browline berlaku sampai kapan? Bisa COD?", status: "new" }
+    adOrders: [
+      { id: `AO-20260901-${String(id.slice(1)).padStart(4, "0")}`, type: "banner", placement: "mitra", label: "Slot Iklan Banner — Halaman Mitra", weeks: 4, unit: 500000, total: 2000000, startsOn: "2026-09-01", endsOn: "2026-09-28", status: "paid", frameIds: [], slot: null },
+      ...(plan === "pro"
+        ? [
+            { id: "AO-20260920-0002", type: "highlighted", placement: null, label: "Highlighted Brand — Slot 1", weeks: 2, unit: 350000, total: 700000, startsOn: "2026-09-20", endsOn: "2026-10-03", status: "paid", frameIds: [], slot: 1 },
+            { id: "AO-20260920-0003", type: "sponsored", placement: "pencarian", label: "Sponsored Frame — Hasil Pencarian", weeks: 2, unit: 450000, total: 900000, startsOn: "2026-09-20", endsOn: "2026-10-03", status: "paid", frameIds: ids.slice(0, 1), slot: null }
+          ]
+        : [])
     ],
     invoices: [
-      { id: `INV-20260920-${String(id.slice(1)).padStart(4, "0")}`, date: "2026-09-20", plan, amount: PLANS[plan].price, status: "paid", method: "QRIS" }
+      { id: `INV-20260920-${String(id.slice(1)).padStart(4, "0")}`, date: "2026-09-20", kind: "subscription", label: planLabel(plan, "month"), plan, amount: planPrice(plan, "month"), status: "paid", method: "QRIS" },
+      { id: `INV-20260901-${String(Number(id.slice(1)) + 10).padStart(4, "0")}`, date: "2026-09-01", kind: "ad", label: "Slot Iklan Banner — Halaman Mitra (4 minggu)", amount: 2000000, status: "paid", method: "VA BCA", tab: "banners" },
+      ...(plan === "pro"
+        ? [
+            { id: "INV-20260920-0013", date: "2026-09-20", kind: "ad", label: "Highlighted Brand — Slot 1 (2 minggu)", amount: 700000, status: "paid", method: "QRIS", tab: "highlighted" },
+            { id: "INV-20260920-0014", date: "2026-09-20", kind: "ad", label: "Sponsored Frame — Hasil Pencarian (2 minggu)", amount: 900000, status: "paid", method: "QRIS", tab: "sponsored" }
+          ]
+        : [])
     ]
   };
 }

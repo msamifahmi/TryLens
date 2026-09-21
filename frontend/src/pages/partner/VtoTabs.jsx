@@ -32,9 +32,9 @@ export function VtoLibraryTab() {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {acc.frames.map((f) => (
             <Tile key={f.id} className="p-3">
-              <div className="bg-zinc-50 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
-              <p className="text-[13px] font-medium text-zinc-900 m-0 truncate">{f.name}</p>
-              <p className="text-[11.5px] text-zinc-500 m-0 mb-2.5">{STYLE_LABELS[f.style]}</p>
+              <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
+              <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
+              <p className="text-[11.5px] text-ink-muted m-0 mb-2.5">{STYLE_LABELS[f.style]}</p>
               <div className="flex items-center justify-between">
                 <Badge tone={f.vto ? "green" : "gray"}>{f.vto ? "Try-On aktif" : "Nonaktif"}</Badge>
                 <Toggle checked={f.vto} onChange={(v) => setVto(f.id, v)} label={`Try-On ${f.name}`} />
@@ -68,31 +68,31 @@ export function VtoAnalyticsTab() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         {tiles.map(([k, v]) => (
           <Tile key={k} className="p-4">
-            <p className="text-[12.5px] text-zinc-500 m-0 mb-1.5">{k}</p>
-            <p className="text-[24px] font-semibold text-zinc-900 tracking-tight m-0">{v}</p>
+            <p className="text-[12.5px] text-ink-muted m-0 mb-1.5">{k}</p>
+            <p className="text-[24px] font-semibold text-ink tracking-tight m-0">{v}</p>
           </Tile>
         ))}
       </div>
       <Tile className="p-4">
-        <p className="text-[14px] font-semibold text-zinc-900 m-0 mb-3">Frame paling sering dicoba</p>
+        <p className="text-[14px] font-semibold text-ink m-0 mb-3">Frame paling sering dicoba</p>
         {top.length === 0 ? (
-          <p className="text-[13px] text-zinc-500 m-0">Belum ada data.</p>
+          <p className="text-[13px] text-ink-muted m-0">Belum ada data.</p>
         ) : (
           <ol className="list-none m-0 p-0 flex flex-col gap-2">
             {top.map((f, i) => (
               <li key={f.id} className="flex items-center gap-3 text-[13px]">
-                <span className="w-5 text-zinc-400">{i + 1}</span>
+                <span className="w-5 text-ink-muted">{i + 1}</span>
                 <span className="w-12 h-6 flex-shrink-0"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></span>
-                <span className="flex-1 truncate text-zinc-900">{f.name}</span>
-                <span className="font-medium text-zinc-900">{fmtNum(f.vto)} sesi</span>
+                <span className="flex-1 truncate text-ink">{f.name}</span>
+                <span className="font-medium text-ink">{fmtNum(f.vto)} sesi</span>
               </li>
             ))}
           </ol>
         )}
       </Tile>
       {plan === "basic" && (
-        <p className="text-[12.5px] text-zinc-500 m-0 mt-3">
-          Rincian per gaya dan funnel try-on tersedia di <Link to="/partner/analytics/tryon" className="text-zinc-900 underline">Analitik → Try-On Performance</Link> (Pro).
+        <p className="text-[12.5px] text-ink-muted m-0 mt-3">
+          Rincian per gaya dan funnel try-on tersedia di <Link to="/partner/analytics/tryon" className="text-ink underline">Analitik → Try-On Performance</Link> (Pro).
         </p>
       )}
     </Card>
@@ -116,18 +116,18 @@ export function VtoSettingsTab() {
   return (
     <Card className="max-w-[720px]">
       <CardHeader title="VTO Settings" subtitle="Atur perilaku Virtual Try-On di halaman toko Anda. Perubahan tersimpan otomatis." />
-      <div className="flex flex-col divide-y divide-zinc-100 rounded-xl border border-zinc-200/80 bg-white">
+      <div className="flex flex-col divide-y divide-[#E8F0F8] rounded-xl border border-[#DDE8F4] bg-white">
         <div className="flex items-center justify-between gap-4 p-4">
           <div>
-            <p className="text-[14px] font-medium text-zinc-900 m-0">Aktifkan Virtual Try-On</p>
-            <p className="text-[12.5px] text-zinc-500 m-0">Tombol “Coba” tampil di setiap frame yang diaktifkan.</p>
+            <p className="text-[14px] font-medium text-ink m-0">Aktifkan Virtual Try-On</p>
+            <p className="text-[12.5px] text-ink-muted m-0">Tombol “Coba” tampil di setiap frame yang diaktifkan.</p>
           </div>
           <Toggle checked={v.enabled} onChange={(x) => set({ enabled: x })} label="Aktifkan Virtual Try-On" />
         </div>
         <div className="flex items-center justify-between gap-4 p-4">
           <div>
-            <p className="text-[14px] font-medium text-zinc-900 m-0">Izinkan berbagi tangkapan layar</p>
-            <p className="text-[12.5px] text-zinc-500 m-0">Pelanggan bisa membagikan hasil try-on ke teman atau media sosial.</p>
+            <p className="text-[14px] font-medium text-ink m-0">Izinkan berbagi tangkapan layar</p>
+            <p className="text-[12.5px] text-ink-muted m-0">Pelanggan bisa membagikan hasil try-on ke teman atau media sosial.</p>
           </div>
           <Toggle checked={v.share} onChange={(x) => set({ share: x })} label="Izinkan berbagi tangkapan layar" disabled={!v.enabled} />
         </div>

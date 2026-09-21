@@ -79,8 +79,8 @@ export default function SectionPage() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-[22px] font-semibold text-zinc-900 tracking-tight m-0">{cfg.title}</h1>
-        <p className="text-[13px] text-zinc-500 m-0">{cfg.subtitle}</p>
+        <h1 className="text-[22px] font-semibold text-ink tracking-tight m-0">{cfg.title}</h1>
+        <p className="text-[13px] text-ink-muted m-0">{cfg.subtitle}</p>
       </div>
       <SubTabs base={`/partner/${section}`} tabs={cfg.tabs} active={current.key} />
       <Content key={`${section}/${current.key}`} />

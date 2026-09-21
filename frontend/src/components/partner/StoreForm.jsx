@@ -48,7 +48,7 @@ export default function StoreForm({ initial, submitLabel, onSubmit, footerExtra,
             {initialsOf(f.name)}
           </div>
           <div>
-            <p className="text-[12.5px] font-medium text-zinc-700 m-0 mb-1.5">Warna brand</p>
+            <p className="text-[12.5px] font-medium text-ink-text m-0 mb-1.5">Warna brand</p>
             <div className="flex gap-2">
               {BRAND_COLORS.map((c) => (
                 <button
@@ -57,7 +57,7 @@ export default function StoreForm({ initial, submitLabel, onSubmit, footerExtra,
                   onClick={() => setF((p) => ({ ...p, color: c }))}
                   aria-label={`Warna ${c}`}
                   aria-pressed={f.color === c}
-                  className={`w-7 h-7 rounded-full ${f.color === c ? "ring-2 ring-offset-2 ring-zinc-900" : ""}`}
+                  className={`w-7 h-7 rounded-full ${f.color === c ? "ring-2 ring-offset-2 ring-blue-deep" : ""}`}
                   style={{ background: c }}
                 />
               ))}
@@ -89,7 +89,7 @@ export default function StoreForm({ initial, submitLabel, onSubmit, footerExtra,
           <input className={inputCls} value={f.phone} onChange={set("phone")} placeholder="0271-xxxxxx" />
         </Field>
 
-        <p className="md:col-span-2 text-[12.5px] font-semibold text-zinc-700 m-0 mt-2">Tautan online (opsional)</p>
+        <p className="md:col-span-2 text-[12.5px] font-semibold text-ink-text m-0 mt-2">Tautan online (opsional)</p>
         <Field label="Instagram"><input className={inputCls} value={f.instagram} onChange={set("instagram")} placeholder="https://instagram.com/…" /></Field>
         <Field label="X"><input className={inputCls} value={f.x} onChange={set("x")} placeholder="https://x.com/…" /></Field>
         <Field label="Tokopedia"><input className={inputCls} value={f.tokopedia} onChange={set("tokopedia")} placeholder="https://tokopedia.com/…" /></Field>

@@ -61,18 +61,18 @@ export function StoreSettingsTab() {
   return (
     <Card className="max-w-[720px]">
       <CardHeader title="Pengaturan Toko" subtitle="Perubahan tersimpan otomatis." />
-      <div className="flex flex-col divide-y divide-zinc-100 rounded-xl border border-zinc-200/80 bg-white">
+      <div className="flex flex-col divide-y divide-[#E8F0F8] rounded-xl border border-[#DDE8F4] bg-white">
         <div className="flex items-center justify-between gap-4 p-4">
           <div>
-            <p className="text-[14px] font-medium text-zinc-900 m-0">Tampilkan toko di TryLens</p>
-            <p className="text-[12.5px] text-zinc-500 m-0">Matikan untuk menyembunyikan toko sementara (mis. saat libur).</p>
+            <p className="text-[14px] font-medium text-ink m-0">Tampilkan toko di TryLens</p>
+            <p className="text-[12.5px] text-ink-muted m-0">Matikan untuk menyembunyikan toko sementara (mis. saat libur).</p>
           </div>
           <Toggle checked={s.visible} onChange={(v) => set({ visible: v })} label="Tampilkan toko" />
         </div>
         <div className="flex items-center justify-between gap-4 p-4">
           <div>
-            <p className="text-[14px] font-medium text-zinc-900 m-0">Tombol “Hubungi Toko”</p>
-            <p className="text-[12.5px] text-zinc-500 m-0">Izinkan pelanggan menghubungi lewat WhatsApp.</p>
+            <p className="text-[14px] font-medium text-ink m-0">Tombol “Hubungi Toko”</p>
+            <p className="text-[12.5px] text-ink-muted m-0">Izinkan pelanggan menghubungi lewat WhatsApp.</p>
           </div>
           <Toggle checked={s.showContact} onChange={(v) => set({ showContact: v })} label="Tombol hubungi toko" />
         </div>
@@ -108,18 +108,18 @@ export function NotificationsTab() {
   return (
     <Card>
       <CardHeader title="Notifikasi" subtitle="Pilih kanal untuk tiap jenis pemberitahuan. Perubahan tersimpan otomatis." />
-      <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-[#DDE8F4] bg-white">
         <table className="w-full text-[13px] border-collapse min-w-[560px]">
           <thead>
-            <tr className="text-left text-zinc-500 text-[12px]">
-              <th className="font-medium px-4 py-3 border-b border-zinc-100">Pemberitahuan</th>
-              {CHANNELS.map((c) => <th key={c.key} className="font-medium px-4 py-3 border-b border-zinc-100 text-center">{c.label}</th>)}
+            <tr className="text-left text-ink-muted text-[12px]">
+              <th className="font-medium px-4 py-3 border-b border-[#E8F0F8]">Pemberitahuan</th>
+              {CHANNELS.map((c) => <th key={c.key} className="font-medium px-4 py-3 border-b border-[#E8F0F8] text-center">{c.label}</th>)}
             </tr>
           </thead>
           <tbody>
             {EVENTS.map((e) => (
-              <tr key={e.key} className="border-b border-zinc-100 last:border-0">
-                <td className="px-4 py-3"><span className="block font-medium text-zinc-900">{e.label}</span><span className="block text-[12px] text-zinc-500">{e.hint}</span></td>
+              <tr key={e.key} className="border-b border-[#E8F0F8] last:border-0">
+                <td className="px-4 py-3"><span className="block font-medium text-ink">{e.label}</span><span className="block text-[12px] text-ink-muted">{e.hint}</span></td>
                 {CHANNELS.map((c) => (
                   <td key={c.key} className="px-4 py-3">
                     <div className="flex justify-center"><Toggle checked={acc.notif[e.key][c.key]} onChange={(v) => set(e.key, c.key, v)} label={`${e.label} lewat ${c.label}`} /></div>

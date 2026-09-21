@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useOutletContext } from "react-router-dom";
 import { PRODUCTS, MERCHANTS, FRAME_COLORS, formatRp } from "../data/mockData.js";
 import { useWishlist } from "../store/useWishlist.js";
 import ProductImage from "../components/ProductImage.jsx";
 import ConnectMerchantModal from "../components/ConnectMerchantModal.jsx";
+import { useConsult } from "../store/useConsult.js";
 
 const SWATCH_ORDER = ["brown", "black", "navy", "blue", "tort", "gold", "red", "clear"];
 
 function HeartIcon({ active }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"}>
-      <path d="M12 21s-7.5-4.6-10-9.3C.5 8.2 2.3 5 5.6 5c1.9 0 3.4 1 4.4 2.5C11 6 12.5 5 14.4 5c3.3 0 5.1 3.2 3.6 6.7C19.5 16.4 12 21 12 21z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -37,6 +38,12 @@ export default function ProductDetailPage() {
   const [activeVariant, setActiveVariant] = useState("main");
   const [qty, setQty] = useState(1);
   const [connectOpen, setConnectOpen] = useState(false);
+
+  // Catat frame yang dilihat (tanpa login) untuk konteks konsultasi.
+  const markViewed = useConsult((s) => s.markViewed);
+  useEffect(() => {
+    if (product) markViewed(product.id);
+  }, [product, markViewed]);
 
   const isWished = useWishlist((s) => (product ? s.isWished(product.id) : false));
   const toggle = useWishlist((s) => s.toggle);
@@ -156,6 +163,15 @@ export default function ProductDetailPage() {
               </svg>
               Checkout — Hubungkan ke {merchant.name}
             </button>
+          )}
+
+          {merchant && (
+            <Link
+              to={`/konsultasi?frame=${product.id}&toko=${merchant.id}`}
+              className="flex items-center justify-center gap-2 h-12 mt-3 rounded-full text-blue-deep font-bold text-sm hover:bg-surface-blue transition-colors"
+            >
+              Belum yakin? Scan wajah &amp; konsultasi dengan optik
+            </Link>
           )}
         </div>
 

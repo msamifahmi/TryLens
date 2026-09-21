@@ -4,6 +4,7 @@ import { PRODUCTS, MERCHANTS } from "../data/mockData.js";
 import { useWishlist } from "../store/useWishlist.js";
 import ProductImage from "../components/ProductImage.jsx";
 import ConnectMerchantModal from "../components/ConnectMerchantModal.jsx";
+import { useConsult } from "../store/useConsult.js";
 
 /**
  * Status kamera:
@@ -38,6 +39,12 @@ export default function TryOnPage() {
   useEffect(() => {
     setActiveId(id);
   }, [id]);
+
+  // Catat frame yang dicoba (tanpa login) agar ikut terkirim bila pengguna meminta konsultasi.
+  const markViewed = useConsult((s) => s.markViewed);
+  useEffect(() => {
+    if (activeId) markViewed(activeId);
+  }, [activeId, markViewed]);
 
   useEffect(() => {
     return () => stopCamera();
@@ -208,7 +215,7 @@ export default function TryOnPage() {
           aria-label="Tambah ke wishlist"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill={isWished ? "currentColor" : "none"}>
-            <path d="M12 21s-7.5-4.6-10-9.3C.5 8.2 2.3 5 5.6 5c1.9 0 3.4 1 4.4 2.5C11 6 12.5 5 14.4 5c3.3 0 5.1 3.2 3.6 6.7C19.5 16.4 12 21 12 21z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           </svg>
         </button>
         {merchant ? (
@@ -227,6 +234,12 @@ export default function TryOnPage() {
           </Link>
         )}
       </div>
+      <Link
+        to={`/konsultasi?frame=${product.id}${merchantId ? `&toko=${merchantId}` : ""}`}
+        className="mt-3 flex items-center justify-center gap-2 h-12 rounded-full border-[1.5px] border-blue text-blue-deep font-bold text-sm hover:bg-surface-blue"
+      >
+        Scan bentuk wajah &amp; konsultasi dengan optik
+      </Link>
       <p className="text-[11.5px] text-ink-muted text-center mt-3">
         TryLens tidak menjual frame secara langsung — pembelian diselesaikan bersama toko optik mitra.
       </p>
@@ -253,6 +266,10 @@ export default function TryOnPage() {
  *   3. (Opsional, untuk klaim "rekomendasi AI") turunkan rasio lebar wajah
  *      terhadap tinggi dari landmark untuk mengelompokkan bentuk wajah
  *      (oval/bulat/kotak), lalu cocokkan ke tag bentuk pada tiap produk.
+ *
+ * UPDATE 8: langkah 3 (bentuk wajah) sudah ada di /konsultasi memakai MediaPipe Face
+ * Landmarker sungguhan (lihat components/consult/FaceScanner.jsx). Overlay frame di halaman
+ * ini tetap BELUM mengikuti gerakan wajah.
  *
  * Sengaja tidak dipasang di iterasi ini karena butuh model ML + testing
  * akurasi tersendiri, dan salah menampilkan "AI mendeteksi wajahmu" tanpa

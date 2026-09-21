@@ -20,11 +20,11 @@ function Bars({ rows, suffix = "%" }) {
       {rows.map((r) => (
         <div key={r.label}>
           <div className="flex justify-between text-[12.5px] mb-1">
-            <span className="text-zinc-700">{r.label}</span>
-            <span className="font-medium text-zinc-900">{r.value}{suffix}</span>
+            <span className="text-ink-text">{r.label}</span>
+            <span className="font-medium text-ink">{r.value}{suffix}</span>
           </div>
-          <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
-            <div className="h-full rounded-full bg-zinc-900" style={{ width: `${(r.value / max) * 100}%` }} />
+          <div className="h-2 rounded-full bg-surface-blue overflow-hidden">
+            <div className="h-full rounded-full bg-blue-deep" style={{ width: `${(r.value / max) * 100}%` }} />
           </div>
         </div>
       ))}
@@ -51,9 +51,9 @@ export function AnalyticsOverviewTab() {
           const k = kpiFor(data.daily, 30, field);
           return (
             <Tile key={field} className="p-4">
-              <p className="text-[12.5px] text-zinc-500 m-0 mb-1.5">{label}</p>
-              <p className="text-[24px] font-semibold text-zinc-900 tracking-tight m-0 mb-1">{fmtNum(k.value)}</p>
-              <p className={`text-[12px] m-0 ${k.delta >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+              <p className="text-[12.5px] text-ink-muted m-0 mb-1.5">{label}</p>
+              <p className="text-[24px] font-semibold text-ink tracking-tight m-0 mb-1">{fmtNum(k.value)}</p>
+              <p className={`text-[12px] m-0 ${k.delta >= 0 ? "text-success" : "text-red-500"}`}>
                 {k.delta >= 0 ? "+" : ""}{k.delta.toFixed(1).replace(".", ",")}%
               </p>
             </Tile>
@@ -79,8 +79,8 @@ export function AnalyticsVisitorsTab() {
           <div className="flex items-end gap-1 h-40" role="img" aria-label="Grafik kunjungan per jam">
             {data.hours.map((v, h) => (
               <div key={h} className="flex-1 flex flex-col items-center gap-1 justify-end h-full">
-                <div className="w-full rounded-t bg-zinc-900" style={{ height: `${(v / maxH) * 100}%` }} title={`${h}.00 — ${v}`} />
-                <span className="text-[10px] text-zinc-400">{h % 3 === 0 ? h : ""}</span>
+                <div className="w-full rounded-t bg-blue-deep" style={{ height: `${(v / maxH) * 100}%` }} title={`${h}.00 — ${v}`} />
+                <span className="text-[10px] text-ink-muted">{h % 3 === 0 ? h : ""}</span>
               </div>
             ))}
           </div>
@@ -97,16 +97,16 @@ export function AnalyticsProductsTab() {
     <ProLock feature="advancedAnalytics" title="Product Performance adalah fitur Pro" text={LOCK_TEXT}>
       <Card>
         <CardHeader title="Performa Produk" subtitle="Frame dengan interaksi tertinggi (30 hari)" />
-        <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-[#DDE8F4] bg-white">
           <table className="w-full text-[13px] border-collapse min-w-[640px]">
             <thead>
-              <tr className="text-left text-zinc-500 text-[12px]">
-                {["Frame", "Dilihat", "Try-On", "Wishlist", "Hubungi", "Konversi"].map((h) => <th key={h} className="font-medium px-4 py-3 border-b border-zinc-100">{h}</th>)}
+              <tr className="text-left text-ink-muted text-[12px]">
+                {["Frame", "Dilihat", "Try-On", "Wishlist", "Hubungi", "Konversi"].map((h) => <th key={h} className="font-medium px-4 py-3 border-b border-[#E8F0F8]">{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {data.topFrames.map((f) => (
-                <tr key={f.id} className="border-b border-zinc-100 last:border-0">
+                <tr key={f.id} className="border-b border-[#E8F0F8] last:border-0">
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3"><span className="w-12 h-6"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></span>{f.name}</div>
                   </td>

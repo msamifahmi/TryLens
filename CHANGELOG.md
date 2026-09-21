@@ -2,9 +2,68 @@
 
 Catatan progres per update. Entri terbaru di paling atas. Jalur file relatif terhadap root `trylens-project/`.
 
-Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel, Merchant Slider, Recommendation Feed dengan Category Tabs, Wishlist) + **Dashboard Mitra** (Update 7).
+Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel, Merchant Slider, Recommendation Feed dengan Category Tabs, Wishlist) + **Dashboard Mitra** (Update 7–8).
 
 ---
+
+## Update 8 — 2026-09-21 — Warna dashboard sesuai palet, model harga (bulanan/tahunan + iklan mingguan), konsultasi konsumen ↔ Mitra dengan scan wajah AR
+
+Zip ini **kumulatif**: berisi semua file Update 7 dan 8 (banyak file Update 7 ikut berubah), jadi cukup ekstrak dan timpa.
+
+### Wajib setelah ekstrak
+1. `cd frontend && npm install` — dependensi baru **`@mediapipe/tasks-vision`** (pemindai wajah; dimuat malas, hanya saat pemindai dibuka) selain `lucide-react` dari Update 7.
+2. Database: jalankan ulang `schema.sql` dan `seed.sql` (skema berubah; **hapus database `trylens` lama dulu** — `DROP DATABASE trylens;`).
+3. Data demo di browser (localStorage) otomatis di-reset satu kali karena struktur data berubah (`trylens-partner` v2).
+
+### 1. Warna dashboard sesuai palet
+Penyebab ketidakkonsistenan: dashboard Update 7 meniru referensi secara harfiah (hitam/putih/abu-abu Tailwind `zinc`), padahal palet TryLens sudah ada di `tailwind.config.js` (`blue` #427AB5, `blue-deep` #406AAF, `accent-yellow` #F7DD7D, `accent-cream` #FFE8BE, `surface-blue`, `ink`). Tata letak tetap mengikuti referensi; **warna kini memakai token palet**:
+- Aksi utama, menu aktif, toggle, grafik, meter → `blue-deep`. Latar halaman → `surface-blue`, kartu → tint biru muda.
+- Kuning `accent-yellow` khusus untuk Pro/Upgrade (chip header, mahkota, tombol upgrade); krem untuk pemberitahuan. Hijau/merah hanya untuk status.
+- Halaman login memakai gradien `blue-deep → blue` (sebelumnya slate/biru gelap bawaan komponen paste).
+- Kontras teks dicek (WCAG): teks putih di `blue-deep` 5,4:1; `ink` di kuning 13:1; teks samar `ink-muted` ≥ 4,6:1.
+- Uji otomatis baru: 23 halaman (3.250 elemen) tidak boleh memuat kelas `zinc/slate/gray/amber/black`.
+
+### 2. Model langganan & iklan
+| Item | Harga |
+|---|---|
+| Basic | Rp299.000/bulan · Rp2.990.000/tahun (hemat 2 bulan = Rp598.000) |
+| Pro | Rp799.000/bulan · Rp7.990.000/tahun (hemat 2 bulan = Rp1.598.000) |
+| Slot Iklan Banner | mulai Rp500.000/minggu (Halaman Mitra Rp500.000; Beranda **Rp900.000 = placeholder**) |
+| Highlighted Brand | Rp350.000/minggu per slot (6 slot; slot 2 dan 5 dianggap terisi — mock) |
+| Sponsored Frame | Rp200.000–800.000/minggu **per frame** (Kategori 200rb, Pencarian **450rb = placeholder**, Beranda 800rb) |
+
+- Pilihan Bulanan/Tahunan di pemilih paket (onboarding dan Langganan → Upgrade Plan). Upgrade tanpa prorata (paket lama diganti hari itu juga); tahunan → bulanan baru bisa setelah periode berakhir.
+- Iklan **bukan bagian langganan**: dipesan per minggu (1–8) di menu Promosi → Checkout → aktif. Banner lewat status "Menunggu review". Invoice dan Billing memuat langganan dan iklan.
+- **Asumsi yang perlu dikonfirmasi:** Highlighted Brand dan Sponsored Frame hanya bisa dipesan paket **Pro** (mengikuti daftar terkunci di spesifikasi awal); banner terbuka untuk Basic dan Pro. Ubah di `PLANS[..].features` (`partnerMock.js`) bila keputusannya berbeda.
+- Kuota banner per paket dihapus (diganti pembelian per minggu). Batas frame tetap: Basic 50, Pro tanpa batas.
+
+### 3. Konsultasi konsumen ↔ Mitra (dua arah), scan wajah AR
+Prinsip: **try-on tidak pernah butuh akun**; identitas minimum (nama panggilan + WhatsApp) baru diminta saat konsumen minta dibantu.
+| File | Fungsi |
+|---|---|
+| `frontend/src/pages/ConsultPage.jsx` | `/konsultasi` (tanpa login): scan wajah (opsional) + form permintaan (optik, nama, WhatsApp, jenis, pesan, frame yang dilihat). Setelah terkirim: kode `TL-xxxxx` + tombol WhatsApp dengan pesan berisi hasil scan. |
+| `frontend/src/components/consult/FaceScanner.jsx`, `landmarker.js` | Kamera → **MediaPipe Face Landmarker** → rasio wajah → bentuk wajah (Oval, Bulat, Persegi, Hati, Lonjong) + perkiraan lebar wajah (dari jarak pupil). Diproses di perangkat; tidak ada foto/video yang disimpan atau dikirim. Bila kamera/model gagal: pilihan manual, ditandai "manual" (bukan hasil AR). |
+| `frontend/src/data/faceShape.js` | Aturan klasifikasi, gaya frame yang disarankan per bentuk wajah. |
+| `frontend/src/store/useConsult.js`, `data/consultMock.js` | Kotak masuk konsultasi bersama (mock, localStorage) + frame yang dilihat + hasil scan terakhir. |
+| `frontend/src/components/consult/FaceSummary.jsx` | Ringkasan hasil analisis (dipakai di sisi konsumen dan Mitra). |
+| `frontend/src/pages/partner/RequestsPage.jsx`, `RequestDetailPage.jsx`, `components/partner/requests.jsx` | Sisi Mitra: kartu **Permintaan Konsultasi** di dashboard (badge Guest, jenis, hasil scan), halaman `/partner/requests` (filter Konsultasi / Ketersediaan / Pertanyaan Produk / Minat Membeli), detail `/partner/requests/:id` (analisis wajah, frame dilihat, pertanyaan, **rekomendasi dari katalog toko**, tombol WhatsApp yang menandai "Dihubungi"). |
+Titik masuk konsumen: tombol **Konsultasi** di header, tombol di halaman Try-On dan detail produk. Frame yang dilihat/dicoba dicatat otomatis (tanpa login).
+
+### Diubah
+`App.jsx` (rute `/konsultasi`, `/partner/requests`), `MainNav.jsx` (tombol Konsultasi), `TryOnPage.jsx`, `ProductDetailPage.jsx` (catat frame dilihat + ajakan konsultasi), `package.json`/`package-lock.json`, dan seluruh berkas dashboard Mitra (warna, harga, iklan).
+
+### Database (`backend-php/database/`)
+- `plans`: `price_monthly_idr` + `price_yearly_idr` (kolom `max_active_banners` dihapus). `subscriptions.billing_interval`.
+- Baru: `ad_orders` (pesanan iklan mingguan; CHECK total = harga × minggu × jumlah, durasi 1–8 minggu, tanggal akhir konsisten), `consultations` + `consultation_frames` (pengganti `leads`; hasil scan berupa label/rasio, tanpa foto), `invoices` kini untuk langganan **atau** iklan (`kind`).
+- `highlighted_brands`: satu slot aktif = satu toko (UNIQUE pada kolom turunan). `banner_ads`/`sponsored_frames` terhubung ke `ad_orders`.
+- Semua constraint diuji (ditolak sesuai harapan). `dashboard_queries.sql` diperbarui (konsultasi, rekomendasi lewat `FIND_IN_SET`, slot kosong, aktivasi langganan dan iklan).
+
+### Catatan penting / batas
+- **Pemindai kamera belum bisa diuji di lingkungan pengembangan ini** (tanpa kamera/browser). Yang teruji: rumus klasifikasi (data landmark sintetis), jalur manual, seluruh alur kirim–terima konsultasi. Uji di HP/laptop Anda; pertama kali memuat WASM (jsDelivr) dan model (~4 MB, Google Storage) sehingga butuh internet.
+- **Ambang klasifikasi bentuk wajah adalah aturan heuristik, belum dikalibrasi** dengan data wajah nyata; hasil diberi label "estimasi". Lebar wajah (mm) memakai jarak pupil 63 mm sebagai skala, akurasi ±10%.
+- Mock: semua frame satu toko bergaya sama (mis. Optik Kusuma semuanya aviator), sehingga rekomendasi katalog sering kosong di data demo.
+- Belum dibuat: endpoint PHP (auth, langganan, iklan, konsultasi), chat di dalam TryLens, akun konsumen (level "Customer" baru disiapkan di skema/UI).
+- Harga di sisi klien hanya untuk tampilan; saat API dibuat, hitung ulang di server.
 
 ## Update 7 — 2026-09-21 — Dashboard Mitra (Partner), alur login → langganan → setup toko, skema database SQL
 

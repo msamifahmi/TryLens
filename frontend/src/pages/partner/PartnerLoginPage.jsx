@@ -20,10 +20,10 @@ export default function PartnerLoginPage() {
 
   return (
     <LoginPage mode="login" onSubmit={onSubmit} fill={fill}>
-      <div className="mt-8 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4">
-        <p className="text-xs font-semibold text-gray-700 m-0 mb-1">Akun demo (mode uji)</p>
-        <p className="text-xs text-gray-500 m-0 mb-3">
-          Password semua akun: <code className="bg-white px-1 rounded border border-gray-200">{DEMO_PASSWORD}</code>
+      <div className="mt-8 rounded-xl border border-dashed border-[#C5D6EA] bg-surface-blue/60 p-4">
+        <p className="text-xs font-semibold text-ink-text m-0 mb-1">Akun demo (mode uji)</p>
+        <p className="text-xs text-ink-muted m-0 mb-3">
+          Password semua akun: <code className="bg-white px-1 rounded border border-[#DDE8F4]">{DEMO_PASSWORD}</code>
         </p>
         <div className="flex flex-col gap-1.5">
           {DEMO_ACCOUNTS.map((a) => (
@@ -31,10 +31,10 @@ export default function PartnerLoginPage() {
               key={a.email}
               type="button"
               onClick={() => setFill({ email: a.email, password: DEMO_PASSWORD })}
-              className="text-left text-[13px] px-3 py-2 rounded-lg bg-white border border-gray-200 hover:border-gray-900"
+              className="text-left text-[13px] px-3 py-2 rounded-lg bg-white border border-[#DDE8F4] hover:border-blue-deep"
             >
-              <span className="font-medium text-gray-900">{a.email}</span>
-              <span className="block text-xs text-gray-500">{a.label}</span>
+              <span className="font-medium text-ink">{a.email}</span>
+              <span className="block text-xs text-ink-muted">{a.label}</span>
             </button>
           ))}
         </div>

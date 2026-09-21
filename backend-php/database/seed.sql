@@ -12,22 +12,18 @@
 USE trylens;
 SET NAMES utf8mb4;
 
-INSERT INTO plans (id, code, name, price_idr, billing_interval, max_frames, max_active_banners, has_advanced_analytics, has_featured_store, has_sponsored_frame, sort_order) VALUES
-  (1, 'basic', 'Basic', 299000, 'month', 50, 1, 0, 0, 0, 1),
-  (2, 'pro', 'Pro', 599000, 'month', NULL, 5, 1, 1, 1, 2);
+INSERT INTO plans (id, code, name, price_monthly_idr, price_yearly_idr, max_frames, has_advanced_analytics, has_featured_store, has_sponsored_frame, sort_order) VALUES
+  (1, 'basic', 'Basic', 299000, 2990000, 50, 0, 0, 0, 1),
+  (2, 'pro', 'Pro', 799000, 7990000, NULL, 1, 1, 1, 2);
 
 INSERT INTO users (id, name, email, password_hash, phone, role, email_verified_at, created_at) VALUES
   (1, 'Ratna Kusuma', 'basic@optikkusuma.id', '$2y$10$/4khrqSDy1VF03QNl85Sl.Lj8geHOZStDEjfuyR5oRt7lssHW3skm', '0812-3450-0001', 'partner', '2026-08-20 09:00:00', '2026-08-20 09:00:00'),
   (2, 'Andra Lensa', 'pro@lensakita.id', '$2y$10$/4khrqSDy1VF03QNl85Sl.Lj8geHOZStDEjfuyR5oRt7lssHW3skm', '0812-3450-0006', 'partner', '2026-08-20 09:00:00', '2026-08-20 09:00:00'),
   (3, 'Budi Santoso', 'baru@optikbaru.id', '$2y$10$/4khrqSDy1VF03QNl85Sl.Lj8geHOZStDEjfuyR5oRt7lssHW3skm', NULL, 'partner', NULL, '2026-09-20 07:00:00');
 
-INSERT INTO subscriptions (id, user_id, plan_id, status, started_at, current_period_start, current_period_end, next_billing_at) VALUES
-  (1, 1, 1, 'active', '2026-09-20 00:00:00', '2026-09-20 00:00:00', '2026-10-20 00:00:00', '2026-10-20 00:00:00'),
-  (2, 2, 2, 'active', '2026-09-20 00:00:00', '2026-09-20 00:00:00', '2026-10-20 00:00:00', '2026-10-20 00:00:00');
-
-INSERT INTO invoices (invoice_no, user_id, subscription_id, plan_id, amount_idr, status, payment_method, issued_at, paid_at) VALUES
-  ('INV-20260920-0001', 1, 1, 1, 299000, 'paid', 'QRIS', '2026-09-20 00:00:00', '2026-09-20 00:05:00'),
-  ('INV-20260920-0002', 2, 2, 2, 599000, 'paid', 'QRIS', '2026-09-20 00:00:00', '2026-09-20 00:05:00');
+INSERT INTO subscriptions (id, user_id, plan_id, billing_interval, status, started_at, current_period_start, current_period_end, next_billing_at) VALUES
+  (1, 1, 1, 'month', 'active', '2026-09-20 00:00:00', '2026-09-20 00:00:00', '2026-10-20 00:00:00', '2026-10-20 00:00:00'),
+  (2, 2, 2, 'month', 'active', '2026-09-20 00:00:00', '2026-09-20 00:00:00', '2026-10-20 00:00:00', '2026-10-20 00:00:00');
 
 INSERT INTO stores (id, user_id, public_id, name, description, city, province, whatsapp, phone, initials, brand_color, rating_avg, frame_count_label, status, setup_completed_at) VALUES
   (1, 1, 'm1', 'Optik Kusuma', 'Optik Kusuma — toko optik lokal di Surakarta dengan koleksi frame pilihan dan layanan pemeriksaan mata.', 'Surakarta', 'Jawa Tengah', '6281234500001', '0812-3450-0001', 'OK', '#427AB5', 4.9, '120+ frame', 'active', '2026-08-21 09:00:00'),
@@ -119,25 +115,54 @@ INSERT INTO collection_products (collection_id, product_id, sort_order) VALUES
   (4, 18, 2),
   (4, 24, 3);
 
-INSERT INTO banner_ads (store_id, title, subtitle, cta_label, status, starts_on, ends_on, impressions, clicks) VALUES
-  (1, 'Promo Frame Terbaru', 'Diskon hingga 33% untuk frame pilihan', 'Lihat Promo', 'active', '2026-09-01', '2026-09-30', 12840, 412),
-  (6, 'Promo Frame Terbaru', 'Diskon hingga 33% untuk frame pilihan', 'Lihat Promo', 'active', '2026-09-01', '2026-09-30', 12840, 412);
+INSERT INTO ad_orders (id, order_no, user_id, store_id, type, placement, slot_no, weeks, quantity, unit_price_idr, total_idr, starts_on, ends_on, status, created_at, paid_at) VALUES
+  (1, 'AO-20260901-0001', 1, 1, 'banner', 'mitra', NULL, 4, 1, 500000, 2000000, '2026-09-01', '2026-09-28', 'paid', '2026-09-01 00:00:00', '2026-09-01 00:05:00'),
+  (2, 'AO-20260901-0002', 2, 6, 'banner', 'mitra', NULL, 4, 1, 500000, 2000000, '2026-09-01', '2026-09-28', 'paid', '2026-09-01 00:00:00', '2026-09-01 00:05:00'),
+  (3, 'AO-20260920-0002', 2, 6, 'highlighted', NULL, 1, 2, 1, 350000, 700000, '2026-09-20', '2026-10-03', 'paid', '2026-09-20 00:00:00', '2026-09-20 00:05:00'),
+  (4, 'AO-20260920-0003', 2, 6, 'sponsored', 'pencarian', NULL, 2, 1, 450000, 900000, '2026-09-20', '2026-10-03', 'paid', '2026-09-20 00:00:00', '2026-09-20 00:05:00');
 
-INSERT INTO highlighted_brands (store_id, status, starts_at, ends_at) VALUES
-  (6, 'active', '2026-09-20 00:00:00', '2026-10-20 00:00:00');
+INSERT INTO banner_ads (store_id, ad_order_id, placement, title, subtitle, cta_label, status, starts_on, ends_on, impressions, clicks) VALUES
+  (1, 1, 'mitra', 'Promo Frame Terbaru', 'Diskon hingga 33% untuk frame pilihan', 'Lihat Promo', 'active', '2026-09-01', '2026-09-28', 12840, 412),
+  (6, 2, 'mitra', 'Promo Frame Terbaru', 'Diskon hingga 33% untuk frame pilihan', 'Lihat Promo', 'active', '2026-09-01', '2026-09-28', 12840, 412);
 
-INSERT INTO sponsored_frames (store_id, product_id, status, starts_at) VALUES
-  (6, 6, 'active', '2026-09-20 00:00:00');
+INSERT INTO highlighted_brands (store_id, ad_order_id, slot_no, status, starts_at, ends_at) VALUES
+  (6, 3, 1, 'active', '2026-09-20 00:00:00', '2026-10-03 23:59:59');
 
-INSERT INTO leads (store_id, customer_name, topic, message, source, status, created_at) VALUES
-  (1, 'Rina Wulandari', 'Frame Wanita · Cat Eye', 'Tertarik dengan frame cat eye, apakah bisa dipasangi lensa minus 2,5 dan silinder?', 'whatsapp', 'new', '2026-09-19 10:00:00'),
-  (1, 'Budi Hartono', 'Frame Pria · Aviator', 'Frame aviator warna gold masih ada stok? Saya ingin ambil hari Sabtu.', 'whatsapp', 'new', '2026-09-18 10:00:00'),
-  (1, 'Citra Maharani', 'Frame Anak · Round', 'Untuk anak usia 7 tahun, ukuran frame yang cocok yang mana ya?', 'whatsapp', 'new', '2026-09-16 10:00:00'),
-  (1, 'Andi Pratama', 'Promo · Flash Sale', 'Flash sale frame Browline berlaku sampai kapan? Bisa COD?', 'whatsapp', 'new', '2026-09-14 10:00:00'),
-  (6, 'Rina Wulandari', 'Frame Wanita · Cat Eye', 'Tertarik dengan frame cat eye, apakah bisa dipasangi lensa minus 2,5 dan silinder?', 'whatsapp', 'new', '2026-09-19 10:00:00'),
-  (6, 'Budi Hartono', 'Frame Pria · Aviator', 'Frame aviator warna gold masih ada stok? Saya ingin ambil hari Sabtu.', 'whatsapp', 'new', '2026-09-18 10:00:00'),
-  (6, 'Citra Maharani', 'Frame Anak · Round', 'Untuk anak usia 7 tahun, ukuran frame yang cocok yang mana ya?', 'whatsapp', 'new', '2026-09-16 10:00:00'),
-  (6, 'Andi Pratama', 'Promo · Flash Sale', 'Flash sale frame Browline berlaku sampai kapan? Bisa COD?', 'whatsapp', 'new', '2026-09-14 10:00:00');
+INSERT INTO sponsored_frames (store_id, product_id, ad_order_id, placement, status, starts_at) VALUES
+  (6, 6, 4, 'pencarian', 'active', '2026-09-20 00:00:00');
+
+INSERT INTO invoices (invoice_no, kind, user_id, subscription_id, plan_id, ad_order_id, description, amount_idr, status, payment_method, issued_at, paid_at) VALUES
+  ('INV-20260920-0001', 'subscription', 1, 1, 1, NULL, 'Paket Basic (Bulanan)', 299000, 'paid', 'QRIS', '2026-09-20 00:00:00', '2026-09-20 00:05:00'),
+  ('INV-20260901-0011', 'ad_order', 1, NULL, NULL, 1, 'Slot Iklan Banner — Halaman Mitra (4 minggu)', 2000000, 'paid', 'VA BCA', '2026-09-01 00:00:00', '2026-09-01 00:05:00'),
+  ('INV-20260920-0002', 'subscription', 2, 2, 2, NULL, 'Paket Pro (Bulanan)', 799000, 'paid', 'QRIS', '2026-09-20 00:00:00', '2026-09-20 00:05:00'),
+  ('INV-20260901-0012', 'ad_order', 2, NULL, NULL, 2, 'Slot Iklan Banner — Halaman Mitra (4 minggu)', 2000000, 'paid', 'VA BCA', '2026-09-01 00:00:00', '2026-09-01 00:05:00'),
+  ('INV-20260920-0013', 'ad_order', 2, NULL, NULL, 3, 'Highlighted Brand — Slot 1 (2 minggu)', 700000, 'paid', 'QRIS', '2026-09-20 00:00:00', '2026-09-20 00:05:00'),
+  ('INV-20260920-0014', 'ad_order', 2, NULL, NULL, 4, 'Sponsored Frame — Hasil Pencarian (2 minggu)', 900000, 'paid', 'QRIS', '2026-09-20 00:00:00', '2026-09-20 00:05:00');
+
+INSERT INTO consultations (id, code, store_id, customer_name, customer_whatsapp, identity, category, message, face_source, face_shape, face_width, face_width_mm, recommended_styles, status, contacted_at, created_at) VALUES
+  (1, 'TL-48201', 1, 'Rina', '6281200011101', 'guest', 'konsultasi', 'Menurut TryLens wajah saya cocok frame apa ya?', 'ar', 'oval', 'medium', 136, 'square,rect,browline,aviator', 'new', NULL, '2026-09-21 01:11:55'),
+  (2, 'TL-48202', 1, 'Budi', '6281200011102', 'guest', 'ketersediaan', 'Frame aviator warna gold masih ada stok? Saya ingin ambil hari Sabtu.', NULL, NULL, NULL, NULL, NULL, 'new', NULL, '2026-09-21 00:48:55'),
+  (3, 'TL-48203', 1, 'Citra', '6281200011103', 'guest', 'produk', 'Untuk anak usia 7 tahun, ukuran frame yang cocok yang mana ya?', 'ar', 'round', 'small', 121, 'square,rect,browline', 'new', NULL, '2026-09-21 00:00:55'),
+  (4, 'TL-48204', 1, 'Andi', '6281200011104', 'guest', 'minat_beli', 'Saya tertarik dengan frame ini, bisa COD?', NULL, NULL, NULL, NULL, NULL, 'contacted', '2026-09-19 23:14:55', '2026-09-19 23:14:55'),
+  (5, 'TL-48205', 6, 'Sari', '6281200011105', 'guest', 'konsultasi', 'Bingung pilih frame untuk dipakai kuliah, bisa dibantu?', 'ar', 'square', 'large', 146, 'round,aviator,cateye', 'new', NULL, '2026-09-21 01:06:55'),
+  (6, 'TL-48206', 6, 'Fajar', '6281200011106', 'guest', 'ketersediaan', 'Retro Oval Blue ready stok?', NULL, NULL, NULL, NULL, NULL, 'new', NULL, '2026-09-21 00:33:55'),
+  (7, 'TL-48207', 6, 'Maya', '6281200011107', 'guest', 'konsultasi', 'Wajah saya panjang, frame yang pas yang mana?', 'ar', 'oblong', 'medium', 134, 'browline,square,round', 'new', NULL, '2026-09-20 23:39:55'),
+  (8, 'TL-48208', 6, 'Yoga', '6281200011108', 'guest', 'minat_beli', 'Mau ambil Round Vintage Tortoise, bisa dikirim ke Cimahi?', NULL, NULL, NULL, NULL, NULL, 'closed', '2026-09-19 19:14:55', '2026-09-19 19:14:55');
+
+INSERT INTO consultation_frames (consultation_id, product_id, seen_order) VALUES
+  (1, 1, 1),
+  (1, 7, 2),
+  (1, 13, 3),
+  (2, 1, 1),
+  (3, 19, 1),
+  (4, 13, 1),
+  (4, 7, 2),
+  (5, 6, 1),
+  (5, 12, 2),
+  (6, 6, 1),
+  (7, 18, 1),
+  (7, 24, 2),
+  (8, 12, 1);
 
 INSERT INTO store_daily_stats (store_id, stat_date, store_views, unique_visitors, product_views, vto_sessions, contact_clicks, link_clicks) VALUES
   (1, '2026-07-23', 382, 275, 322, 104, 20, 12),

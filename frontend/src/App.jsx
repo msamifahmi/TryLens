@@ -6,6 +6,9 @@ import ProductDetailPage from "./pages/ProductDetailPage.jsx";
 import MerchantPage from "./pages/MerchantPage.jsx";
 import MitraPage from "./pages/MitraPage.jsx";
 import TryOnPage from "./pages/TryOnPage.jsx";
+import ConsultPage from "./pages/ConsultPage.jsx";
+import RequestsPage from "./pages/partner/RequestsPage.jsx";
+import RequestDetailPage from "./pages/partner/RequestDetailPage.jsx";
 import Gate from "./components/partner/Gate.jsx";
 import PartnerLayout from "./layouts/PartnerLayout.jsx";
 import PartnerLoginPage from "./pages/partner/PartnerLoginPage.jsx";
@@ -27,6 +30,7 @@ export default function App() {
           <Route path="/mitra" element={<MitraPage />} />
           <Route path="/toko/:id" element={<MerchantPage />} />
           <Route path="/try-on/:id" element={<TryOnPage />} />
+          <Route path="/konsultasi" element={<ConsultPage />} />
         </Route>
 
         {/* ===== Area Mitra (tanpa header/footer beranda) ===== */}
@@ -38,6 +42,8 @@ export default function App() {
         <Route path="/partner/setup" element={<Gate allow={["setup"]}><StoreSetupPage /></Gate>} />
         <Route path="/partner" element={<PartnerLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="requests" element={<RequestsPage />} />
+          <Route path="requests/:id" element={<RequestDetailPage />} />
           <Route path=":section/:tab?" element={<SectionPage />} />
         </Route>
       </Routes>
