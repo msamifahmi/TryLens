@@ -89,7 +89,6 @@ export function StoreSettingsTab() {
 
 /* ---------------------------------------------------------- Notifications */
 const EVENTS = [
-  { key: "newLead", label: "Permintaan pelanggan baru", hint: "Saat ada calon pelanggan menghubungi toko" },
   { key: "billing", label: "Tagihan & pembayaran", hint: "Pengingat tagihan dan bukti pembayaran" },
   { key: "weekly", label: "Laporan mingguan", hint: "Ringkasan performa toko tiap Senin" },
   { key: "promo", label: "Info & promo TryLens", hint: "Fitur baru dan program untuk mitra" }

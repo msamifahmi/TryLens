@@ -2,7 +2,60 @@
 
 Catatan progres per update. Entri terbaru di paling atas. Jalur file relatif terhadap root `trylens-project/`.
 
-Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel, Merchant Slider, Recommendation Feed dengan Category Tabs, Wishlist) + **Dashboard Mitra** (Update 7–8).
+Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel, Merchant Slider, Recommendation Feed dengan Category Tabs, Wishlist) + **Dashboard Mitra** (Update 7–8) + **Konsultasi lewat WhatsApp optik** (Update 9, menggantikan kotak masuk konsultasi Update 8).
+
+---
+
+## Update 9 — 2026-09-21 — Konsultasi langsung lewat WhatsApp optik (tanpa pengajuan lewat TryLens)
+
+**Keputusan produk:** konsumen tidak perlu mengajukan konsultasi lewat TryLens. Bila ingin berkonsultasi, konsumen langsung diarahkan ke nomor WhatsApp masing-masing optik. Akibatnya formulir permintaan di sisi konsumen **dan** kotak masuk permintaan di dashboard Mitra ikut dihapus (tanpa pengajuan, kotak masuk itu tidak akan pernah terisi).
+
+Zip ini **kumulatif** (berisi semua file Update 7–9): ekstrak dan timpa.
+
+### Wajib setelah ekstrak
+1. **Hapus manual 4 file** yang sudah tidak dipakai (zip tidak bisa menghapus file; bila tertinggal tidak menyebabkan error karena tidak ada lagi yang mengimpornya):
+   - `frontend/src/pages/partner/RequestsPage.jsx`
+   - `frontend/src/pages/partner/RequestDetailPage.jsx`
+   - `frontend/src/components/partner/requests.jsx`
+   - `frontend/src/data/consultMock.js`
+2. **Tidak perlu `npm install` ulang dan tidak perlu reset database** (tidak ada dependensi baru; SQL hanya berubah di komentar).
+3. Data konsultasi lama di browser (`trylens-consult`) dimigrasi otomatis: kotak masuk demo dibuang, frame yang dilihat dan hasil scan wajah dipertahankan.
+
+### Diubah — sisi konsumen
+| File | Perubahan |
+|---|---|
+| `frontend/src/pages/ConsultPage.jsx` | Ditulis ulang. **Dihapus:** formulir (nama, WhatsApp, jenis permintaan, pesan), tombol "Kirim Permintaan", layar "Permintaan terkirim", kode konsultasi `TL-xxxxx`. **Sekarang:** Langkah 1 scan wajah (opsional, tidak berubah) → Langkah 2 **Chat optik lewat WhatsApp**: pilih optik → kartu nomor WhatsApp optik (mis. `0812 3450 0001`) → tombol hijau **"Chat {optik} via WhatsApp"** yang membuka `wa.me/{nomor optik}` dengan pesan pembuka siap kirim (hasil scan wajah + frame yang dilihat dari optik itu). Hasil scan bisa dimatikan lewat centang; chip frame bisa dihapus. Tanpa optik terpilih tombol nonaktif ("Pilih optik dulu"); bila optik tidak punya nomor tombol nonaktif dengan keterangan. Catatan privasi diganti: TryLens tidak menyimpan nomor maupun percakapan. Titik masuk tidak berubah: `?toko=` dan `?frame=` tetap memilih optik otomatis. |
+| `frontend/src/store/useConsult.js` | Hanya menyimpan `viewed` (frame dilihat) dan `face` (hasil scan). **Dihapus:** `items` (kotak masuk), `submit`, `setStatus`, `normalizeWa`. Versi penyimpanan 1 → 2 dengan `migrate` + `partialize`. |
+| `frontend/src/pages/TryOnPage.jsx`, `ProductDetailPage.jsx` | Hanya komentar kode (frame yang dilihat kini "ikut disebut di pesan WhatsApp"). Tombol "Scan bentuk wajah & konsultasi dengan optik" tetap, menuju `/konsultasi`. |
+
+### Diubah — sisi Mitra
+| File | Perubahan |
+|---|---|
+| `frontend/src/pages/partner/DashboardPage.jsx` | Kartu **Permintaan Konsultasi** dihapus. Kolom kanan kini hanya kartu Paket Anda. KPI "Hubungi Toko" (klik WhatsApp) tetap. |
+| `frontend/src/layouts/PartnerLayout.jsx` | Lonceng tidak lagi menampilkan permintaan baru: tanpa titik merah, isi "Belum ada notifikasi." (tempat notifikasi lain di masa depan, mis. tagihan). |
+| `frontend/src/App.jsx` | Rute `/partner/requests` dan `/partner/requests/:id` dihapus. Alamat lama otomatis kembali ke dashboard. |
+| `frontend/src/pages/partner/SettingsTabs.jsx` | Baris notifikasi "Permintaan pelanggan baru" dihapus (TryLens tidak lagi tahu kapan pelanggan menghubungi lewat WhatsApp). Kunci `newLead` di state dibiarkan agar data demo tidak perlu di-reset. |
+| `frontend/src/components/partner/StoreForm.jsx` | Petunjuk kolom WhatsApp: nomor ini dipakai tombol "Hubungi Toko" **dan konsultasi pelanggan (langsung ke nomor ini)**. |
+| `frontend/src/data/partnerMock.js` | Teks fitur paket Basic: "Permintaan konsultasi + hasil scan wajah pelanggan" → "Konsultasi pelanggan langsung ke WhatsApp toko (bisa disertai hasil scan wajah)". |
+
+### Dihapus
+`pages/partner/RequestsPage.jsx`, `pages/partner/RequestDetailPage.jsx`, `components/partner/requests.jsx` (kartu, halaman, dan detail permintaan), `data/consultMock.js` (jenis permintaan, status, data demo).
+
+### Database (`backend-php/database/`) — hanya komentar
+- `schema.sql` dan `dashboard_queries.sql`: tabel `consultations` + `consultation_frames` dan query 6–6f ditandai **tidak dipakai sejak Update 9**. Tabel **sengaja tidak dihapus** supaya database Update 8 yang sudah dibuat tidak perlu di-reset; aman di-`DROP` bila memang tidak akan dipakai (`consultation_frames` dulu, baru `consultations`). `seed.sql` tidak diubah.
+- Klik tombol WhatsApp saat API dibuat: catat sebagai `analytics_events.event_type = 'contact_click'` (sudah ada di skema). Nilai enum `consult_submit` tidak terpakai lagi.
+
+### Pengujian
+- `vite build` lolos untuk seluruh `App.jsx` (tidak ada impor yang mengarah ke file yang dihapus).
+- 15 uji otomatis (jsdom) lolos; uji yang sama gagal 14 dari 15 pada kode Update 8, jadi benar-benar mendeteksi perubahan ini. Isinya: tidak ada formulir/kirim; link `wa.me` memakai nomor optik yang dipilih; pesan memuat hasil scan dan frame (hanya milik optik terpilih); centang dan hapus chip memengaruhi pesan; optik tanpa nomor; migrasi penyimpanan v1 → v2; dashboard tanpa kartu permintaan; lonceng; rute lama; pengaturan notifikasi; tidak ada kelas warna `zinc/slate/gray/amber/black`.
+- Tampilan `/konsultasi` diperiksa lewat screenshot desktop dan HP (Chrome headless).
+- **Batas pengujian:** `mockData.js`, `ConnectMerchantModal.jsx`, dan berkas beranda lain tidak ada di zip, jadi uji memakai *stub* dengan bentuk data yang sama (`MERCHANTS[].whatsapp`, `PRODUCTS[].merchantId`). Warna di screenshot memakai token tebakan, bukan `tailwind.config.js` asli. Cek sekali di `npm run dev`: `/konsultasi`, `/konsultasi?toko=m1`, `/konsultasi?frame=f0`, dan `/partner`.
+
+### Catatan / batas
+- Konsultasi sekarang **sepenuhnya bergantung pada nomor `whatsapp` tiap optik** (`mockData.js`, `merchants.json`, `stores.whatsapp`). Nomor demo (`62812345000xx`) harus diganti nomor asli sebelum dipakai.
+- Toggle Pengaturan Toko → "Tombol Hubungi Toko" belum memengaruhi `/konsultasi` (halaman itu membaca data merchant publik, bukan pengaturan Mitra). Sambungkan saat API dibuat.
+- Mitra tidak lagi punya riwayat/status konsultasi di TryLens; hitungan "Hubungi Toko" di dashboard dan analitik menjadi satu-satunya jejak (masih data mock).
+- `ConnectMerchantModal.jsx` (tombol "Cocok! Hubungkan ke …" dan Checkout di halaman produk/try-on) tidak ada di zip, jadi **tidak diperiksa**; bila di dalamnya ada alur "ajukan lewat TryLens", perlu disesuaikan dengan keputusan yang sama.
 
 ---
 
@@ -38,6 +91,8 @@ Penyebab ketidakkonsistenan: dashboard Update 7 meniru referensi secara harfiah 
 - Kuota banner per paket dihapus (diganti pembelian per minggu). Batas frame tetap: Basic 50, Pro tanpa batas.
 
 ### 3. Konsultasi konsumen ↔ Mitra (dua arah), scan wajah AR
+> **Sudah diganti di Update 9:** formulir permintaan dan kotak masuk Mitra di bawah ini dihapus; konsultasi kini langsung lewat WhatsApp optik. Scan wajah AR dan pencatatan frame yang dilihat tetap dipakai.
+
 Prinsip: **try-on tidak pernah butuh akun**; identitas minimum (nama panggilan + WhatsApp) baru diminta saat konsumen minta dibantu.
 | File | Fungsi |
 |---|---|

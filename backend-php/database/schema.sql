@@ -9,7 +9,7 @@
 --    store_settings ................... Settings → Store Settings
 --    products, collections(+_products)  Store Management → Products / Frames, Collections
 --    vto_settings ..................... Virtual Try-On → VTO Settings / Frame Library (products.vto_enabled)
---    consultations(+_frames) .......... Dashboard → Permintaan Konsultasi (+ hasil scan wajah, tanpa foto)
+--    consultations(+_frames) .......... [TIDAK DIPAKAI sejak Update 9] konsultasi kini langsung lewat WhatsApp optik, bukan kotak masuk TryLens
 --    ad_orders, invoices .............. Pembelian iklan mingguan & tagihan (langganan + iklan)
 --    analytics_events + *_daily_stats . Dashboard, Analytics, Try-On Analytics
 --    banner_ads, highlighted_brands,
@@ -357,7 +357,11 @@ CREATE TABLE IF NOT EXISTS invoices (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------------
--- 8. Konsultasi konsumen → Mitra (kartu "Permintaan Konsultasi")
+-- 8. [TIDAK DIPAKAI sejak Update 9] Konsultasi konsumen → Mitra (kartu "Permintaan Konsultasi")
+--    Keputusan produk: konsumen berkonsultasi LANGSUNG lewat nomor WhatsApp optik (stores.whatsapp); TryLens tidak
+--    menerima maupun menyimpan permintaan konsultasi. Tabel di bawah dibiarkan agar database yang sudah dibuat tidak
+--    perlu di-reset; aman dihapus (DROP TABLE consultation_frames, consultations) bila tidak akan dipakai lagi.
+--    Klik tombol WhatsApp tetap bisa dicatat sebagai analytics_events.event_type = 'contact_click'.
 --    Konsumen TIDAK perlu akun: identitas minimum = nama panggilan + WhatsApp.
 --    Hasil scan wajah (AR) hanya disimpan sebagai label & rasio — TIDAK ADA foto/video yang disimpan.
 --    Pelanggan bertipe 'customer' (punya akun) disiapkan untuk fase berikutnya.

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, Crown, ExternalLink, Home, LogOut, Settings } from "lucide-react";
 import { PartnerLogo } from "../components/partner/PartnerFlowShell.jsx";
-import { useRequests } from "../components/partner/requests.jsx";
 import { usePartner, useAccount, stageOf, STAGE_PATH } from "../store/usePartner.js";
 
 // Struktur menu Mitra: Dashboard · Toko · Virtual Try-On · Analitik · Promosi · Langganan (+ Pengaturan via ikon gear)
@@ -57,7 +56,6 @@ export default function PartnerLayout() {
   const logout = usePartner((s) => s.logout);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { mine } = useRequests();
   const bell = usePopover();
   const user = usePopover();
 
@@ -65,7 +63,6 @@ export default function PartnerLayout() {
   if (stage !== "dashboard") return <Navigate to={STAGE_PATH[stage]} replace />;
 
   const plan = acc.subscription.plan;
-  const newLeads = mine.filter((l) => l.status === "new");
   const settingsActive = pathname.startsWith("/partner/settings");
 
   const iconBtn = "relative w-9 h-9 rounded-full border border-[#DDE8F4] bg-white flex items-center justify-center text-ink-text hover:border-blue-deep";
@@ -98,23 +95,13 @@ export default function PartnerLayout() {
             <PlanChip plan={plan} />
 
             <div className="relative" ref={bell.ref}>
-              <button className={iconBtn} aria-label={`Notifikasi, ${newLeads.length} permintaan baru`} aria-expanded={bell.open} onClick={() => bell.setOpen(!bell.open)}>
+              <button className={iconBtn} aria-label="Notifikasi" aria-expanded={bell.open} onClick={() => bell.setOpen(!bell.open)}>
                 <Bell size={17} strokeWidth={1.8} />
-                {newLeads.length > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-error ring-2 ring-white" />}
               </button>
               {bell.open && (
                 <div className="absolute right-0 top-11 z-50 w-[300px] rounded-2xl border border-[#DDE8F4] bg-white shadow-xl p-2">
                   <p className="text-[12px] font-semibold text-ink-muted px-2.5 py-1.5 m-0">Notifikasi</p>
-                  {newLeads.length === 0 ? (
-                    <p className="text-[13px] text-ink-muted px-2.5 py-3 m-0">Belum ada permintaan baru.</p>
-                  ) : (
-                    newLeads.slice(0, 4).map((l) => (
-                      <Link key={l.id} to={`/partner/requests/${l.id}`} onClick={() => bell.setOpen(false)} className="block rounded-xl px-2.5 py-2 hover:bg-surface-blue">
-                        <span className="block text-[13px] font-medium text-ink">Permintaan baru dari {l.name}</span>
-                        <span className="block text-[12px] text-ink-muted truncate">{l.message}</span>
-                      </Link>
-                    ))
-                  )}
+                  <p className="text-[13px] text-ink-muted px-2.5 py-3 m-0">Belum ada notifikasi.</p>
                 </div>
               )}
             </div>

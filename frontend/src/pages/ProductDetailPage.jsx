@@ -39,7 +39,7 @@ export default function ProductDetailPage() {
   const [qty, setQty] = useState(1);
   const [connectOpen, setConnectOpen] = useState(false);
 
-  // Catat frame yang dilihat (tanpa login) untuk konteks konsultasi.
+  // Catat frame yang dilihat (tanpa login) agar ikut disebut di pesan WhatsApp saat berkonsultasi.
   const markViewed = useConsult((s) => s.markViewed);
   useEffect(() => {
     if (product) markViewed(product.id);

@@ -4,7 +4,6 @@ import { CalendarDays, Glasses, MessageCircle, MousePointerClick, Store } from "
 import { Btn, Card, CardHeader, EmptyState, IconBox, Segmented, Tile } from "../../components/partner/ui.jsx";
 import LineChart from "../../components/partner/LineChart.jsx";
 import PlanCard from "../../components/partner/PlanCard.jsx";
-import { RequestCard, useRequests } from "../../components/partner/requests.jsx";
 import { useAccount } from "../../store/usePartner.js";
 import { PERIODS, activeHighlight, activeOrders, buildAnalytics, fmtDate, fmtNum, kpiFor } from "../../data/partnerMock.js";
 
@@ -40,7 +39,6 @@ function KpiCard({ label, value, delta, icon }) {
 /** Dashboard Mitra — tata letak mengikuti referensi (KPI, grafik, permintaan, promosi aktif). */
 export default function DashboardPage() {
   const acc = useAccount();
-  const { mine, setStatus, newCount } = useRequests();
   const plan = acc.subscription.plan;
   const [period, setPeriod] = useState("month");
 
@@ -48,7 +46,6 @@ export default function DashboardPage() {
   const days = PERIODS.find((p) => p.key === period).days;
   const range = `${data.months[0].label} – ${data.months[data.months.length - 1].label} ${new Date().getFullYear()}`;
 
-  const newRequests = mine.filter((i) => i.status === "new");
   const hl = activeHighlight(acc);
   const promos = [
     ...acc.banners.filter((b) => b.status === "active").map((b) => ({ id: b.id, name: b.title, since: b.startsAt, badge: `${fmtNum(b.impressions)} tayangan` })),
@@ -122,23 +119,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex flex-col gap-5 min-w-0">
-          <Card>
-            <CardHeader
-              title="Permintaan Konsultasi"
-              subtitle={`${newCount} pelanggan menunggu respons`}
-              right={<Link to="/partner/requests" className="text-[12.5px] font-semibold text-blue-deep hover:underline">Lihat semua</Link>}
-            />
-            {newRequests.length === 0 ? (
-              <EmptyState title="Semua permintaan sudah ditangani" />
-            ) : (
-              <div className="flex flex-col gap-3">
-                {newRequests.slice(0, 3).map((item, i) => (
-                  <RequestCard key={item.id} item={item} storeName={acc.store.name} primary={i === 0} onContact={(id) => setStatus(id, "contacted")} />
-                ))}
-              </div>
-            )}
-          </Card>
-
           <PlanCard />
         </div>
       </div>

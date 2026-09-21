@@ -40,7 +40,7 @@ export default function TryOnPage() {
     setActiveId(id);
   }, [id]);
 
-  // Catat frame yang dicoba (tanpa login) agar ikut terkirim bila pengguna meminta konsultasi.
+  // Catat frame yang dicoba (tanpa login) agar ikut disebut di pesan WhatsApp bila pengguna berkonsultasi.
   const markViewed = useConsult((s) => s.markViewed);
   useEffect(() => {
     if (activeId) markViewed(activeId);

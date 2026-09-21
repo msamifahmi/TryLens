@@ -20,7 +20,7 @@ export const PLANS = {
     perks: [
       "Profil toko & etalase hingga 50 frame",
       "Virtual Try-On untuk semua frame",
-      "Permintaan konsultasi + hasil scan wajah pelanggan",
+      "Konsultasi pelanggan langsung ke WhatsApp toko (bisa disertai hasil scan wajah)",
       "Analitik dasar (ikhtisar)",
       "Bisa memesan slot iklan banner (per minggu)"
     ]

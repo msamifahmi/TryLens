@@ -41,7 +41,8 @@ JOIN products p ON p.id = d.product_id
 WHERE p.store_id = :store_id AND d.stat_date > CURDATE() - INTERVAL 30 DAY
 GROUP BY p.id ORDER BY vto DESC LIMIT 6;
 
--- 6) Kartu "Permintaan Konsultasi" (belum ditanggapi) + hasil scan wajah
+-- 6) [TIDAK DIPAKAI sejak Update 9 — konsultasi lewat WhatsApp optik; query 6–6f dibiarkan hanya sebagai arsip]
+--    Kartu "Permintaan Konsultasi" (belum ditanggapi) + hasil scan wajah
 SELECT c.id, c.code, c.customer_name, c.identity, c.category, c.message, c.created_at,
        c.face_shape, c.face_width, c.recommended_styles,
        (SELECT COUNT(*) FROM consultation_frames f WHERE f.consultation_id = c.id) AS frames_viewed

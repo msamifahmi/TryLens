@@ -82,7 +82,7 @@ export default function StoreForm({ initial, submitLabel, onSubmit, footerExtra,
         <Field label="Alamat" className="md:col-span-2">
           <input className={inputCls} value={f.address} onChange={set("address")} placeholder="Jalan, nomor, kecamatan" />
         </Field>
-        <Field label="WhatsApp *" hint="Dipakai tombol “Hubungi Toko”. Format 62812…">
+        <Field label="WhatsApp *" hint="Dipakai tombol “Hubungi Toko” dan konsultasi pelanggan (langsung ke nomor ini). Format 62812…">
           <input className={inputCls} value={f.whatsapp} onChange={set("whatsapp")} placeholder="62812xxxxxxx" inputMode="tel" required />
         </Field>
         <Field label="Telepon">
