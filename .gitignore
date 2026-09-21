@@ -1,0 +1,13 @@
+# XAMPP / Local
+.env
+*.log
+*.tmp
+
+# Dependecies
+vendor/
+node_module/
+composer.lock
+
+# OS
+.DS_store
+Thumbs.db
