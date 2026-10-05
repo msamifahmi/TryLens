@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import MerchantAvatar from "./MerchantAvatar.jsx";
 import { MERCHANTS } from "../data/mockData.js";
 
 function StarIcon() {
@@ -42,9 +43,7 @@ export default function MerchantSection({ id }) {
             aria-label={`Lihat katalog ${m.name}`}
           >
             <div className="flex gap-3 items-center mb-2.5">
-              <div className="w-[46px] h-[46px] rounded-xl flex-shrink-0 flex items-center justify-center text-white font-extrabold text-base" style={{ background: m.color }}>
-                {m.initials}
-              </div>
+              <MerchantAvatar merchant={m} className="w-[46px] h-[46px] rounded-xl text-base font-extrabold" />
               <div>
                 <p className="text-[14.5px] font-bold text-ink-text mb-0.5">{m.name}</p>
                 <p className="text-xs text-ink-muted m-0 flex items-center gap-1"><PinIcon /> {m.city}</p>

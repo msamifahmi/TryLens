@@ -1,6 +1,8 @@
 import { FACE_SHAPES, FACE_WIDTHS } from "../../data/faceShape.js";
 import { STYLE_LABELS } from "../../data/mockData.js";
 
+const CONF = { high: "Tinggi", medium: "Sedang", low: "Rendah — coba scan ulang di tempat lebih terang" };
+
 /** Ringkasan hasil analisis wajah — dipakai di sisi konsumen (hasil scan) dan sisi Mitra (kartu/detail). */
 export default function FaceSummary({ face, compact = false, className = "" }) {
   if (!face) return null;
@@ -29,6 +31,12 @@ export default function FaceSummary({ face, compact = false, className = "" }) {
           </p>
         </div>
       </div>
+      {face.pd ? (
+        <p className="text-[12.5px] text-ink-text m-0 mb-3">
+          Jarak pupil (PD) <span className="font-bold">≈ {face.pd} mm</span>
+          <span className="text-ink-muted"> — perkiraan dari kamera; untuk resep tetap ukur di optik.</span>
+        </p>
+      ) : null}
       <p className="text-[11.5px] text-ink-muted m-0 mb-1.5">Gaya frame yang disarankan</p>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {styles.map((s) => (
@@ -36,7 +44,7 @@ export default function FaceSummary({ face, compact = false, className = "" }) {
         ))}
       </div>
       <p className="text-[11.5px] text-ink-muted m-0">
-        {face.source === "ar" ? "Hasil pemindaian AR (estimasi)." : "Dipilih manual oleh pengguna, bukan hasil pemindaian."} {shape.desc}
+        {face.source === "ar" ? `Hasil pemindaian AR (estimasi${face.confidence ? `, keyakinan ${CONF[face.confidence]}` : ""}).` : "Dipilih manual oleh pengguna, bukan hasil pemindaian."} {shape.desc}
       </p>
     </div>
   );

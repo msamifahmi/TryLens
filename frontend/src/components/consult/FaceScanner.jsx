@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { ScanFace, ShieldCheck } from "lucide-react";
-import { FACE_SHAPES, manualResult, measureFace, summarizeSamples } from "../../data/faceShape.js";
+import { FACE_SHAPES, manualResult, summarizeSamples } from "../../data/faceShape.js";
 import { createLandmarker } from "./landmarker.js";
+import { PoseEngine } from "../../ar/PoseEngine.js";
+import { LumaProbe } from "../../ar/quality.js";
+import canonical from "../../data/canonicalFace.json";
 
-const NEED_SAMPLES = 20;
+const NEED_SAMPLES = 30;
+const SAMPLE_GAP_MS = 70; // jeda antar sampel agar tersebar ±2 detik, bukan 30 frame identik
+const canonArr = Float64Array.from(canonical.v);
 
 /**
  * Pemindai bentuk wajah (AR). Kamera → MediaPipe Face Landmarker → rasio wajah → bentuk wajah.
@@ -51,9 +56,9 @@ export default function FaceScanner({ onResult }) {
     setHint("Menyiapkan kamera dan model pemindai… (pertama kali butuh koneksi internet)");
     setProgress(0);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       streamRef.current = stream;
-      const landmarker = await createLandmarker();
+      const landmarker = await createLandmarker({ matrices: true, blendshapes: true });
       if (!alive.current) return cleanup();
       landmarkerRef.current = landmarker;
       const video = videoRef.current;
@@ -63,18 +68,27 @@ export default function FaceScanner({ onResult }) {
       setHint("Hadapkan wajah lurus ke kamera…");
 
       const samples = [];
+      const engine = new PoseEngine(canonArr, { mode: "scan" }); // gerbang ketat: lurus, diam, terang, mata terbuka
+      const luma = new LumaProbe();
+      let lastT = -1;
+      let lastSample = 0;
       const tick = () => {
         if (!alive.current || !landmarkerRef.current) return;
-        if (video.readyState >= 2 && video.videoWidth) {
-          const lm = landmarkerRef.current.detectForVideo(video, performance.now()).faceLandmarks?.[0];
-          if (!lm) setHint("Wajah belum terdeteksi. Pastikan cahaya cukup.");
+        if (video.readyState >= 2 && video.videoWidth && video.currentTime !== lastT) {
+          lastT = video.currentTime;
+          const now = performance.now();
+          const res = landmarkerRef.current.detectForVideo(video, now);
+          const out = engine.update(res, video.videoWidth, video.videoHeight, now, luma.sample(video));
+          if (!out.tracked) setHint("Wajah belum terdeteksi. Pastikan cahaya cukup.");
+          else if (!out.quality.ok) setHint(out.quality.issues[0]);
+          else if (!out.frame) setHint("Buka mata lebar dan tatap kamera.");
           else {
-            const m = measureFace(lm, video.videoWidth, video.videoHeight);
-            if (m && m.frontal > 0.8) {
-              samples.push(m);
+            setHint("Tahan posisi sebentar…");
+            if (now - lastSample >= SAMPLE_GAP_MS) {
+              lastSample = now;
+              samples.push(out.frame);
               setProgress(Math.min(100, Math.round((samples.length / NEED_SAMPLES) * 100)));
-              setHint("Tahan posisi sebentar…");
-            } else setHint("Hadapkan wajah lurus ke kamera (jangan menoleh).");
+            }
           }
           if (samples.length >= NEED_SAMPLES) {
             const result = summarizeSamples(samples);

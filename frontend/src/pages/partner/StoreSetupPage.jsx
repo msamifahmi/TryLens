@@ -19,8 +19,8 @@ export default function StoreSetupPage() {
       <StoreForm
         submitLabel="Selesai & Buka Dashboard"
         submitClassName="w-full"
-        onSubmit={(values) => {
-          saveStore(values);
+        onSubmit={async (values, extra) => {
+          await saveStore(values, extra);
           navigate("/partner", { replace: true });
         }}
       />

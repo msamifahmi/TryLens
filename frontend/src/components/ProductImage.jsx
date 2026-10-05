@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import FrameIcon from "./icons/FrameIcon.jsx";
+import { assetUrl } from "../lib/catalog.js";
 
 /**
  * Renders a REAL product photo when one is available, and only falls back
@@ -18,7 +19,7 @@ import FrameIcon from "./icons/FrameIcon.jsx";
  * real photo the moment it's placed in that folder.
  */
 export default function ProductImage({ productId, variant = "main", style, colorKey, className = "", alt = "" }) {
-  const src = `/products/${productId}/${variant}.jpg`;
+  const src = assetUrl(productId, `${variant}.jpg`); // unggahan Mitra (/media) atau berkas bawaan (/products)
   const [status, setStatus] = useState("loading"); // loading | photo | fallback
 
   useEffect(() => {

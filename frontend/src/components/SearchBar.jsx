@@ -26,7 +26,7 @@ export default function SearchBar({ onSelectProduct, onSelectMerchant }) {
   const noResults = q && productResults.length === 0 && merchantResults.length === 0;
 
   return (
-    <div className="relative flex-1 max-w-[620px]" ref={wrapRef}>
+    <div className="relative flex-1 min-w-0 max-w-[620px]" ref={wrapRef}>
       <div className="flex items-center h-[46px] border-[1.5px] border-border rounded-[10px] bg-white px-3.5 gap-2.5 focus-within:border-blue transition-colors">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-ink-muted flex-shrink-0" aria-hidden="true">
           <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />

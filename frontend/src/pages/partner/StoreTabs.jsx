@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Glasses, Pencil, Plus, Trash2 } from "lucide-react";
-import FrameIcon from "../../components/icons/FrameIcon.jsx";
+import { FrameAssetFields, FrameThumb, assetsInitial, commitAssets } from "../../components/partner/FrameAssets.jsx";
+import { delFrameMedia } from "../../lib/mediaDb.js";
+import { backend } from "../../api/http.js";
+import { PLATFORMS, cleanBuyUrl } from "../../lib/ecommerce.js";
 import StoreForm from "../../components/partner/StoreForm.jsx";
+import FramePreviewModal from "../../components/partner/FramePreviewModal.jsx";
+import MerchantAvatar from "../../components/MerchantAvatar.jsx";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Flash, Meter, Tile, Toggle, UpgradeLink, inputCls, useFlash } from "../../components/partner/ui.jsx";
-import { usePartner, useAccount } from "../../store/usePartner.js";
+import { usePartner, useAccount, whenSynced } from "../../store/usePartner.js";
 import { FRAME_COLORS, STYLE_LABELS } from "../../data/mockData.js";
 import { PLANS, activeHighlight, fmtRp, sponsoredIds } from "../../data/partnerMock.js";
 import { InstagramIcon, XIcon, ShopBagIcon } from "../../components/icons/SocialIcons.jsx";
@@ -20,9 +25,9 @@ export function StoreProfileTab() {
       <StoreForm
         initial={acc.store}
         submitLabel="Simpan Perubahan"
-        onSubmit={(v) => {
-          saveStore(v);
-          flash("Profil toko tersimpan");
+        onSubmit={async (v, extra) => {
+          const r = await saveStore(v, extra);
+          flash(r?.ok === false ? `Profil tersimpan, tetapi foto gagal: ${r.error}` : "Profil toko tersimpan");
         }}
         footerExtra={<Flash msg={msg} />}
       />
@@ -31,7 +36,7 @@ export function StoreProfileTab() {
 }
 
 /* --------------------------------------------------------- Produk / Frame */
-const EMPTY = { name: "", style: "aviator", colorKey: "black", category: "Pria", price: "", oldPrice: "", stock: "10" };
+const EMPTY = { name: "", description: "", buy: {}, style: "aviator", colorKey: "black", category: "Pria", price: "", oldPrice: "", stock: "10" };
 
 export function ProductsTab() {
   const acc = useAccount();
@@ -39,14 +44,33 @@ export function ProductsTab() {
   const plan = acc.subscription.plan;
   const limit = PLANS[plan].limits.frames;
   const [form, setForm] = useState(null); // null = tertutup; {id?} = tambah/ubah
+  const [assets, setAssets] = useState({ photos: [], glb: null });
+  const [saving, setSaving] = useState(false);
+  const openForm = (f) => {
+    const base = f ? { ...f, oldPrice: f.oldPrice ?? "" } : { ...EMPTY, id: `f-${Date.now().toString(36)}`, isNew: true };
+    setAssets(f ? assetsInitial(f) : { photos: [], glb: null });
+    setForm(base);
+  };
   const atLimit = acc.frames.length >= limit;
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  function save(e) {
+  async function save(e) {
     e.preventDefault();
-    const frame = {
-      id: form.id || `f-${Date.now().toString(36)}`,
+    setSaving(true);
+    // Tautan e-commerce: kosong boleh, isi harus https & domain platform yang benar.
+    const buy = {};
+    for (const p of PLATFORMS) {
+      const raw = (form.buy?.[p.key] || "").trim();
+      if (!raw) continue;
+      const u = cleanBuyUrl(p.key, raw);
+      if (!u) { setSaving(false); return alert(`Tautan ${p.label} tidak valid${p.hosts ? ` — gunakan alamat https dari ${p.hosts[0]}` : " — gunakan alamat https"}.`); }
+      buy[p.key] = u;
+    }
+    const base = {
+      id: form.id,
       name: form.name.trim(),
+      description: (form.description || "").trim().slice(0, 800),
+      buy,
       style: form.style,
       colorKey: form.colorKey,
       category: form.category,
@@ -56,17 +80,50 @@ export function ProductsTab() {
       published: form.published ?? true,
       vto: form.vto ?? true
     };
-    patch((a) => ({ ...a, frames: form.id ? a.frames.map((f) => (f.id === form.id ? frame : f)) : [frame, ...a.frames] }));
+    const prevMedia = acc.frames.find((f) => f.id === form.id)?.media;
+    const put = (frame) => patch((a) => ({ ...a, frames: form.isNew ? [frame, ...a.frames] : a.frames.map((f) => (f.id === form.id ? frame : f)) }));
+
+    if (backend.partner) {
+      // Mode server: frame dibuat dulu (agar ada pemiliknya), baru berkas diunggah & divalidasi server.
+      usePartner.getState().clearSyncError();
+      put({ ...base, media: prevMedia });
+      await whenSynced();
+      const errs = usePartner.getState().syncError;
+      if (errs) { setSaving(false); return alert(errs); }
+      try {
+        await commitAssets(form.id, assets, prevMedia);
+      } catch (err) {
+        await usePartner.getState().refresh();
+        setSaving(false);
+        return alert(`Frame tersimpan, tetapi berkas ditolak server: ${err.message}`);
+      }
+      await usePartner.getState().refresh();
+      setSaving(false);
+      setForm(null);
+      return;
+    }
+
+    let media;
+    try {
+      media = await commitAssets(form.id, assets, prevMedia);
+    } catch {
+      setSaving(false);
+      return alert("Berkas gagal disimpan di browser (penyimpanan penuh atau mode privat). Coba kurangi ukuran foto/model.");
+    }
+    put({ ...base, media });
+    setSaving(false);
     setForm(null);
   }
 
   const update = (id, part) => patch((a) => ({ ...a, frames: a.frames.map((f) => (f.id === id ? { ...f, ...part } : f)) }));
-  const remove = (id) =>
+  const remove = (id) => {
+    delFrameMedia(id).catch(() => {});
     patch((a) => ({
       ...a,
       frames: a.frames.filter((f) => f.id !== id),
       collections: a.collections.map((c) => ({ ...c, frameIds: c.frameIds.filter((x) => x !== id) }))
     }));
+  };
 
   return (
     <Card>
@@ -74,7 +131,7 @@ export function ProductsTab() {
         title="Produk / Frame"
         subtitle={`${acc.frames.length} frame terdaftar`}
         right={
-          <Btn size="sm" disabled={atLimit} onClick={() => setForm({ ...EMPTY })}>
+          <Btn size="sm" disabled={atLimit} onClick={() => openForm(null)}>
             <Plus size={15} /> Tambah frame
           </Btn>
         }
@@ -91,7 +148,7 @@ export function ProductsTab() {
 
       {form && (
         <form onSubmit={save} className="rounded-xl border border-[#C5D6EA] bg-white p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <p className="col-span-full text-[14px] font-semibold text-ink m-0">{form.id ? "Ubah frame" : "Frame baru"}</p>
+          <p className="col-span-full text-[14px] font-semibold text-ink m-0">{form.isNew ? "Frame baru" : "Ubah frame"}</p>
           <Field label="Nama frame *" className="col-span-2"><input className={inputCls} value={form.name} onChange={set("name")} required /></Field>
           <Field label="Gaya">
             <select className={inputCls} value={form.style} onChange={set("style")}>
@@ -111,8 +168,24 @@ export function ProductsTab() {
           <Field label="Harga (Rp) *"><input className={inputCls} type="number" min="1000" value={form.price} onChange={set("price")} required /></Field>
           <Field label="Harga coret (Rp)"><input className={inputCls} type="number" min="0" value={form.oldPrice ?? ""} onChange={set("oldPrice")} /></Field>
           <Field label="Stok"><input className={inputCls} type="number" min="0" value={form.stock} onChange={set("stock")} /></Field>
+          <Field label={`Deskripsi produk (${(form.description || "").length}/800)`} className="col-span-full">
+            <textarea className={`${inputCls} h-24 py-2.5 resize-none`} maxLength={800} value={form.description || ""} onChange={set("description")} placeholder="Bahan, ukuran lensa, cocok untuk bentuk wajah apa, garansi… Tampil di halaman produk. Kosongkan untuk deskripsi otomatis." />
+          </Field>
+          <div className="col-span-full">
+            <p className="text-[12.5px] font-semibold text-ink m-0">Tautan beli di e-commerce <span className="font-normal text-ink-muted">(opsional)</span></p>
+            <p className="text-[12px] text-ink-muted m-0 mt-0.5 mb-2">Pembeli melihat tombolnya di halaman produk. Kosong = memakai tautan Tokopedia/Shopee toko (Store Profile).</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {PLATFORMS.map((p) => (
+                <label key={p.key} className="flex items-center gap-2">
+                  <span className="w-[92px] flex-shrink-0 text-[12px] font-medium" style={{ color: p.color }}>{p.label}</span>
+                  <input className={inputCls} type="url" inputMode="url" placeholder={p.hosts ? `https://${p.hosts[0]}/…` : "https://…"} value={form.buy?.[p.key] || ""} onChange={(e) => setForm((f) => ({ ...f, buy: { ...f.buy, [p.key]: e.target.value } }))} />
+                </label>
+              ))}
+            </div>
+          </div>
+          <FrameAssetFields assets={assets} setAssets={setAssets} />
           <div className="col-span-full flex gap-2">
-            <Btn type="submit" size="sm">Simpan frame</Btn>
+            <Btn type="submit" size="sm" disabled={saving}>{saving ? "Menyimpan…" : "Simpan frame"}</Btn>
             <Btn type="button" variant="ghost" size="sm" onClick={() => setForm(null)}>Batal</Btn>
           </div>
         </form>
@@ -135,10 +208,10 @@ export function ProductsTab() {
                 <tr key={f.id} className="border-b border-[#E8F0F8] last:border-0">
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3">
-                      <span className="w-14 h-8 flex-shrink-0"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></span>
+                      <span className="w-14 h-10 flex-shrink-0 flex items-center"><FrameThumb frame={f} /></span>
                       <span>
                         <span className="block font-medium text-ink">{f.name}</span>
-                        <span className="block text-[11.5px] text-ink-muted">{STYLE_LABELS[f.style]}</span>
+                        <span className="block text-[11.5px] text-ink-muted">{STYLE_LABELS[f.style]}{f.media?.photos ? ` · ${f.media.photos} foto` : ""}</span>
                       </span>
                     </div>
                   </td>
@@ -148,11 +221,14 @@ export function ProductsTab() {
                     {f.oldPrice && <span className="block text-[11.5px] text-ink-muted line-through">{fmtRp(f.oldPrice)}</span>}
                   </td>
                   <td className="px-4 py-2.5">{f.stock <= 5 ? <Badge tone="amber">{f.stock} tersisa</Badge> : f.stock}</td>
-                  <td className="px-4 py-2.5"><Badge tone={f.vto ? "green" : "gray"}>{f.vto ? "Aktif" : "Nonaktif"}</Badge></td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={f.vto ? "green" : "gray"}>{f.vto ? "Aktif" : "Nonaktif"}</Badge>
+                    <span className="block text-[11.5px] text-ink-muted mt-0.5">{f.media?.glb ? (f.media.glb.rig === "ok" ? "3D · rig sesuai" : "3D · tanpa rig") : "Ilustrasi 2D"}</span>
+                  </td>
                   <td className="px-4 py-2.5"><Toggle checked={f.published} onChange={(v) => update(f.id, { published: v })} label={`Tayangkan ${f.name}`} /></td>
                   <td className="px-4 py-2.5">
                     <div className="flex gap-1 justify-end">
-                      <button className="w-8 h-8 rounded-lg hover:bg-surface-blue flex items-center justify-center text-ink-text" aria-label={`Ubah ${f.name}`} onClick={() => setForm({ ...f, oldPrice: f.oldPrice ?? "" })}><Pencil size={15} /></button>
+                      <button className="w-8 h-8 rounded-lg hover:bg-surface-blue flex items-center justify-center text-ink-text" aria-label={`Ubah ${f.name}`} onClick={() => openForm(f)}><Pencil size={15} /></button>
                       <button className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-red-500" aria-label={`Hapus ${f.name}`} onClick={() => remove(f.id)}><Trash2 size={15} /></button>
                     </div>
                   </td>
@@ -239,6 +315,7 @@ export function PreviewTab() {
   const published = acc.frames.filter((f) => f.published);
   const sponsored = new Set(sponsoredIds(acc));
   const links = s.links || {};
+  const [open, setOpen] = useState(null);
 
   return (
     <Card>
@@ -250,7 +327,7 @@ export function PreviewTab() {
         )}
       />
       <Tile className="p-5 mb-4 flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl text-white font-extrabold text-xl flex items-center justify-center flex-shrink-0" style={{ background: s.color }}>{s.initials}</div>
+        <MerchantAvatar merchant={s} className="w-16 h-16 rounded-2xl text-xl font-extrabold" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-[20px] font-bold text-ink m-0">{s.name}</h3>
@@ -271,16 +348,19 @@ export function PreviewTab() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {published.map((f) => (
-            <Tile key={f.id} className="p-3 relative">
+            <Tile key={f.id} className="p-3 relative cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all focus-within:ring-2 focus-within:ring-blue-deep">
               {sponsored.has(f.id) && <Badge tone="gold" className="absolute top-2 left-2">Sponsored</Badge>}
-              <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
-              <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
-              <p className="text-[13px] font-semibold text-ink m-0">{fmtRp(f.price)}</p>
-              {f.vto && <p className="flex items-center gap-1 text-[11.5px] text-ink-muted m-0 mt-1"><Glasses size={12} /> Try-On</p>}
+              <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameThumb frame={f} /></div>
+              <button type="button" onClick={() => setOpen(f)} aria-label={`Lihat ${f.name}`} className="text-left w-full after:absolute after:inset-0 after:content-[''] focus:outline-none">
+                <span className="block text-[13px] font-medium text-ink truncate">{f.name}</span>
+                <span className="block text-[13px] font-semibold text-ink">{fmtRp(f.price)}</span>
+                {f.vto && <span className="flex items-center gap-1 text-[11.5px] text-ink-muted mt-1"><Glasses size={12} /> Try-On</span>}
+              </button>
             </Tile>
           ))}
         </div>
       )}
+      {open && <FramePreviewModal frame={acc.frames.find((x) => x.id === open.id) || open} store={s} sponsored={sponsored.has(open.id)} onClose={() => setOpen(null)} />}
     </Card>
   );
 }

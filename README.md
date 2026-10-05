@@ -50,6 +50,35 @@ Server berjalan di `http://localhost:4000`. Endpoint tersedia:
 | POST   | /api/wishlist/:userId | Simpan wishlist user (JSON file)    |
 | GET    | /api/wishlist/:userId | Ambil wishlist user                 |
 
+### Backend sungguhan (akun, frame, unggahan, katalog publik)
+
+```bash
+cd backend-node && npm install
+npm run seed          # akun demo (basic@optikkusuma.id, pro@lensakita.id, baru@optikbaru.id · Partner123!)
+npm run dev           # http://localhost:4000
+cd ../frontend && npm run dev   # Vite meneruskan /api & /media ke backend → satu origin, cookie sesi jalan
+```
+Tanpa backend, front-end otomatis memakai mode demo (localStorage). Dengan backend: password di-hash (scrypt), sesi di cookie HttpOnly, frame & berkas Mitra tersimpan di SQLite (`backend-node/data/`) dan `backend-node/uploads/`, dan frame terbit tampil di katalog publik, Coba Virtual dan 360°.
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| POST | /api/auth/register · /login · /logout · /password | Akun & sesi (butuh header `X-TryLens: 1`) |
+| GET | /api/auth/me | Akun sesi ini (atau `null`) |
+| GET/PATCH | /api/partner/me | Data akun (hanya bidang yang boleh diubah klien) |
+| PUT/DELETE | /api/partner/frames/:id | Buat/ubah/hapus frame (validasi + kuota paket) |
+| PUT/DELETE | /api/partner/frames/:id/assets/{photo-0..3\|model} | Unggah JPEG / GLB (badan mentah, divalidasi) |
+| GET | /media/:id/{main,side,detail,close}.jpg · model.glb | Berkas unggahan |
+| GET | /api/catalog | Frame terbit Mitra + toko + daftar id yang harus disembunyikan |
+| POST | /api/billing/checkout | Hitung pesanan di server (harga klien diabaikan) |
+| POST | /api/billing/orders/:id/pay | Bayar uji (hanya `PAYMENT_PROVIDER=sandbox`) |
+| POST | /api/billing/webhook | Konfirmasi gateway: header `X-Signature` = HMAC-SHA256(secret, badan mentah) |
+
+Konfigurasi: `backend-node/.env.example`. Uji: `cd backend-node && npm test` (21 uji integrasi). Produksi: `NODE_ENV=production`, `PAYMENT_PROVIDER=webhook`, `PAYMENT_WEBHOOK_SECRET` diisi, jalankan di belakang HTTPS/reverse proxy yang menyatukan `/`, `/api`, `/media` dalam satu origin. **Backend PHP belum diselaraskan dengan fitur ini** (masih katalog baca-saja).
+
+### VTO: node wajah paralel + magnet, dan ML (Python)
+
+Lihat CHANGELOG Update 17-C. Ringkas: `ar/faceNodes.js` (node pupil/hidung/pelipis, jalur cepat per frame), `ar/magnet.js` (pelacak gain-adaptif + ekstrapolasi latensi), `PoseEngine.predict()` (render antar deteksi), kalibrasi ulang cepat, dan `ml/train_node_corrector.py` (latih offline di data berlabel → `frontend/src/data/nodeCorrector.json` → inferensi di browser). `npm run test:magnet` di `frontend/`.
+
 ## 3. Backend PHP (alternatif, tanpa framework)
 
 Butuh PHP 8+ terpasang.
@@ -153,6 +182,64 @@ gambar rusak. Tidak perlu ubah kode apa pun.
 > tidak punya sumber foto berlisensi/bebas hak cipta untuk 24 model frame
 > demo ini. Silakan pakai foto katalog TryLens kamu sendiri — lihat
 > `frontend/public/products/README.md` untuk detail penamaan file.
+
+### Model 3D (.glb) untuk Coba Virtual — spesifikasi aset
+
+Taruh file di `frontend/public/products/<id-produk>/model.glb`. Berkas mentah (.rar/.obj/.fbx) simpan di `assets-mentah/`, jangan di `public/`.
+
+Setiap model harus memuat **node bernama baku** dan **metadata ukuran asli**:
+
+```
+GLB
+├── GlassesRoot          (induk semua mesh; transform identitas; metadata ada di sini)
+├── Bridge               titik BELAKANG jembatan (yang menyentuh hidung), x = 0
+├── LeftLensCenter       pusat lensa kiri PEMAKAI  → sumbu +X
+├── RightLensCenter      pusat lensa kanan PEMAKAI → sumbu −X
+├── LeftTemple           engsel gagang kiri
+└── RightTemple          engsel gagang kanan
+GlassesRoot.extras.trylens = { frameWidthMm, lensWidthMm, lensHeightMm, bridgeWidthMm, templeLengthMm, realWorldScale }
+```
+
+Sumbu: **+X = kiri pemakai, +Y = atas, +Z = depan (menghadap kamera)**. `realWorldScale` = mm per satuan model (10 = model dalam cm, 1 = mm).
+Material lensa harus bernama mengandung `glass`/`lens` agar bisa diukur otomatis.
+
+- `npm run glb:rig -- masuk.glb keluar.glb` — menambah node + metadata ke model biasa dengan **mengukur geometrinya** (lensa dari material, gagang dari mesh yang terletak di belakang, jembatan dari titik belakang bingkai). Opsi: `--lens=<regex material>`, `--temple-gap=<cm>`.
+- `npm run glb:check` — memeriksa semua `public/products/*/model.glb`: node lengkap, kiri/kanan simetris, Bridge di tengah, metadata cocok dengan geometri (toleransi 3 mm), rentang ukuran wajar. Model lama tanpa rig dilaporkan sebagai "cadangan".
+- **Periksa hasil `glb:rig` di Blender** (node-node itu hanya sebaik deteksinya); koreksi node secara manual bila perlu lalu jalankan `glb:check`.
+
+Yang mengambil spesifikasi ini: `src/ar/rigSpec.js` (konversi satuan) dan `src/ar/rigSpecThree.js` (membaca scene hasil GLTFLoader).
+Model tanpa rig tetap tampil, tetapi dengan penempatan perkiraan (titik tetap + koreksi jembatan hidung) dan tanpa laporan kecocokan.
+
+**Pipeline fitting (`src/ar/eyeFit.js`)**
+
+```
+Wajah: Left Eye · Right Eye (pusat iris 468/473) · Nose Bridge (168·6·197) · Face Orientation (matriks pose) · Metric Scale (iris 11,7 mm)
+   ↓  median 45 frame, metrik (cm), sudah di-un-rotate
+Transformasi rigid (tanpa scale ke wajah):
+   x,y  = titik tengah LeftLensCenter/RightLensCenter ↔ titik tengah pupil
+   roll = garis pupil (dibatasi ±4°)
+   z    = Bridge tidak masuk punggung hidung (+0,5 mm celah), batas bawah jarak lensa–pupil 12 mm, batas atas 28 mm
+   ↓
+GLB dipasang berukuran ASLI (skala = realWorldScale/10)
+```
+
+Karena frame kaku, kedua pusat lensa hanya bisa tepat di kedua pupil bila jarak pusat lensa = PD. Selisihnya dihitung dan dilaporkan per mata ("Pusat lensa vs pupil"), bukan disembunyikan.
+
+### Presisi AR & rekomendasi
+
+- `frontend/src/ar/` — mesin presisi (One Euro, kalibrasi iris, un-rotate, gerbang kualitas, `eyeFit.js` kunci-pupil). Fungsi murni, diuji dengan `npm run test:ar`; aset GLB dengan `npm run test:glb`.
+- `frontend/src/rec/recommend.js` — algoritma rekomendasi (bobot di `WEIGHTS`, kalibrasi lebar di `FIT`). Uji: `npm run test:rec`.
+- Lebar frame tiap produk diambil dari `product.frameMm` bila ada; bila tidak, diperkirakan dari gaya. Isi `frameMm` di data produk asli agar rekomendasi lebar akurat.
+
+### Mengukur akurasi try-on (disarankan sebelum klaim angka)
+
+Tidak ada angka "95%" yang terukur di project ini. Cara membuatnya jujur:
+
+1. Kumpulkan 15–20 orang. Ukur dengan penggaris/jangka: lebar wajah (tulang pipi), PD (pakai alat optik), lebar frame f0 (146 mm).
+2. Buka `/try-on/f0`, tunggu "Ukuran asli terkalibrasi", catat lebar wajah dan PD yang tampil di panel "Kecocokan di wajahmu".
+3. Untuk kunci-pupil: foto close-up wajah pengguna dengan frame asli (kamera sejajar mata), bandingkan posisi pusat lensa asli terhadap pupil dengan yang tampil di layar; ukur juga jarak lensa ke mata (laporan "Jarak lensa ke mata") dengan penggaris.
+4. Hitung galat rata-rata |terukur − tampil|. Target realistis kamera biasa: PD ±3–4 mm, lebar wajah ±5 mm. Setel `widthClass` (`data/faceShape.js`) dan `FIT` (`rec/recommend.js`) dari data ini.
+5. Untuk kecocokan visual: minta orang menilai skala 1–5 "frame terlihat menempel di hidung & sejajar mata" di beberapa pose.
 
 ## 5. Teknologi yang dipakai
 

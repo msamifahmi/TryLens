@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import MerchantAvatar from "../MerchantAvatar.jsx";
+import { cropSquare } from "../../lib/mediaDb.js";
 import { Btn, Field, Tile, inputCls } from "./ui.jsx";
 
 export const PROVINCES = ["DKI Jakarta", "Jawa Barat", "Banten", "Jawa Tengah", "DI Yogyakarta", "Jawa Timur", "Bali", "Sumatera Utara", "Sulawesi Selatan", "Lainnya"];
@@ -22,6 +24,22 @@ export default function StoreForm({ initial, submitLabel, onSubmit, footerExtra,
     shopee: initial?.links?.shopee || "",
     color: initial?.color || BRAND_COLORS[0]
   });
+  // logo: undefined = tidak berubah · null = dihapus · {blob,dataUrl} = foto baru
+  const [logo, setLogo] = useState(undefined);
+  const [logoErr, setLogoErr] = useState("");
+  const fileRef = useRef(null);
+  const shownLogo = logo === undefined ? initial?.logo || null : logo ? logo.dataUrl : null;
+  async function pick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setLogoErr("");
+      setLogo(await cropSquare(file));
+    } catch (err) {
+      setLogoErr(err.message);
+    }
+  }
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
 
   function submit(e) {
@@ -37,17 +55,27 @@ export default function StoreForm({ initial, submitLabel, onSubmit, footerExtra,
       phone: f.phone.trim(),
       color: f.color,
       links
-    });
+    }, { logo });
   }
 
   return (
     <form onSubmit={submit}>
       <Tile className="p-5 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2 flex items-center gap-4 pb-2">
-          <div className="w-16 h-16 rounded-2xl text-white font-extrabold text-xl flex items-center justify-center flex-shrink-0" style={{ background: f.color }}>
-            {initialsOf(f.name)}
-          </div>
-          <div>
+          <MerchantAvatar
+            merchant={{ name: f.name, color: f.color, initials: initialsOf(f.name) }}
+            src={shownLogo}
+            className="w-16 h-16 rounded-2xl text-xl font-extrabold"
+          />
+          <div className="min-w-0">
+            <p className="text-[12.5px] font-medium text-ink-text m-0 mb-1.5">Foto profil toko</p>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={pick} data-testid="logo-input" />
+              <Btn type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()}>{shownLogo ? "Ganti foto" : "Unggah foto"}</Btn>
+              {shownLogo && <Btn type="button" size="sm" variant="ghost" onClick={() => setLogo(null)}>Hapus</Btn>}
+              <span className="text-[11.5px] text-ink-muted">JPG/PNG/WebP · dipotong persegi · tanpa foto → inisial</span>
+            </div>
+            {logoErr && <p className="text-xs text-red-600 m-0 mb-2" role="alert">{logoErr}</p>}
             <p className="text-[12.5px] font-medium text-ink-text m-0 mb-1.5">Warna brand</p>
             <div className="flex gap-2">
               {BRAND_COLORS.map((c) => (

@@ -9,8 +9,8 @@ export default function PartnerRegisterPage() {
 
   if (account) return <Navigate to={STAGE_PATH[stageOf(account)]} replace />;
 
-  const onSubmit = ({ name, email, password }) => {
-    const res = register({ name, email, password });
+  const onSubmit = async ({ name, email, password }) => {
+    const res = await register({ name, email, password });
     return res.ok ? null : res.error;
   };
 

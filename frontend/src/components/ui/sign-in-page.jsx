@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -70,8 +71,8 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
 
         <div className="relative z-[1] px-14 max-w-[560px] text-white">
           <div className="w-full max-w-[380px] mb-10 relative h-[180px]">
-            <FrameIcon style="aviator" colorKey="gold" className="absolute top-0 left-0 w-[70%] -rotate-6 drop-shadow-2xl" />
-            <FrameIcon style="round" colorKey="clear" className="absolute bottom-0 right-0 w-[70%] rotate-3 drop-shadow-2xl" />
+            <motion.div className="absolute top-0 left-0 w-[70%]" initial={{ opacity: 0, x: -30, rotate: -12 }} animate={{ opacity: 1, x: 0, rotate: -6, y: [0, -8, 0] }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], y: { duration: 5, repeat: Infinity, ease: "easeInOut" } }}><FrameIcon style="aviator" colorKey="gold" className="w-full drop-shadow-2xl" /></motion.div>
+            <motion.div className="absolute bottom-0 right-0 w-[70%]" initial={{ opacity: 0, x: 30, rotate: 9 }} animate={{ opacity: 1, x: 0, rotate: 3, y: [0, 8, 0] }} transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1], y: { duration: 6, repeat: Infinity, ease: "easeInOut" } }}><FrameIcon style="round" colorKey="clear" className="w-full drop-shadow-2xl" /></motion.div>
           </div>
           <p className="text-xs font-semibold tracking-[0.2em] text-accent-yellow mb-3">TRYLENS PARTNER</p>
           <h2 className="text-[34px] leading-tight font-extrabold tracking-tight mb-4">
@@ -95,7 +96,7 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
           <ArrowLeft className="w-5 h-5 text-ink" />
         </button>
 
-        <div className="w-full max-w-md p-8">
+        <motion.div className="w-full max-w-md p-8" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-ink mb-2">{isRegister ? "Daftar sebagai Mitra" : "Masuk Mitra"}</h1>
             <p className="text-ink-text">
@@ -170,23 +171,33 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
             )}
 
             {notice && <p className="text-sm text-ink-text bg-surface-blue/60 border border-[#DDE8F4] rounded-xl px-4 py-3 m-0">{notice}</p>}
-            {error && (
-              <p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 m-0">
-                {error}
-              </p>
-            )}
+            <AnimatePresence>
+              {error && (
+                <motion.p key={error} role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 m-0"
+                  initial={{ opacity: 0, x: 0 }} animate={{ opacity: 1, x: [0, -8, 8, -5, 5, 0] }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }}>
+                  {error}
+                </motion.p>
+              )}
+            </AnimatePresence>
 
-            <button
+            <motion.button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-deep text-white py-3 px-4 rounded-xl font-semibold hover:brightness-90 transition-colors disabled:opacity-60"
+              whileHover={{ y: -2, boxShadow: "0 10px 24px rgba(64,106,175,0.35)" }}
+              whileTap={{ scale: 0.97, y: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="w-full bg-blue-deep text-white py-3 px-4 rounded-xl font-semibold disabled:opacity-60"
             >
-              {loading ? "Memproses…" : isRegister ? "Buat Akun Mitra" : "Masuk"}
-            </button>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span key={loading ? "l" : "i"} className="block" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
+                  {loading ? "Memproses…" : isRegister ? "Buat Akun Mitra" : "Masuk"}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
           </form>
 
           {children}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

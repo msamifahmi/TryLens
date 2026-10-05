@@ -2,7 +2,7 @@
 // Struktur sengaja mengikuti tabel di backend-php/database/schema.sql,
 // jadi nanti tinggal diganti dengan pemanggilan API.
 
-import { PRODUCTS, MERCHANTS } from "./mockData.js";
+import { PRODUCTS, MERCHANTS, STYLE_LABELS } from "./mockData.js";
 
 /* ---------------------------------------------------------------- paket */
 
@@ -300,8 +300,21 @@ export function buildAnalytics(key, frames = [], plan = "basic") {
       visitors: Math.round(views * 0.72),
       productViews: Math.round(views * (0.82 + r() * 0.1)),
       vto: Math.round(views * (0.26 + r() * 0.06)),
-      contacts: Math.round(views * (0.045 + r() * 0.015))
+      contacts: Math.round(views * (0.045 + r() * 0.015)),
+      buyClicks: Math.round(views * (0.03 + r() * 0.014)),
+      captures: Math.round(views * (0.16 + r() * 0.04)),
+      wishlist: Math.round(views * (0.05 + r() * 0.02)),
+      returning: Math.round(views * (0.19 + r() * 0.05))
     };
+  });
+  const today = new Date();
+  daily.forEach((d, i) => {
+    const dt = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daily.length - 1 - i));
+    d.date = dt.toISOString().slice(0, 10);
+    d.dow = dt.getDay(); // 0 = Minggu
+    // akhir pekan lebih ramai di toko optik online
+    const f = d.dow === 0 || d.dow === 6 ? 1.14 : d.dow === 2 || d.dow === 3 ? 0.93 : 1;
+    for (const k of ["storeViews", "visitors", "productViews", "vto", "contacts", "buyClicks", "captures", "wishlist", "returning"]) d[k] = Math.round(d[k] * f);
   });
 
   const now = new Date();
@@ -313,21 +326,24 @@ export function buildAnalytics(key, frames = [], plan = "basic") {
     return { label: d.toLocaleDateString("id-ID", { month: "short" }), current, previous };
   });
 
-  const topFrames = (frames.length ? frames : []).slice(0, 6).map((f, i) => {
-    const views = Math.round((900 - i * 95 + r() * 120) * scale);
+  const topFrames = (frames.length ? frames : []).slice(0, 10).map((f, i) => {
+    const views = Math.round((900 - i * 80 + r() * 120) * scale);
     const vto = Math.round(views * (0.34 + r() * 0.1));
     const wishlist = Math.round(views * (0.06 + r() * 0.03));
+    const captures = Math.round(vto * (0.55 + r() * 0.12));
+    const buyClicks = Math.round(vto * (0.1 + r() * 0.07));
     const contacts = Math.round(vto * (0.12 + r() * 0.05));
-    return { id: f.id, name: f.name, style: f.style, colorKey: f.colorKey, views, vto, wishlist, contacts };
+    const trend = Math.round((r() * 70 - 22) * 10) / 10; // % vs 30 hari sebelumnya
+    return { id: f.id, name: f.name, style: f.style, colorKey: f.colorKey, price: f.price, stock: f.stock, views, vto, wishlist, captures, buyClicks, contacts, trend };
   });
 
   const sources = [
-    { label: "Pencarian TryLens", value: 34 },
-    { label: "Beranda & Promo", value: 27 },
-    { label: "Instagram", value: 18 },
-    { label: "Tokopedia / Shopee", value: 12 },
-    { label: "Langsung", value: 9 }
-  ];
+    { label: "Pencarian TryLens", value: 34, conv: 5.1 },
+    { label: "Beranda & Promo", value: 27, conv: 3.4 },
+    { label: "Instagram", value: 18, conv: 6.2 },
+    { label: "Tokopedia / Shopee", value: 12, conv: 4.4 },
+    { label: "Langsung", value: 9, conv: 7.0 }
+  ].map((x) => ({ ...x, conv: Math.round((x.conv * (0.9 + r() * 0.25)) * 10) / 10 }));
   const devices = [
     { label: "Mobile", value: 71 },
     { label: "Desktop", value: 24 },
@@ -338,7 +354,22 @@ export function buildAnalytics(key, frames = [], plan = "basic") {
     return Math.round((40 + peak * 220 + r() * 25) * scale);
   });
 
-  return { daily, months, topFrames, sources, devices, hours };
+  const faceShapes = [
+    { label: "Oval", value: 31 }, { label: "Bulat", value: 24 }, { label: "Kotak", value: 18 },
+    { label: "Hati", value: 15 }, { label: "Lonjong", value: 12 }
+  ];
+  const ages = [
+    { label: "< 18", value: 6 }, { label: "18–24", value: 38 }, { label: "25–34", value: 31 }, { label: "35–44", value: 16 }, { label: "45+", value: 9 }
+  ];
+  const genders = [{ label: "Wanita", value: 54 }, { label: "Pria", value: 43 }, { label: "Lainnya", value: 3 }];
+  const cities = [
+    { label: "Surakarta", value: 22 }, { label: "Yogyakarta", value: 15 }, { label: "Semarang", value: 13 },
+    { label: "Jakarta", value: 12 }, { label: "Bandung", value: 8 }, { label: "Lainnya", value: 30 }
+  ];
+  // Gaya frame yang paling cocok per bentuk wajah (rekomendasi umum optik) — dipakai untuk celah katalog.
+  const faceStyles = { Oval: ["aviator", "square", "round"], Bulat: ["square", "rect", "browline"], Kotak: ["round", "cateye", "aviator"], Hati: ["round", "rect", "aviator"], Lonjong: ["square", "browline", "round"] };
+
+  return { daily, months, topFrames, sources, devices, hours, faceShapes, ages, genders, cities, faceStyles };
 }
 
 export function sumWindow(daily, days, offset, field) {
@@ -350,4 +381,103 @@ export function kpiFor(daily, days, field) {
   const cur = sumWindow(daily, days, 0, field);
   const prev = sumWindow(daily, days, days, field);
   return { value: cur, delta: prev ? ((cur - prev) / prev) * 100 : 0 };
+}
+
+
+/** Total satu bidang untuk jendela `days` hari terakhir. */
+export const totalOf = (daily, days, field, offset = 0) => sumWindow(daily, days, offset, field);
+
+const pct = (a, b) => (b ? (a / b) * 100 : 0);
+export const fmtPct = (n, d = 1) => `${n.toFixed(d).replace(".", ",")}%`;
+
+/** Metrik turunan satu jendela waktu: funnel dan rasio. */
+export function metricsFor(daily, days, offset = 0) {
+  const g = (f) => sumWindow(daily, days, offset, f);
+  const m = { storeViews: g("storeViews"), visitors: g("visitors"), productViews: g("productViews"), vto: g("vto"), captures: g("captures"), wishlist: g("wishlist"), buyClicks: g("buyClicks"), contacts: g("contacts"), returning: g("returning") };
+  m.actions = m.buyClicks + m.contacts;
+  m.convRate = pct(m.actions, m.visitors); // pengunjung → klik beli / hubungi
+  m.vtoRate = pct(m.vto, m.productViews); // lihat produk → try-on
+  m.returnRate = pct(m.returning, m.visitors);
+  return m;
+}
+
+/**
+ * Wawasan otomatis. Bagian yang memakai data frame NYATA (deskripsi, tautan beli, foto, model 3D, stok) dihitung dari
+ * `frames`; bagian perilaku pengunjung memakai data analitik (saat ini simulasi — belum ada pelacakan sungguhan).
+ * Mengembalikan [{ tone: "good"|"warn"|"tip", title, text, action? }] terurut berdasarkan prioritas.
+ */
+export function buildInsights(data, frames = [], days = 30) {
+  const out = [];
+  const cur = metricsFor(data.daily, days), prev = metricsFor(data.daily, days, days);
+  const dPct = (a, b) => (b ? ((a - b) / b) * 100 : 0);
+  const vDelta = dPct(cur.visitors, prev.visitors);
+
+  // --- kualitas katalog (data nyata) ---
+  const pub = frames.filter((f) => f.published);
+  const noDesc = pub.filter((f) => !(f.description || "").trim());
+  const noBuy = pub.filter((f) => !f.buy || !Object.values(f.buy).some(Boolean));
+  const noModel = pub.filter((f) => f.vto && !f.media?.glb);
+  const lowStock = pub.filter((f) => f.stock > 0 && f.stock <= 3);
+  const out0 = pub.filter((f) => f.stock === 0);
+  if (noBuy.length) out.push({ tone: "warn", title: `${noBuy.length} frame belum punya tautan e-commerce`, text: `Pelanggan yang siap membeli hanya punya WhatsApp. Tambahkan tautan Tokopedia/Shopee agar tombol “Beli lewat e-commerce” muncul. Contoh: ${noBuy.slice(0, 2).map((f) => f.name).join(", ")}.`, action: "Produk / Frame → Ubah" });
+  if (noDesc.length) out.push({ tone: "warn", title: `${noDesc.length} frame belum punya deskripsi`, text: "Deskripsi membantu pelanggan memilih ukuran/bahan dan memperkaya pencarian. Isi minimal bahan, ukuran lensa, dan keunggulannya.", action: "Produk / Frame → Ubah" });
+  if (noModel.length) out.push({ tone: "tip", title: `${noModel.length} frame try-on tanpa model 3D`, text: "Frame dengan model 3D sendiri memberi try-on yang lebih akurat dibanding model bawaan.", action: "Unggah .glb" });
+  if (out0.length) out.push({ tone: "warn", title: `${out0.length} frame tayang tetapi stok 0`, text: `Sembunyikan atau isi stok: ${out0.slice(0, 3).map((f) => f.name).join(", ")}.`, action: "Produk / Frame" });
+  else if (lowStock.length) out.push({ tone: "tip", title: `${lowStock.length} frame stok menipis (≤3)`, text: lowStock.slice(0, 3).map((f) => f.name).join(", ") + ". Siapkan restock sebelum hari ramai.", action: "Produk / Frame" });
+
+  // --- perilaku pengunjung ---
+  out.push(vDelta >= 5
+    ? { tone: "good", title: `Pengunjung naik ${fmtPct(vDelta)}`, text: `${fmtNum(cur.visitors)} pengunjung dalam ${days} hari terakhir dibanding ${fmtNum(prev.visitors)} periode sebelumnya. Pertahankan dengan menayangkan frame baru tiap minggu.` }
+    : vDelta <= -5
+      ? { tone: "warn", title: `Pengunjung turun ${fmtPct(Math.abs(vDelta))}`, text: "Pertimbangkan Highlight/iklan banner atau perbarui foto utama frame terlaris.", action: "Promosi & Iklan" }
+      : { tone: "tip", title: "Pengunjung stabil", text: `Perubahan hanya ${fmtPct(Math.abs(vDelta))} dibanding periode sebelumnya.` });
+
+  const convDelta = cur.convRate - prev.convRate;
+  out.push({ tone: convDelta >= 0 ? "good" : "warn", title: `Konversi ${fmtPct(cur.convRate, 2)} (${convDelta >= 0 ? "+" : ""}${convDelta.toFixed(2).replace(".", ",")} poin)`, text: `${fmtNum(cur.buyClicks)} klik beli e-commerce dan ${fmtNum(cur.contacts)} kontak toko dari ${fmtNum(cur.visitors)} pengunjung.` });
+
+  if (cur.vtoRate < 28) out.push({ tone: "tip", title: `Hanya ${fmtPct(cur.vtoRate, 0)} pelihat produk yang mencoba try-on`, text: "Naikkan dengan menambahkan model 3D dan menandai lebih banyak frame “Try-On aktif”.", action: "Produk / Frame" });
+
+  const peak = data.hours.reduce((b, v, h) => (v > data.hours[b] ? h : b), 0);
+  const win = (h) => `${String(h).padStart(2, "0")}.00–${String((h + 1) % 24).padStart(2, "0")}.00`;
+  out.push({ tone: "tip", title: `Jam paling ramai: ${win(peak)}`, text: "Balas chat WhatsApp dan jadwalkan promo/flash sale 1–2 jam sebelumnya." });
+
+  const dowLabel = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const dow = Array(7).fill(0);
+  data.daily.slice(-28).forEach((d) => { dow[d.dow] += d.visitors; });
+  const best = dow.indexOf(Math.max(...dow)), worst = dow.indexOf(Math.min(...dow));
+  out.push({ tone: "tip", title: `Hari terbaik ${dowLabel[best]}, tersepi ${dowLabel[worst]}`, text: `Selisih ${fmtPct(dPct(dow[best], dow[worst]), 0)}. Jadwalkan posting media sosial menjelang ${dowLabel[best]}.` });
+
+  const src = [...data.sources].sort((a, b) => b.conv - a.conv)[0];
+  const big = [...data.sources].sort((a, b) => b.value - a.value)[0];
+  if (src && big && src.label !== big.label) out.push({ tone: "tip", title: `${src.label} paling berkualitas (${fmtPct(src.conv)} konversi)`, text: `Trafik terbesar justru dari ${big.label} (${big.value}%). Alihkan sebagian usaha promosi ke ${src.label}.` });
+
+  // --- performa frame ---
+  const tf = data.topFrames;
+  if (tf.length >= 3) {
+    const rate = (f) => pct(f.buyClicks + f.contacts, f.vto || 1);
+    const stars = [...tf].sort((a, b) => rate(b) - rate(a))[0];
+    out.push({ tone: "good", title: `${stars.name} konversi terbaik (${fmtPct(rate(stars))} dari try-on)`, text: "Jadikan frame ini Highlight/banner dan letakkan di urutan teratas koleksi." });
+    const leaks = tf.filter((f) => f.vto > 0 && f.views > tf.reduce((a, x) => a + x.views, 0) / tf.length && rate(f) < 12);
+    if (leaks[0]) out.push({ tone: "warn", title: `${leaks[0].name} ramai dilihat tetapi jarang berujung beli`, text: `Dilihat ${fmtNum(leaks[0].views)}× dengan konversi ${fmtPct(rate(leaks[0]))}. Periksa harga (${fmtRp(leaks[0].price)}), foto, deskripsi, dan tautan belinya.`, action: "Produk / Frame → Ubah" });
+    const falling = [...tf].sort((a, b) => a.trend - b.trend)[0];
+    if (falling.trend < -10) out.push({ tone: "warn", title: `${falling.name} menurun ${fmtPct(Math.abs(falling.trend), 0)}`, text: "Coba diskon terbatas atau perbarui fotonya." });
+  }
+
+  // --- celah katalog vs bentuk wajah pengunjung ---
+  const topShape = data.faceShapes[0];
+  const want = data.faceStyles[topShape.label] || [];
+  const have = new Set(pub.map((f) => f.style));
+  const missing = want.filter((s) => !have.has(s));
+  if (pub.length && missing.length) out.push({ tone: "tip", title: `Pengunjung terbanyak berwajah ${topShape.label} (${topShape.value}%)`, text: `Gaya yang umumnya cocok: ${want.map((s) => STYLE_LABELS[s] || s).join(", ")}. Katalog Anda belum punya ${missing.map((s) => STYLE_LABELS[s] || s).join(", ")}.`, action: "Tambah frame" });
+
+  if (data.devices[0].value >= 60) out.push({ tone: "tip", title: `${data.devices[0].value}% pengunjung memakai ${data.devices[0].label.toLowerCase()}`, text: "Pastikan foto utama jelas pada layar kecil dan tombol WhatsApp mudah dijangkau." });
+
+  const order = { warn: 0, good: 1, tip: 2 };
+  return out.sort((a, b) => order[a.tone] - order[b.tone]);
+}
+
+/** CSV harian (untuk Excel / Google Sheets). */
+export function dailyCsv(daily) {
+  const cols = [["date", "Tanggal"], ["storeViews", "Kunjungan"], ["visitors", "Pengunjung"], ["returning", "Pengunjung kembali"], ["productViews", "Klik frame"], ["vto", "Sesi try-on"], ["captures", "Tangkapan layar"], ["wishlist", "Wishlist"], ["buyClicks", "Klik beli e-commerce"], ["contacts", "Hubungi toko"]];
+  return [cols.map((c) => c[1]).join(","), ...daily.map((d) => cols.map((c) => d[c[0]]).join(","))].join("\n");
 }

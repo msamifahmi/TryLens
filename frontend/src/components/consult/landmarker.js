@@ -3,14 +3,17 @@
 const WASM_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 
-export async function createLandmarker() {
+// opts.matrices = true -> matriks pose kepala; opts.blendshapes = true -> skor ekspresi (dipakai deteksi kedipan).
+export async function createLandmarker(opts = {}) {
   const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
   const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
   const make = (delegate) =>
     FaceLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MODEL_URL, delegate },
       runningMode: "VIDEO",
-      numFaces: 1
+      numFaces: 1,
+      outputFacialTransformationMatrixes: !!opts.matrices,
+      outputFaceBlendshapes: !!opts.blendshapes
     });
   try {
     return await make("GPU");

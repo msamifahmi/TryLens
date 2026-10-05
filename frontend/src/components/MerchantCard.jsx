@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import MerchantAvatar from "./MerchantAvatar.jsx";
 import { InstagramIcon, XIcon, ShopBagIcon } from "./icons/SocialIcons.jsx";
 
 function StarIcon() {
@@ -29,12 +30,7 @@ export default function MerchantCard({ merchant: m, productCount, promoCount }) 
       aria-label={`Lihat katalog ${m.name}`}
     >
       <div className="flex gap-3 items-center mb-3">
-        <div
-          className="w-[46px] h-[46px] rounded-xl flex-shrink-0 flex items-center justify-center text-white font-extrabold text-base"
-          style={{ background: m.color }}
-        >
-          {m.initials}
-        </div>
+        <MerchantAvatar merchant={m} className="w-[46px] h-[46px] rounded-xl text-base font-extrabold" />
         <div className="min-w-0">
           <p className="text-[14.5px] font-bold text-ink-text mb-0.5 truncate">{m.name}</p>
           <p className="text-xs text-ink-muted m-0 flex items-center gap-1 truncate">

@@ -13,8 +13,8 @@ export default function PartnerLoginPage() {
   // Sudah masuk → langsung ke tahap yang sesuai (onboarding / setup / dashboard).
   if (account) return <Navigate to={STAGE_PATH[stageOf(account)]} replace />;
 
-  const onSubmit = ({ email, password }) => {
-    const res = login(email, password);
+  const onSubmit = async ({ email, password }) => {
+    const res = await login(email, password);
     return res.ok ? null : res.error;
   };
 

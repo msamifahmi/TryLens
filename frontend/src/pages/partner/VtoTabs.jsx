@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import FrameIcon from "../../components/icons/FrameIcon.jsx";
+import { FrameThumb } from "../../components/partner/FrameAssets.jsx";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Tile, Toggle, inputCls } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount } from "../../store/usePartner.js";
 import { STYLE_LABELS } from "../../data/mockData.js";
@@ -32,7 +32,7 @@ export function VtoLibraryTab() {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {acc.frames.map((f) => (
             <Tile key={f.id} className="p-3">
-              <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
+              <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameThumb frame={f} /></div>
               <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
               <p className="text-[11.5px] text-ink-muted m-0 mb-2.5">{STYLE_LABELS[f.style]}</p>
               <div className="flex items-center justify-between">
@@ -82,7 +82,7 @@ export function VtoAnalyticsTab() {
             {top.map((f, i) => (
               <li key={f.id} className="flex items-center gap-3 text-[13px]">
                 <span className="w-5 text-ink-muted">{i + 1}</span>
-                <span className="w-12 h-6 flex-shrink-0"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></span>
+                <span className="w-12 h-6 flex-shrink-0"><FrameThumb frame={f} /></span>
                 <span className="flex-1 truncate text-ink">{f.name}</span>
                 <span className="font-medium text-ink">{fmtNum(f.vto)} sesi</span>
               </li>

@@ -6,6 +6,152 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 18
+
+- **Magnet VTO stabil**: kesehatan node diperiksa (satu mata dipejamkan / ujung alis tertutup rambut tidak lagi mengubah skala); relock butuh stabilitas + cooldown; laju perubahan skala dibatasi; konsistensi pasangan node. Divalidasi hanya dengan data sintetis — belum dengan wajah nyata.
+- **Hubungkan / checkout**: produk bisa ditautkan ke Tokopedia, Shopee, Lazada, TikTok Shop, dan website toko (https + host diizinkan, divalidasi di klien dan server). Modal Hubungkan menampilkan "Beli lewat e-commerce"; tanpa tautan produk dipakai tautan toko.
+- **Deskripsi produk** kembali di form Tambah/Ubah Frame; tampil di halaman produk.
+- **Store Preview**: tile frame bisa diklik → popup detail (foto, deskripsi, harga, tombol beli, tautan halaman publik).
+- **Foto profil toko**: unggah/ganti/hapus di Store Profile (dipotong persegi 256px), disajikan di `/media/store/<id>.jpg`; dipakai di kartu toko, halaman toko, modal Hubungkan, dan Preview. Tanpa foto → inisial.
+- **Analitik lebih kaya**: rentang 7/30/60 hari, KPI + konversi, funnel, sumber + konversi, bentuk wajah/usia/gender/kota, hari & jam ramai, tabel produk bisa diurutkan, tren per frame, ekspor CSV, insight otomatis (kualitas katalog dihitung dari frame nyata). Data perilaku pengunjung masih simulasi.
+- Tes: backend 24, frontend semua lolos.
+
+## Update 17 — 2026-10-04 — Backend sungguhan (akun, frame, unggahan, katalog publik) + VTO "magnet" node wajah
+
+### A. Backend Node (`backend-node/`, SQLite)
+- **Akun & sesi**: password di-hash **scrypt** (N=2¹⁵, salt acak; tidak pernah dikembalikan API), sesi server dengan token acak 256-bit di cookie **HttpOnly + SameSite=Lax** (+Secure di produksi), token disimpan sebagai hash SHA-256. Login dibatasi 5 gagal/15 menit (429), waktu respons disamakan saat email tak ada, ganti password mencabut sesi di perangkat lain, perlindungan CSRF lewat header `X-TryLens`.
+- **Mitra**: `GET/PATCH /api/partner/me` (hanya bidang yang boleh diubah klien; `subscription`, `invoices`, `adOrders` tidak bisa diubah dari klien), CRUD frame dengan validasi + kuota paket di server, `merchantId` ditetapkan server (tidak bisa membajak toko lain).
+- **Unggah berkas** `PUT /api/partner/frames/:id/assets/{photo-0..3|model}`: foto harus JPEG ≤5 MB (ditandai magic byte), GLB divalidasi struktur (header, panjang, chunk JSON, mesh) dan rig TryLens; disajikan di `/media/<idFrame>/{main,side,detail,close}.jpg|model.glb` (nosniff, tipe konten tetap).
+- **Katalog publik** `GET /api/catalog`: frame **terbit** milik Mitra aktif (langganan aktif + toko selesai + toko tidak disembunyikan) digabung ke katalog statis; frame yang ditarik/dihapus disaring. Frame unggahan Mitra kini muncul di katalog, halaman produk, Coba Virtual dan 360°.
+- **Pembayaran**: harga/total dihitung **ulang di server** (angka dari klien diabaikan), bentrok slot Highlighted ditolak (409), gating fitur Pro, invoice bernomor global, finalisasi idempoten. Mode `sandbox` (tombol bayar uji) atau `webhook` (konfirmasi gateway ber-HMAC, jumlah dicocokkan). **Belum ada integrasi gateway sungguhan** (Midtrans/Xendit): tinggal memanggil `/api/billing/webhook` dari gateway pilihan.
+- Skrip `npm run seed` (akun demo), `.env.example`, `npm test` → **21 uji integrasi** (hash, sesi, brute-force, CSRF, otorisasi lintas-akun, validasi unggahan, katalog, harga, webhook, kuota; termasuk uji anti-drift harga server vs front-end).
+
+### B. Front-end terhubung ke API
+- `main.jsx` mencari backend (maks. 1,5 dtk). **Ada** → mode server: login/daftar/ganti password/pembayaran lewat API, perubahan akun disinkronkan lewat antrean (UI tetap optimistis; hasil akhir dimuat ulang dari server), berkas diunggah ke server (`lib/mediaDb.js` otomatis memilih server/IndexedDB), katalog publik digabung dari `/api/catalog` sebelum aplikasi dimuat. **Tidak ada** → mode demo seperti sebelumnya (localStorage + IndexedDB). Sisa data mode server tidak pernah dianggap login di mode demo; password demo polos tidak lagi tersimpan di mode server.
+- Vite meneruskan `/api` dan `/media` ke `http://localhost:4000` (ubah dengan `API_TARGET`).
+
+### C. VTO: node wajah paralel + "magnet" (anti-delay)
+Penyebab delay yang ditemukan: One Euro menahan posisi (lag ∝ kecepatan), pose hanya diperbarui saat deteksi lalu *diam* di antara dua deteksi (render > deteksi), ukuran wajah diratakan median 45 frame + EMA, dan Y/X pupil hanya dibaca dari median.
+- `ar/faceNodes.js` — **node wajah** (pupil kiri/kanan, 3 titik batang hidung, pelipis kiri/kanan): jalur lambat (median kalibrasi, offset lokal) dan **jalur cepat** per frame: tiap node memilih posisi titik asal kepala langsung dari landmark frame itu, dirata-rata berbobot (pupil paling berat, terutama sumbu **Y**).
+- `ar/magnet.js` — pelacak α-β dengan **gain bergantung selisih & kecepatan**: selisih kecil → halus; selisih besar/gerak cepat → gain→1 ("tersedot" ke wajah); sumbu Y diberi `axisBoost`. Kecepatan ikut ditaksir + ekstrapolasi latensi (`lead` 25 ms, `setLatency()`), juga untuk rotasi (quaternion).
+- `PoseEngine.predict(nowMs)` dipanggil tiap `requestAnimationFrame` di `TryOnStage` → kacamata tidak menunggu deteksi berikutnya.
+- **Kalibrasi ulang cepat**: ukuran wajah menyimpang >6% selama 6 frame (orang lain/mendekat) → buffer dibuang & dikunci ulang (≈8 frame, bukan 45+). Tidak terpicu gerak/noise biasa.
+- **Python → ML**: `ml/train_node_corrector.py` melatih regresi ridge (validasi silang 5-lipat, menolak <150 baris data nyata) yang mengoreksi bias kedalaman z pupil/punggung hidung → `nodeCorrector.json` → `ar/nodeCorrector.js` (inferensi di browser). Model sintetis (`--demo`) otomatis **tidak dipakai**; hanya model `kind:"real"` yang aktif.
+- A/B di perangkat nyata: tambahkan `?tracker=oneEuro` ke URL Coba Virtual untuk memakai pelacak lama.
+- **Uji** (`npm run test:magnet`, 8 uji, gerak sintetis 30 fps, kebenaran dinilai pada waktu tampil = tangkap+25 ms): galat Y **4,98 → 0,85 mm**, X **6,12 → 1,10 mm**, rotasi **3,2° → 0,55°**; lompatan 2 cm kembali <1 mm dalam 1 frame (One Euro: 4); getaran saat diam setara (0,11 vs 0,09 mm); koreksi bias matriks pose sesaat 3 mm → 0,08 mm; paritas JS↔numpy <1e-9.
+- **Batas yang jujur:** semua angka di atas dari gerak SINTETIS (matematika), bukan wajah nyata (unduhan model MediaPipe diblokir di sandbox). Sebagian besar keuntungan datang dari ekstrapolasi latensi 25 ms — bila latensi sebenarnya jauh berbeda, atur `engine.setLatency()`. Node dan matriks pose berasal dari landmark yang sama, jadi keuntungan nyata dari voting node bergantung pada seberapa berisik solver pose MediaPipe di perangkat Anda; ukur dengan `?tracker=oneEuro` vs default.
+
+---
+
+## Update 16 — 2026-10-04 — Ikon user kembali, pratinjau 360° dari GLB, notifikasi hanya saat login
+
+- **Menu akun**: tombol kembali berupa ikon pengguna (belum masuk) / inisial (sudah masuk) berbentuk lingkaran, lalu mengembang jadi panel dengan animasi liquid morph yang sama — warna disesuaikan palet TryLens (tombol biru `#406aaf`, panel biru tua, teks krem `#FFE8BE`, sorot kuning `#F7DD7D`). Memperbaiki ikon yang sempat hilang di Update 15 (pil teks dengan nama).
+- **Pratinjau 360°** (`components/Model360.jsx`): di halaman produk, bila produk punya `model.glb`, muncul ubin "360°" di barisan thumbnail di bawah foto utama. Klik → area utama berubah jadi viewer 3D: seret untuk memutar (ada inersia), putar otomatis (bisa dijeda; mati bila pengguna memilih kurangi gerak), slider 0–359°, tombol panah kiri/kanan. Model dimuat dari file GLB yang sama dengan Coba Virtual; render berhenti saat di luar layar. Ubin hanya muncul bila file benar-benar GLB (diperiksa kepala "glTF", bukan sekadar status 200).
+- **Notifikasi** (`components/NotificationBell.jsx`, `lib/partnerNotifications.js`): lonceng **hanya tampil setelah login** (header beranda dan header Mitra); tidak ada lagi lonceng/angka palsu untuk pengunjung. Hover/fokus membuka panel yang mengalir keluar (blur→jelas, item masuk bertahap); tiap item bisa diklik dan punya tombol aksi (Perbarui stok, Unggah foto, Unggah model, Lihat tagihan, Pasang lagi…), "Tandai dibaca", "Tandai semua dibaca", dan tautan ke pengaturan notifikasi. Isinya dihitung dari data akun (stok ≤5, frame tanpa foto, try-on tanpa model 3D / rig tak sesuai, tagihan ≤14 hari, iklan berakhir ≤3 hari); status dibaca tersimpan di akun.
+- **Uji:** `npm test` kini 18 AR + 10 rekomendasi + 8 GLB + 7 notifikasi. Dicek di browser: menu akun, lonceng hover + klik aksi, tidak ada lonceng saat belum login, viewer 360°.
+
+---
+
+## Update 15 — 2026-10-04 — Sidebar di semua bagian Mitra, navbar dropdown bergerak, menu akun "liquid morph"
+
+- **Sidebar lebih besar & di semua bagian** yang punya sub-menu (Store, Virtual Try-On, Analytics, Promotion, Subscription, Settings): kolom 304 px, baris 42 px, ikon per menu, lencana Pro di kanan, judul + keterangan bagian. Di HP tetap tab horizontal. Isi halaman masuk dengan animasi fade/slide.
+- **Navbar Mitra bergaya navigation-menu** (`components/partner/PartnerNavMenu.jsx`): item Toko/Virtual Try-On/Analitik/Promosi/Langganan punya dropdown berisi sub-menu (ikon + keterangan) dan kartu sorotan. Satu panel bersama yang bergeser/berubah ukuran mengikuti item yang disorot, pil putih meluncur antar item (`layoutId`), chevron berputar, isi panel masuk bertahap. Hover (jeda 90 ms) atau klik/Enter; Esc/klik luar menutup. Isi menu diambil dari `SECTIONS` (satu sumber dengan sidebar). Ikut `prefers-reduced-motion`.
+- **Menu akun "liquid morph"** (`components/ui/LiquidMenu.jsx`, port dari liquid-morph-floating-menu): pil kuning mengembang jadi panel gelap, huruf item bergulir saat di-hover. Dipakai di header Mitra (Toko Saya/Beranda/Keluar) dan di header beranda publik (belum masuk: Masuk Mitra/Daftar Mitra; sudah masuk: Dashboard/Keluar). Di layar <640 px pil tertutup hanya ikon. Font tampilan Bebas Neue ditambahkan di `index.html`.
+- **Animasi klik/login:** tombol `Btn` (hover naik, ditekan mengecil), halaman login/daftar (form masuk dari bawah, kacamata melayang, tombol Masuk memantul, pesan error bergetar, teks tombol bertukar saat memproses).
+- Tidak diubah: navbar/menu beranda publik selain tombol akun.
+
+---
+
+## Update 14 — 2026-10-04 — Sidebar Store Management + unggah foto & model 3D di Produk/Frame
+
+- **Sidebar pohon** (`components/ui/TreeNav.jsx`, port dari komponen tree-nav ke JSX + paket `motion`): Store Management kini punya sidebar kiri (Store Profile · Products/Frames · Collections · Store Preview) dengan rel, penanda berlian, dan latar sorot yang meluncur mengikuti kursor; klik menampilkan isi menu di kanan. Di HP (<768 px) tetap tab horizontal. Diaktifkan lewat `layout: "sidebar"` di `SECTIONS` (`pages/partner/SectionPage.jsx`); bagian lain tidak berubah.
+- **Unggah aset frame** (`components/partner/FrameAssets.jsx`): form tambah/ubah frame kini punya Foto produk (maks. 4, JPG/PNG/WebP, otomatis diperkecil ke 1200 px, bisa dijadikan foto utama/dihapus) dan Model 3D `.glb` (maks. 12 MB).
+- **Pemeriksa GLB di browser** (`ar/inspectGlb.js`): saat file dipilih langsung dicek — bukan GLB / rig sesuai spesifikasi / rig sebagian / tanpa rig, Left-Right tertukar, jarak pusat lensa tak wajar — dengan petunjuk `npm run glb:rig`. Model tanpa rig tetap boleh diunggah (try-on pakai penempatan perkiraan).
+- Tabel frame menampilkan foto unggahan, jumlah foto, dan status 3D; foto yang sama dipakai di Pratinjau Toko dan Frame Library.
+- **Penyimpanan:** mode demo → IndexedDB browser (`lib/mediaDb.js`), bukan localStorage (terlalu kecil untuk .glb). Fungsi di file itu adalah titik ganti saat backend upload tersedia.
+- **Belum terhubung:** frame buatan mitra belum muncul di katalog publik / halaman Coba Virtual (katalog publik masih data statis f0–f23). Itu butuh backend + penyimpanan berkas di server.
+- **Uji:** `npm test` → 18 AR + 10 rekomendasi + 8 GLB (2 uji baru untuk `inspectGlb`). Dicek di browser: sidebar, unggah foto + GLB, simpan, tampilan HP.
+
+---
+
+## Update 13 — 2026-10-03 — Spesifikasi aset GLB + fitting dikunci ke pupil
+
+Menjawab "kurang akurat": anchor diganti dari nosepad/telinga (Update 12) menjadi **pusat lensa ↔ pupil**, dan aset GLB kini punya spesifikasi baku.
+
+**Spesifikasi aset** — node `GlassesRoot, Bridge, LeftLensCenter, RightLensCenter, LeftTemple, RightTemple` + metadata `frameWidthMm, lensWidthMm, lensHeightMm, bridgeWidthMm, templeLengthMm, realWorldScale` di `GlassesRoot.extras.trylens` (detail di README).
+- `scripts/lib/glbRig.mjs`, `npm run glb:rig` (mengukur geometri model biasa lalu menambah node + metadata), `npm run glb:check` (validasi).
+- `public/products/f0/model.glb` sudah di-rig (lensa 55,9 × 52,7 mm, jembatan 19,8 mm, gagang 138,4 mm, jarak pusat lensa 75,7 mm). Versi polos: `assets-mentah/f0/model.plain.glb`.
+
+**Fitting (`src/ar/eyeFit.js`, `rigSpec.js`, `rigSpecThree.js`)** — pusat lensa dikunci ke titik tengah pupil (iris 468/473, metrik, median 45 frame); roll dari garis pupil (±4°); kedalaman dari punggung hidung dengan batas jarak lensa–mata 12–28 mm; model dipasang berukuran asli. Dekantrasi per mata dilaporkan. Panel kecocokan kini: lebar frame, pusat lensa vs pupil (per mata), jarak lensa ke mata, jembatan di hidung, jarak alis.
+- Dihapus: `ar/anchorFit.js` dan `MODEL_ANCHORS` (nosepad/telinga ukuran tangan). Model tanpa rig memakai penempatan cadangan.
+- Slider "ukuran" kini menghitung ulang posisi sehingga pusat lensa tetap di pupil.
+
+**Uji:** `npm test` → 18 uji AR (pupil <1 mm di data sintetis lintas ukuran/jarak/pose/PD, dekantrasi, roll, kedalaman, unit) + 10 uji rekomendasi + 6 uji aset GLB. Pembaca spesifikasi juga dicoba dengan GLTFLoader three.js asli pada f0.
+
+**Belum teruji / asumsi:** (1) akurasi di wajah nyata dengan MediaPipe — model tidak bisa diunduh di lingkungan pengembangan; (2) kedalaman iris vs sudut mata diasumsikan ±9 mm di data sintetis, nilai landmark iris sebenarnya belum diukur — jarak lensa–mata adalah sumbu paling lemah; (3) "95%" tidak terukur; (4) hanya f0 yang punya model 3D, dan f0 adalah model aviator sedangkan `main.jpg` frame persegi.
+
+---
+
+## Update 12 — 2026-10-03 — "Pointing" titik jangkar glasses ↔ wajah, layout VTO dua kolom
+
+**Pointing (`frontend/src/ar/anchorFit.js`)** — meniru konsep yang dipakai situs try-on besar: model `.glb` punya titik jangkar, wajah punya titik pasangannya, lalu posisi frame dihitung dari pasangan itu, bukan ditempel di titik tetap.
+
+| Titik di model (`MODEL_ANCHORS` di `glassesConfig.js`) | Titik di wajah (landmark MediaPipe) | Dipakai untuk |
+|---|---|---|
+| nosepad (bidang belakang rim di tepi hidung) | rantai sisi hidung 351·412·343·277 (dan cerminnya), diinterpolasi pada lebar nosepad | posisi y,z frame (bobot utama) |
+| tekukan gagang di telinga | pelipis 356/127 + offset antropometri telinga (**asumsi**, landmark tidak memodelkan telinga) | kemiringan (pitch), bobot kecil, dibatasi ±6° |
+| puncak rim | tepi bawah alis 282/52 | jarak frame ke alis (mm) |
+| pusat lensa | jarak pupil (PD) dari iris | selisih lensa vs pupil (mm) |
+
+Hasilnya: frame duduk di hidung pengguna (bukan hidung rata-rata), plus panel "Kecocokan di wajahmu" (lebar frame vs wajah, lensa vs PD, jarak alis) dengan status ditulis dengan teks. Geseran dibatasi ±1 cm dari penempatan bawaan supaya landmark buruk tidak melempar frame. Model baru: ukur jangkarnya di Blender dan isi `MODEL_ANCHORS[idProduk]` (cara ada di komentar file itu).
+
+**Layout Coba Virtual** — dua kolom di layar lebar: kamera di kiri; di kanan checkout (harga, wishlist, hubungkan ke toko, konsultasi), kecocokan wajah, dan rekomendasi "Dari toko serupa" (toko lain di provinsi yang sama; `merchantIds` di `rec/recommend.js`). Satu kolom di HP.
+
+**Perbaikan:** halaman meluap ke samping di HP (≤390 px) karena bar pencarian tanpa `min-w-0` (`SearchBar.jsx`).
+
+**Uji:** `npm test` → 15 uji AR (termasuk 5 uji pointing: nosepad jatuh di sisi hidung sebenarnya <1,5 mm di data sintetis, arah koreksi, batas) + 10 uji rekomendasi.
+
+**Belum teruji:** akurasi di wajah nyata dengan jaringan saraf MediaPipe (aset model tidak bisa diunduh di lingkungan pengembangan). Angka "95%" belum terukur — lihat README untuk cara mengukurnya.
+
+---
+
+## Update 11 — 2026-10-02 — Mesin presisi AR + rekomendasi produk
+
+**Presisi AR (`frontend/src/ar/`)** — pemrosesan di atas jaringan saraf MediaPipe, bukan model baru:
+
+| Teknik | Gunanya |
+|---|---|
+| One Euro Filter (posisi & rotasi) | Hilangkan getar saat diam tanpa membuat model tertinggal saat kepala bergerak. |
+| Kalibrasi skala dari diameter iris (11,7 mm) + rekonstruksi 3D berkoreksi perspektif | Frame tampil berukuran asli di wajah pengguna; ukuran wajah (mm) dan PD tidak lagi mengandalkan asumsi "PD = 63 mm". |
+| Un-rotate landmark dengan pose kepala | Rasio bentuk wajah tidak berubah saat pengguna sedikit menoleh/menunduk. |
+| Koreksi titik tempel di batang hidung (median, dibatasi ±0,7 cm) | Frame duduk sesuai hidung pengguna, bukan hidung rata-rata. |
+| Gerbang kualitas (pose, kedipan via blendshape, cahaya, jarak, kecepatan) + petunjuk Indonesia | Hanya frame bagus yang dipakai mengukur/mengkalibrasi. |
+| `requestVideoFrameCallback` | Satu deteksi per frame kamera, lebih sedikit lag. |
+
+Scan wajah kini 1280×720, 30 sampel tersebar ±2 detik, median dengan pembuang pencilan, hasil menyertakan `pd` dan tingkat keyakinan. `widthClass` disesuaikan ke pengukuran baru (142/154 mm) dan **belum dikalibrasi dengan ukuran manusia nyata**.
+
+**Rekomendasi (`frontend/src/rec/`)** — content-based, transparan, berjalan di perangkat. Skor = rata-rata berbobot sinyal yang tersedia (gaya vs bentuk wajah 0,34 · lebar frame vs wajah 0,22 · kemiripan dengan riwayat coba & wishlist 0,22 · harga 0,06 · diskon 0,06 · baru 0,04), disusun ulang dengan MMR agar beragam. Dipakai di: menu Coba Virtual (strip "Rekomendasi untuk wajahmu", ukuran wajah dari kalibrasi kamera ikut dipakai), detail produk, dan daftar produk (urutan "Paling cocok" + lencana % pada kartu). Angka kalibrasi lebar ada di satu tempat: `FIT` di `rec/recommend.js`.
+
+**Uji:** `npm test` → `scripts/test-ar.mjs` (10 uji sintetis: skala, PD, invarian pose, noise, kehilangan wajah) dan `scripts/test-rec.mjs` (9 uji).
+
+---
+
+## Update 10 — 2026-10-02 — Try-on 3D: model .glb mengikuti gerak kepala (MediaPipe + three.js)
+
+| File | Perubahan |
+|---|---|
+| `frontend/src/components/tryon/TryOnStage.jsx` (baru) | Video kamera + MediaPipe Face Landmarker (matriks pose kepala) + render `model.glb` dengan three.js. Frame mengikuti posisi, jarak, dan rotasi kepala; mesh wajah tak-terlihat jadi penutup sehingga gagang hilang di balik pipi/telinga. Frame tanpa model memakai ilustrasi 2D yang mengikuti mata. Slider geser (naik/turun, maju/mundur, ukuran) tersimpan per produk di browser. |
+| `frontend/src/components/tryon/glassesConfig.js` (baru) | Titik tempel & skala bawaan model di wajah; override per produk. |
+| `frontend/src/data/canonicalFace.json` (baru) | Mesh wajah kanonik MediaPipe (468 titik) untuk penutup. |
+| `frontend/src/pages/TryOnPage.jsx` | Panggung kamera diganti `TryOnStage` (dimuat malas). Catatan teknis diperbarui. |
+| `frontend/src/components/consult/landmarker.js` | Opsi `createLandmarker({ matrices: true })`; pemakaian lama tidak berubah. |
+| `frontend/public/products/f0/` | `main.jpg` (foto) dan `model.glb` (kacamata aviator dari `glasses2.obj`, 2,2 MB, satuan cm, origin di jembatan hidung, menghadap +Z). `.rar` mentah dipindah ke `assets-mentah/f0/` supaya tidak ikut build. |
+| `frontend/package.json` | Tambah dependency `three`. |
+
+Belum diuji langsung dengan kamera; angka penempatan dihitung dari mesh wajah kanonik MediaPipe, jadi bila perlu cukup disetel di `glassesConfig.js`.
+
+---
+
 ## Update 9 — 2026-09-21 — Konsultasi langsung lewat WhatsApp optik (tanpa pengajuan lewat TryLens)
 
 **Keputusan produk:** konsumen tidak perlu mengajukan konsultasi lewat TryLens. Bila ingin berkonsultasi, konsumen langsung diarahkan ke nomor WhatsApp masing-masing optik. Akibatnya formulir permintaan di sisi konsumen **dan** kotak masuk permintaan di dashboard Mitra ikut dihapus (tanpa pengajuan, kotak masuk itu tidak akan pernah terisi).

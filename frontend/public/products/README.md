@@ -25,3 +25,9 @@ kode sama sekali.
 
 Rekomendasi: foto dengan latar polos/putih, rasio 1:1, minimal 800x800px,
 supaya konsisten dengan desain kartu produk.
+
+## Model 3D
+
+Tambahkan `model.glb` di folder produk yang sama (mis. `f0/model.glb`) agar Coba Virtual tampil 3D.
+Model harus punya node GlassesRoot/Bridge/LeftLensCenter/RightLensCenter/LeftTemple/RightTemple + metadata ukuran.
+Buat otomatis dengan `npm run glb:rig -- masuk.glb keluar.glb`, cek dengan `npm run glb:check`. Detail di README utama.

@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
 import { formatRp } from "../data/mockData.js";
+import { buyLinks } from "../lib/ecommerce.js";
+import { ExternalIcon, ShopBagIcon } from "./icons/SocialIcons.jsx";
+import MerchantAvatar from "./MerchantAvatar.jsx";
 
 function WhatsAppIcon() {
   return (
@@ -40,6 +43,7 @@ export default function ConnectMerchantModal({ open, onClose, merchant, product,
   ].join("\n");
 
   const waLink = `https://wa.me/${merchant.whatsapp}?text=${encodeURIComponent(message)}`;
+  const shops = buyLinks(product, merchant);
   const telLink = `tel:${merchant.phone.replace(/[^0-9+]/g, "")}`;
 
   return (
@@ -62,12 +66,7 @@ export default function ConnectMerchantModal({ open, onClose, merchant, product,
         </div>
 
         <div className="flex items-center gap-3 bg-surface-blue rounded-xl p-3 mb-5">
-          <div
-            className="w-11 h-11 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-extrabold text-sm"
-            style={{ background: merchant.color }}
-          >
-            {merchant.initials}
-          </div>
+          <MerchantAvatar merchant={merchant} className="w-11 h-11 rounded-lg text-sm" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink-text m-0 truncate">{product.name}</p>
             <p className="text-xs text-ink-muted m-0">{qty} × {formatRp(product.price)} = <span className="font-semibold text-blue-deep">{formatRp(totalPrice)}</span></p>
@@ -78,6 +77,23 @@ export default function ConnectMerchantModal({ open, onClose, merchant, product,
           TryLens tidak memproses pembayaran langsung — transaksi diselesaikan bersama mitra toko optik.
           Pilih salah satu cara di bawah untuk melanjutkan:
         </p>
+
+        {shops.length > 0 && (
+          <div className="mb-4">
+            <p className="text-[12.5px] font-semibold text-ink-text m-0 mb-2">Beli lewat e-commerce</p>
+            <div className="flex flex-col gap-2">
+              {shops.map((s) => (
+                <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2.5 h-12 px-4 rounded-xl text-white font-bold text-sm hover:brightness-95" style={{ background: s.color }}>
+                  <ShopBagIcon size={18} />
+                  <span className="flex-1">Beli di {s.label}</span>
+                  {s.scope === "toko" && <span className="text-[10.5px] font-medium opacity-85">halaman toko</span>}
+                  <ExternalIcon size={14} />
+                </a>
+              ))}
+            </div>
+            <p className="text-[11.5px] text-ink-muted mt-2 mb-0">Transaksi dan pembayaran terjadi di platform tersebut, bukan di TryLens.</p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2.5">
           <a

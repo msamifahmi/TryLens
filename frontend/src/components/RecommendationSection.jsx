@@ -1,7 +1,9 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { PRODUCTS, STYLE_LABELS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import ProductCard from "./ProductCard.jsx";
+import { useMatchScores } from "../rec/useRecommendations.js";
 
 const TABS = [
   { label: "Semua", value: "Semua" },
@@ -19,13 +21,18 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
   const visibleCount = useFilter((s) => s.visibleCount);
   const loadMore = useFilter((s) => s.loadMore);
 
+  const scores = useMatchScores();
+  const personal = scores.confidence > 0;
+  const [sortMatch, setSortMatch] = useState(false);
+
   const filtered = useMemo(() => {
     let list = PRODUCTS;
     if (activeCategory === "Promo") list = list.filter((p) => !!p.oldPrice);
     else if (activeCategory !== "Semua") list = list.filter((p) => p.cat === activeCategory);
     if (activeStyle) list = list.filter((p) => p.style === activeStyle);
+    if (sortMatch && personal) list = [...list].sort((a, b) => (scores.map.get(b.id)?.score ?? 0) - (scores.map.get(a.id)?.score ?? 0));
     return list;
-  }, [activeCategory, activeStyle]);
+  }, [activeCategory, activeStyle, sortMatch, personal, scores]);
 
   const shown = filtered.slice(0, visibleCount);
 
@@ -63,6 +70,17 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" /></svg>
             </button>
           )}
+          {personal ? (
+            <button
+              onClick={() => setSortMatch((v) => !v)}
+              aria-pressed={sortMatch}
+              className={`h-7 px-3 rounded-full text-[12.5px] font-semibold border transition-colors ${sortMatch ? "bg-blue text-white border-blue" : "bg-white text-blue border-[#C5D6EA] hover:border-blue"}`}
+            >
+              Paling cocok
+            </button>
+          ) : (
+            <Link to="/konsultasi" className="text-[12.5px] font-semibold text-blue hover:text-blue-deep">Scan wajah untuk urutan paling cocok</Link>
+          )}
           <span className="text-[13px] text-ink-muted" aria-live="polite">{filtered.length} frame</span>
         </div>
       </div>
@@ -75,6 +93,7 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
             onTryOn={onTryOn}
             showToast={showToast}
             onOpenDetail={onOpenDetail}
+            match={personal ? scores.map.get(p.id) : null}
             cardRef={(el) => {
               if (cardRefs) cardRefs.current[p.id] = el;
             }}

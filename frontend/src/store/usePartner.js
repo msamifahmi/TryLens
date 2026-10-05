@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { ApiError, api, apiUrl, backend, probe } from "../api/http.js";
 import { AD_TYPES, INTERVALS, addMonths, endsOn, planLabel, planPrice, seedAccounts } from "../data/partnerMock.js";
 
 // Sementara semua data mitra disimpan di localStorage (mode demo tanpa backend).
@@ -29,6 +30,19 @@ export const STAGE_PATH = {
   dashboard: "/partner"
 };
 
+/* ------------------------------------------------------------ sinkronisasi ke server */
+// Mode server: UI tetap optimistis (state lokal berubah dulu), perubahan dikirim berurutan lewat antrean,
+// lalu setelah antrean kosong akun dimuat ulang dari server (sumber kebenaran: media, status, nomor invoice).
+const SYNC_KEYS = ["name", "phone", "store", "collections", "banners", "vto", "storeSettings", "notif", "notifRead", "subscription"];
+const FRAME_SEND = ["name", "description", "buy", "style", "colorKey", "category", "price", "oldPrice", "stock", "published", "vto"];
+const pick = (o, ks) => Object.fromEntries(ks.filter((k) => k in o).map((k) => [k, o[k]]));
+let chain = Promise.resolve();
+let pending = 0;
+
+export const whenSynced = async () => {
+  while (pending > 0) await chain;
+};
+
 export const usePartner = create(
   persist(
     (set, get) => ({
@@ -36,8 +50,73 @@ export const usePartner = create(
       session: null, // { email }
       checkout: null, // { plan, upgrade }
       lastInvoiceId: null,
+      lastMode: "demo", // mode terakhir yang menulis state ini ("demo" | "server")
+      server: false, // tidak disimpan
+      ready: false, // tidak disimpan
+      syncError: null, // tidak disimpan
 
-      register: ({ name, email, password }) => {
+      /** Dipanggil sekali saat aplikasi mulai: pilih mode server bila backend hidup, jika tidak mode demo (localStorage). */
+      init: async () => {
+        const up = await probe();
+        if (up) {
+          try {
+            const { account } = await api("GET", "/api/auth/me");
+            backend.partner = true;
+            set({ server: true, ready: true, lastMode: "server", accounts: account ? { [account.email]: account } : {}, session: account ? { email: account.email } : null });
+            return;
+          } catch {
+            /* jatuh ke mode demo */
+          }
+        }
+        // Mode demo. Sisa data mode server (tanpa kata sandi) tidak boleh dianggap login.
+        if (get().lastMode === "server") set({ accounts: seedAccounts(), session: null, checkout: null });
+        else if (!Object.keys(get().accounts).length) set({ accounts: seedAccounts() });
+        set({ server: false, ready: true, lastMode: "demo" });
+      },
+
+      applyAccount: (account) => {
+        // Foto profil dari server berupa path relatif (/media/store/…) → jadikan URL absolut ke API.
+        const logo = account.store?.logo;
+        if (logo && logo.startsWith("/media/")) account = { ...account, store: { ...account.store, logo: apiUrl(logo) } };
+        set({ accounts: { [account.email]: account }, session: { email: account.email } });
+      },
+
+      /** Muat ulang akun dari server (mis. setelah unggah berkas). */
+      refresh: async () => {
+        if (!get().server) return;
+        try {
+          const { account } = await api("GET", "/api/partner/me");
+          get().applyAccount(account);
+        } catch (e) {
+          if (e.status === 401) set({ session: null, accounts: {} });
+        }
+      },
+
+      changePassword: async (current, next) => {
+        if (get().server) {
+          try {
+            await api("POST", "/api/auth/password", { current, next });
+            return { ok: true };
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+        }
+        const acc = get().accounts[get().session?.email];
+        if (!acc || acc.password !== current) return { ok: false, error: "Password saat ini salah." };
+        get().patch((a) => ({ ...a, password: next }));
+        return { ok: true };
+      },
+
+      register: async ({ name, email, password }) => {
+        if (get().server) {
+          try {
+            const { account } = await api("POST", "/api/auth/register", { name, email, password });
+            get().applyAccount(account);
+            return { ok: true };
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+        }
         const key = email.trim().toLowerCase();
         if (get().accounts[key]) return { ok: false, error: "Email sudah terdaftar. Silakan masuk." };
         const account = {
@@ -67,22 +146,63 @@ export const usePartner = create(
         return { ok: true };
       },
 
-      login: (email, password) => {
+      login: async (email, password) => {
+        if (get().server) {
+          try {
+            const { account } = await api("POST", "/api/auth/login", { email, password });
+            get().applyAccount(account);
+            return { ok: true };
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+        }
         const acc = get().accounts[email.trim().toLowerCase()];
         if (!acc || acc.password !== password) return { ok: false, error: "Email atau password salah." };
         set({ session: { email: acc.email } });
         return { ok: true };
       },
 
-      logout: () => set({ session: null, checkout: null }),
+      logout: async () => {
+        if (get().server) {
+          await api("POST", "/api/auth/logout").catch(() => {});
+          set({ session: null, checkout: null, accounts: {} });
+        } else set({ session: null, checkout: null });
+      },
 
       /** Ubah data akun yang sedang masuk: patch((akun) => akunBaru). */
-      patch: (fn) =>
-        set((s) => {
-          const key = s.session?.email;
-          if (!key || !s.accounts[key]) return s;
-          return { accounts: { ...s.accounts, [key]: fn(s.accounts[key]) } };
-        }),
+      patch: (fn) => {
+        const s = get();
+        const key = s.session?.email;
+        const prev = key && s.accounts[key];
+        if (!prev) return;
+        const next = fn(prev);
+        set({ accounts: { ...s.accounts, [key]: next } });
+        if (!s.server) return;
+
+        const ops = [];
+        const prevFrames = new Map(prev.frames.map((f) => [f.id, f]));
+        const nextIds = new Set(next.frames.map((f) => f.id));
+        for (const f of next.frames) {
+          const old = prevFrames.get(f.id);
+          const body = pick(f, FRAME_SEND);
+          if (!old || JSON.stringify(pick(old, FRAME_SEND)) !== JSON.stringify(body)) ops.push(() => api("PUT", `/api/partner/frames/${encodeURIComponent(f.id)}`, body));
+        }
+        for (const id of prevFrames.keys()) if (!nextIds.has(id)) ops.push(() => api("DELETE", `/api/partner/frames/${encodeURIComponent(id)}`));
+        const body = {};
+        for (const k of SYNC_KEYS) if (JSON.stringify(prev[k]) !== JSON.stringify(next[k])) body[k] = next[k];
+        if (Object.keys(body).length) ops.push(() => api("PATCH", "/api/partner/me", body));
+
+        for (const op of ops) {
+          pending++;
+          chain = chain
+            .then(op)
+            .catch((e) => set({ syncError: e instanceof ApiError ? e.message : "Perubahan gagal disimpan." }))
+            .finally(() => {
+              if (--pending === 0) get().refresh();
+            });
+        }
+      },
+      clearSyncError: () => set({ syncError: null }),
 
       /**
        * Mulai checkout. item = { kind:"subscription", plan, interval, upgrade }
@@ -92,7 +212,15 @@ export const usePartner = create(
       cancelCheckout: () => set({ checkout: null }),
 
       /** Simulasi pembayaran sukses → langganan aktif / pesanan iklan aktif + invoice. */
-      completePayment: (method) => {
+      completePayment: async (method) => {
+        if (get().server) {
+          const { checkout } = get();
+          const ord = await api("POST", "/api/billing/checkout", checkout); // harga dihitung ulang server
+          const out = await api("POST", `/api/billing/orders/${ord.orderId}/pay`, { method });
+          get().applyAccount(out.account);
+          set({ checkout: null, lastInvoiceId: out.invoiceId });
+          return out.account.invoices.find((i) => i.id === out.invoiceId);
+        }
         const { session, accounts, checkout } = get();
         const acc = accounts[session.email];
         const iso = new Date().toISOString();
@@ -139,21 +267,36 @@ export const usePartner = create(
       },
 
       /** Simpan profil toko (pertama kali = menyelesaikan setup toko). */
-      saveStore: (values) =>
+      saveStore: async (values, { logo } = {}) => {
+        // logo: undefined = tidak diubah · null = hapus · Blob (JPEG persegi) = ganti
+        const server = get().server;
         get().patch((a) => ({
           ...a,
           store: {
             ...(a.store || {}),
             ...values,
+            ...(logo !== undefined && !server ? { logo: logo ? logo.dataUrl : null } : {}),
             initials: initialsOf(values.name || a.store?.name || ""),
             setupCompletedAt: a.store?.setupCompletedAt || new Date().toISOString()
           }
-        }))
+        }));
+        if (server && logo !== undefined) {
+          try {
+            await whenSynced();
+            const { account } = logo ? await api("PUT", "/api/partner/store/logo", logo.blob, { raw: true }) : await api("DELETE", "/api/partner/store/logo");
+            get().applyAccount(account);
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+        }
+        return { ok: true };
+      }
     }),
     {
       name: "trylens-partner",
       version: 2, // v2: harga tahunan, pesanan iklan mingguan, konsultasi pindah ke store terpisah
-      migrate: () => ({ accounts: seedAccounts(), session: null, checkout: null, lastInvoiceId: null })
+      partialize: (s) => ({ accounts: s.accounts, session: s.session, checkout: s.checkout, lastInvoiceId: s.lastInvoiceId, lastMode: s.lastMode }),
+      migrate: () => ({ accounts: seedAccounts(), session: null, checkout: null, lastInvoiceId: null, lastMode: "demo" })
     }
   )
 );

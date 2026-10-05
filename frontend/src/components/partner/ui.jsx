@@ -50,7 +50,7 @@ export function Btn({ variant = "primary", size = "md", className = "", as: As =
   const s = { sm: "h-8 px-3 text-[12.5px]", md: "h-10 px-4 text-[13.5px]", lg: "h-11 px-6 text-sm" }[size];
   return (
     <As
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors disabled:opacity-40 disabled:pointer-events-none ${v} ${s} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold whitespace-nowrap transition-[transform,box-shadow,background-color,border-color,filter] duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(64,106,175,0.18)] active:translate-y-0 active:scale-[0.97] active:shadow-none motion-reduce:transition-none motion-reduce:transform-none disabled:opacity-40 disabled:pointer-events-none ${v} ${s} ${className}`}
       {...rest}
     />
   );

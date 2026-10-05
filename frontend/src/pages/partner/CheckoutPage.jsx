@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const [method, setMethod] = useState("QRIS");
   const [paying, setPaying] = useState(false);
+  const [payErr, setPayErr] = useState("");
   const timer = useRef(null);
   const done = useRef(false);
 
@@ -36,10 +37,17 @@ export default function CheckoutPage() {
 
   function pay() {
     setPaying(true);
-    timer.current = setTimeout(() => {
+    setPayErr("");
+    timer.current = setTimeout(async () => {
       done.current = true;
-      completePayment(method);
-      navigate("/partner/payment-success", { replace: true });
+      try {
+        await completePayment(method); // mode server: harga & pesanan dihitung ulang server
+        navigate("/partner/payment-success", { replace: true });
+      } catch (e) {
+        done.current = false;
+        setPaying(false);
+        setPayErr(e.message || "Pembayaran gagal. Coba lagi.");
+      }
     }, 1100);
   }
 
@@ -102,6 +110,7 @@ export default function CheckoutPage() {
               ? "Sekali bayar untuk periode tayang di atas; tidak diperpanjang otomatis."
               : `Perpanjangan otomatis berikutnya ${fmtDate(addMonths(new Date().toISOString(), INTERVALS[checkout.interval].months))}.${checkout.upgrade ? " Paket lama digantikan mulai hari ini (tanpa prorata)." : ""}`}
           </p>
+          {payErr && <p role="alert" className="text-[13px] text-error m-0 mb-3">{payErr}</p>}
           <Btn size="lg" className="w-full" onClick={pay} disabled={paying}>
             {paying ? "Memproses pembayaran…" : `Bayar ${fmtRp(total)}`}
           </Btn>

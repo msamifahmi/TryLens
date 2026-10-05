@@ -6,6 +6,7 @@ import { usePartner, useAccount } from "../../store/usePartner.js";
 export function AccountTab() {
   const acc = useAccount();
   const patch = usePartner((s) => s.patch);
+  const changePassword = usePartner((s) => s.changePassword);
   const [f, setF] = useState({ name: acc.name, phone: acc.phone || "" });
   const [pw, setPw] = useState({ current: "", next: "" });
   const [err, setErr] = useState("");
@@ -17,12 +18,12 @@ export function AccountTab() {
     patch((a) => ({ ...a, name: f.name.trim(), phone: f.phone.trim() }));
     flash("Profil akun tersimpan");
   }
-  function savePw(e) {
+  async function savePw(e) {
     e.preventDefault();
     setErr("");
-    if (pw.current !== acc.password) return setErr("Password saat ini salah.");
     if (pw.next.length < 8) return setErr("Password baru minimal 8 karakter.");
-    patch((a) => ({ ...a, password: pw.next }));
+    const res = await changePassword(pw.current, pw.next);
+    if (!res.ok) return setErr(res.error);
     setPw({ current: "", next: "" });
     flash2("Password diperbarui");
   }

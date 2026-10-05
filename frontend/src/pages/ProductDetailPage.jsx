@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { PRODUCTS, MERCHANTS, FRAME_COLORS, formatRp } from "../data/mockData.js";
+import { useRecommendations } from "../rec/useRecommendations.js";
+import RecommendedStrip from "../components/RecommendedStrip.jsx";
 import { useWishlist } from "../store/useWishlist.js";
 import ProductImage from "../components/ProductImage.jsx";
+import Model360, { useHasModel } from "../components/Model360.jsx";
+import { RotateCw } from "lucide-react";
 import ConnectMerchantModal from "../components/ConnectMerchantModal.jsx";
 import { useConsult } from "../store/useConsult.js";
 
@@ -32,10 +36,13 @@ export default function ProductDetailPage() {
   const { id } = useParams();
   const { onTryOn, showToast } = useOutletContext();
   const product = PRODUCTS.find((p) => p.id === id);
+  const navigate = useNavigate();
+  const recs = useRecommendations({ currentId: id, limit: 6 });
   const merchant = MERCHANTS.find((m) => m.id === product?.merchantId);
 
   const [activeColor, setActiveColor] = useState(product?.colorKey);
   const [activeVariant, setActiveVariant] = useState("main");
+  const has360 = useHasModel(product?.id);
   const [qty, setQty] = useState(1);
   const [connectOpen, setConnectOpen] = useState(false);
 
@@ -94,12 +101,16 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <p className="text-[14.5px] text-ink-muted leading-relaxed mb-7 max-w-md">
-            {product.name} adalah frame dengan {describeStyle(product.style)}. Tersedia langsung dari{" "}
-            <span className="font-semibold text-ink-text">{product.merchant}</span> di {product.city}, dan bisa kamu
-            coba secara virtual sebelum memutuskan untuk membeli — tinggal tap &ldquo;Coba Sekarang&rdquo; untuk
-            melihat bagaimana frame ini terlihat langsung di wajahmu.
-          </p>
+          {product.description ? (
+            <p className="text-[14.5px] text-ink-muted leading-relaxed mb-7 max-w-md whitespace-pre-line">{product.description}</p>
+          ) : (
+            <p className="text-[14.5px] text-ink-muted leading-relaxed mb-7 max-w-md">
+              {product.name} adalah frame dengan {describeStyle(product.style)}. Tersedia langsung dari{" "}
+              <span className="font-semibold text-ink-text">{product.merchant}</span> di {product.city}, dan bisa kamu
+              coba secara virtual sebelum memutuskan untuk membeli — tinggal tap &ldquo;Coba Sekarang&rdquo; untuk
+              melihat bagaimana frame ini terlihat langsung di wajahmu.
+            </p>
+          )}
 
           <div className="flex items-center gap-3 mb-2">
             <span className="text-[30px] font-extrabold text-ink">{formatRp(product.price)}</span>
@@ -177,17 +188,21 @@ export default function ProductDetailPage() {
 
         {/* ===== RIGHT: GALLERY ===== */}
         <div className="order-1 lg:order-2">
-          <div className="aspect-[4/3] rounded-2xl bg-surface-blue flex items-center justify-center p-10 mb-4 overflow-hidden">
-            <ProductImage
-              productId={product.id}
-              variant={activeVariant}
-              style={product.style}
-              colorKey={activeColor}
-              className="w-full h-full"
-              alt={product.name}
-            />
+          <div className={`aspect-[4/3] rounded-2xl bg-surface-blue flex items-center justify-center mb-4 overflow-hidden ${activeVariant === "360" ? "p-4" : "p-10"}`}>
+            {activeVariant === "360" && has360 ? (
+              <Model360 key={product.id} productId={product.id} alt={`Pratinjau 360 derajat ${product.name}`} />
+            ) : (
+              <ProductImage
+                productId={product.id}
+                variant={activeVariant === "360" ? "main" : activeVariant}
+                style={product.style}
+                colorKey={activeColor}
+                className="w-full h-full"
+                alt={product.name}
+              />
+            )}
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className={`grid gap-3 ${has360 ? "grid-cols-5" : "grid-cols-4"}`}>
             {thumbs.map((variant) => (
               <button
                 key={variant}
@@ -207,9 +222,33 @@ export default function ProductDetailPage() {
                 />
               </button>
             ))}
+            {has360 && (
+              <button
+                onClick={() => setActiveVariant("360")}
+                className={`aspect-square rounded-xl border-2 bg-gradient-to-br from-blue to-blue-deep text-white flex flex-col items-center justify-center gap-1 transition-colors ${
+                  activeVariant === "360" ? "border-accent-yellow" : "border-transparent hover:border-accent-yellow"
+                }`}
+                aria-label="Lihat pratinjau 360 derajat"
+                aria-pressed={activeVariant === "360"}
+              >
+                <RotateCw size={20} strokeWidth={2.2} />
+                <span className="text-[12px] font-bold leading-none">360°</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      <RecommendedStrip
+        className="mt-10"
+        result={recs}
+        title="Frame lain yang cocok untukmu"
+        pickLabel="Lihat"
+        onPick={(pid) => {
+          navigate(`/produk/${pid}`);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
 
       <ConnectMerchantModal
         open={connectOpen}

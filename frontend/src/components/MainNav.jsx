@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo.jsx";
 import SearchBar from "./SearchBar.jsx";
 import ExploreMenu from "./ExploreMenu.jsx";
+import NotificationBell from "./NotificationBell.jsx";
 import PartnerAccountButton from "./PartnerAccountButton.jsx";
 import { MessageCircle } from "lucide-react";
 import { useWishlist } from "../store/useWishlist.js";
@@ -50,13 +51,7 @@ export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerch
             <MessageCircle size={20} strokeWidth={1.8} />
             <span className="hidden lg:inline">Konsultasi</span>
           </button>
-          <button className="relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-text hover:bg-surface-blue flex-shrink-0" aria-label="Notifikasi, 5 belum dibaca">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-              <path d="M13.7 21a2 2 0 01-3.4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-error text-white rounded-full text-[10px] font-bold flex items-center justify-center">5</span>
-          </button>
+          <NotificationBell className="flex-shrink-0" />
 
           <button
             className="relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-text hover:bg-surface-blue flex-shrink-0"

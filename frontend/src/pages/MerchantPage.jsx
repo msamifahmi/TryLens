@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import MerchantAvatar from "../components/MerchantAvatar.jsx";
 import { Link, useParams, useOutletContext } from "react-router-dom";
 import { MERCHANTS, PRODUCTS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
@@ -148,12 +149,7 @@ export default function MerchantPage() {
       {/* ===== MERCHANT HEADER (profil kiri | garis tipis | akun sosmed & e-commerce kanan) ===== */}
       <div className="bg-white border border-border rounded-2xl p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
         <div className="flex items-center gap-5 flex-1 min-w-0">
-          <div
-            className="w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center text-white font-extrabold text-2xl"
-            style={{ background: merchant.color }}
-          >
-            {merchant.initials}
-          </div>
+          <MerchantAvatar merchant={merchant} className="w-20 h-20 rounded-2xl text-2xl font-extrabold" />
           <div className="min-w-0">
             <h1 className="text-2xl font-extrabold text-ink tracking-tight mb-1.5">{merchant.name}</h1>
             <p className="text-sm text-ink-muted flex items-center gap-1.5 mb-2">

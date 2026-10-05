@@ -8,4 +8,8 @@ node_modules/
 
 # OS generated files
 .DS_Store
-Thumbs.db
+Thumbs.db 
+# Backend Node: database & unggahan Mitra
+backend-node/data/*.db
+backend-node/data/*.db-*
+backend-node/uploads/

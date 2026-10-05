@@ -27,7 +27,7 @@ function TryIcon() {
   );
 }
 
-export default function ProductCard({ product, onTryOn, showToast, cardRef, onOpenDetail }) {
+export default function ProductCard({ product, onTryOn, showToast, cardRef, onOpenDetail, match = null }) {
   const isWished = useWishlist((s) => s.isWished(product.id));
   const toggle = useWishlist((s) => s.toggle);
   const navigate = useNavigate();
@@ -89,6 +89,12 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
         <p className="text-[11.5px] text-ink-muted m-0 flex items-center gap-1">
           <PinIcon /> {product.merchant} · {product.city}
         </p>
+        {match && (
+          <p className="text-[11.5px] font-semibold text-blue m-0 line-clamp-2" title="Skor heuristik dari bentuk wajah, lebar frame, dan riwayatmu — bukan jaminan pas.">
+            {match.percent}% cocok{match.reasons[0] ? ` · ${match.reasons[0]}` : ""}
+          </p>
+        )}
+        {match?.caution && <p className="text-[10.5px] text-[#B45309] m-0">{match.caution}</p>}
         <button
           onClick={(e) => {
             e.stopPropagation();

@@ -20,7 +20,7 @@ export const LM = { top: 10, chin: 152, cheekL: 234, cheekR: 454, jawL: 172, jaw
 
 const dist = (a, b, w, h) => Math.hypot((a.x - b.x) * w, (a.y - b.y) * h);
 
-/** Ukur satu frame landmark (koordinat ternormalisasi 0–1; w,h = ukuran video piksel). */
+/** [LAMA, tidak dipakai lagi] Ukur 2D dengan asumsi PD 63 mm. Gantinya: ar/PoseEngine (3D, un-rotate, skala iris). */
 export function measureFace(lm, w, h) {
   const cheek = dist(lm[LM.cheekL], lm[LM.cheekR], w, h);
   if (!cheek) return null;
@@ -52,10 +52,13 @@ export function classifyRatios({ lenR, jawR, foreR }) {
   return "oval";
 }
 
+// Ambang selaras dengan pengukuran berbasis iris (lebar landmark pipi 234–454; model kanonik ≈ 153 mm).
+// Titik tengah kelas: kecil 136 / sedang 148 / lebar 160 mm (lihat FACE_MM_BY_CLASS di rec/recommend.js).
+// BELUM dikalibrasi dengan ukuran manusia nyata — ukur ±20 orang dengan penggaris untuk menyetel angka ini.
 export function widthClass(mm) {
   if (mm == null) return "medium";
-  if (mm < 128) return "small";
-  if (mm <= 142) return "medium";
+  if (mm < 142) return "small";
+  if (mm <= 154) return "medium";
   return "large";
 }
 
@@ -65,17 +68,33 @@ const median = (arr) => {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
-/** Gabungkan banyak sampel (median) → hasil akhir yang disimpan. */
+/** Median setelah membuang pencilan (>3 MAD). cv = sebaran relatif -> dasar tingkat kepercayaan. */
+function robust(values) {
+  const m = median(values);
+  const mad = median(values.map((v) => Math.abs(v - m))) * 1.4826;
+  const kept = values.filter((v) => Math.abs(v - m) <= 3 * mad + 1e-9);
+  return { value: median(kept), n: kept.length, cv: m ? mad / Math.abs(m) : 0 };
+}
+
+/** Gabungkan banyak sampel (median robust) → hasil akhir yang disimpan. Sampel dari ar/PoseEngine (frame.lenR, jawR, foreR, mm, pd). */
 export function summarizeSamples(samples) {
-  const pick = (k) => median(samples.map((s) => s[k]));
-  const ratios = { lenR: pick("lenR"), jawR: pick("jawR"), foreR: pick("foreR") };
-  const mms = samples.map((s) => s.mm).filter((v) => v != null);
-  const mm = mms.length ? median(mms) : null;
+  const L = robust(samples.map((s) => s.lenR));
+  const J = robust(samples.map((s) => s.jawR));
+  const F = robust(samples.map((s) => s.foreR));
+  const ratios = { lenR: L.value, jawR: J.value, foreR: F.value };
+  const mmv = samples.map((s) => s.mm).filter((v) => v != null);
+  const pdv = samples.map((s) => s.pd).filter((v) => v != null);
+  const mm = mmv.length ? robust(mmv).value : null;
+  const pd = pdv.length ? robust(pdv).value : null;
+  const spread = Math.max(L.cv, J.cv, F.cv);
+  const confidence = samples.length >= 20 && spread < 0.02 ? "high" : samples.length >= 12 && spread < 0.05 ? "medium" : "low";
   const shape = classifyRatios(ratios);
   return {
     shape,
     width: widthClass(mm),
     mm: mm ? Math.round(mm) : null,
+    pd: pd ? Math.round(pd) : null,
+    confidence,
     ratios: { lenR: +ratios.lenR.toFixed(2), jawR: +ratios.jawR.toFixed(2), foreR: +ratios.foreR.toFixed(2) },
     styles: FACE_SHAPES[shape].styles,
     source: "ar",
