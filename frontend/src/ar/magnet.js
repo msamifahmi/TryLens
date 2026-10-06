@@ -10,10 +10,11 @@
 // sisi Y kacamata saling mengunci lebih dulu (getaran vertikal paling terlihat di mata).
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// vgain = seberapa besar kecepatan ikut menaikkan gain (kecil → noise tidak diteruskan penuh saat kepala bergerak cepat);
 // g0 = gain saat diam; capture = selisih (cm / rad) yang membuat gain → 1; vref = kecepatan (cm/s, rad/s) yang membuat gain → 1;
 // lead = detik ekstrapolasi untuk latensi tampil; vDead = kecepatan di bawah ini tidak diekstrapolasi (itu getaran).
-export const MAGNET_POS = { g0: 0.22, capture: 0.45, axisBoost: [1, 1.6, 0.8], vref: 5, lead: 0.025, leadMax: 0.5, vDead: 1.5, jump: 1.2 };
-export const MAGNET_ROT = { g0: 0.22, capture: 0.06, vref: 0.4, lead: 0.025, leadMax: 0.12, vDead: 0.12 };
+export const MAGNET_POS = { g0: 0.22, capture: 0.45, axisBoost: [1, 1.6, 0.8], vref: 5, vgain: 1, lead: 0.025, leadMax: 0.5, vDead: 1.5, jump: 1.2 };
+export const MAGNET_ROT = { g0: 0.1, capture: 0.09, vref: 0.4, vgain: 0.08, lead: 0.025, leadMax: 0.12, vDead: 0.12 };
 const ramp = (v, d) => { const u = clamp((Math.abs(v) - d * 0.5) / d, 0, 1); return u * u * (3 - 2 * u); };
 
 export class MagnetVec {
@@ -25,6 +26,7 @@ export class MagnetVec {
   reset() {
     this.x = null;
     this.v = new Array(this.n).fill(0);
+    this.a = new Array(this.n).fill(0); // percepatan (filter g-h-k): gerak kepala melengkung, bukan garis lurus
     this.t = 0;
     this.gain = 0;
     this.held = false;
@@ -50,16 +52,26 @@ export class MagnetVec {
     }
     this.held = false;
     let gmax = 0;
-    const out = z.map((zi, i) => {
-      const pred = this.x[i] + this.v[i] * dt;
+    z.forEach((zi, i) => {
+      const pred = this.x[i] + this.v[i] * dt + 0.5 * this.a[i] * dt * dt;
+      const vp = this.v[i] + this.a[i] * dt;
       const e = zi - pred;
       const r = (Math.abs(e) * (o.axisBoost?.[i] ?? 1)) / o.capture;
       const vr = Math.abs(this.v[i]) / o.vref;
-      const g = o.g0 + (1 - o.g0) * Math.min(1, r * r + vr * vr);
+      if (r > (o.snap ?? 1.8)) {
+        // Selisih jauh di luar jangkauan gerak wajar (kepala berpindah/ditemukan ulang): tempel langsung, buang kecepatan lama
+        // supaya tidak memantul (overshoot) — itu yang membuat 'tersedot' tetap cepat walau filter berorde 3.
+        this.x[i] = zi; this.v[i] = 0; this.a[i] = 0; gmax = 1;
+        return;
+      }
+      const g = Math.min(0.999, o.g0 + (1 - o.g0) * Math.min(1, r * r + o.vgain * vr * vr));
       gmax = Math.max(gmax, g);
-      this.x[i] = pred + g * e;
-      this.v[i] += ((g * g) / (2 - g)) * (e / dt);
-      return 0;
+      // g-h-k kritis teredam: satu parameter θ menentukan ketiga gain (g = 1 − θ³).
+      const th = Math.cbrt(1 - g);
+      const G = 1 - th ** 3, Hh = 1.5 * (1 - th * th) * (1 - th), K = 0.5 * (1 - th) ** 3;
+      this.x[i] = pred + G * e;
+      this.v[i] = vp + (Hh / dt) * e;
+      this.a[i] += ((2 * K) / (dt * dt)) * e * (o.accel ?? 1);
     });
     this.gain = gmax;
     return this.at(o.lead);
@@ -121,7 +133,7 @@ export class MagnetQuat {
     this.t = t;
     const pred = qnorm(qmul(qexp(this.w.map((v) => v * dt)), this.q));
     const e = qlog(qmul(z, qconj(pred))); // rotasi dunia: pred → z
-    const g = o.g0 + (1 - o.g0) * Math.min(1, (Math.hypot(...e) / o.capture) ** 2 + (Math.hypot(...this.w) / o.vref) ** 2);
+    const g = o.g0 + (1 - o.g0) * Math.min(1, (Math.hypot(...e) / o.capture) ** 2 + o.vgain * (Math.hypot(...this.w) / o.vref) ** 2);
     this.gain = g;
     this.q = qnorm(qmul(qexp(e.map((v) => v * g)), pred));
     const b = (g * g) / (2 - g);

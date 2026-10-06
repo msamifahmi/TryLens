@@ -8,6 +8,7 @@ import { useConsult } from "../store/useConsult.js";
 import { useRecommendations } from "../rec/useRecommendations.js";
 import RecommendedStrip from "../components/RecommendedStrip.jsx";
 import FitReport from "../components/tryon/FitReport.jsx";
+import TryOnCatalog from "../components/tryon/TryOnCatalog.jsx";
 import { formatRp } from "../data/mockData.js";
 
 // three.js + MediaPipe cukup berat, jadi baru dimuat saat kamera dinyalakan.
@@ -291,6 +292,16 @@ export default function TryOnPage() {
           />
         </aside>
       </div>
+
+      <TryOnCatalog
+        product={product}
+        merchant={merchant}
+        showToast={showToast}
+        onPick={(pid) => {
+          switchFrame(pid);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
 
       <ConnectMerchantModal open={connectOpen} onClose={() => setConnectOpen(false)} merchant={merchant} product={product} qty={1} />
     </div>

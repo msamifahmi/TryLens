@@ -11,8 +11,9 @@ const Rx = (a) => [[1, 0, 0], [0, Math.cos(a), -Math.sin(a)], [0, Math.sin(a), M
 const Rz = (a) => [[Math.cos(a), -Math.sin(a), 0], [Math.sin(a), Math.cos(a), 0], [0, 0, 1]];
 
 export const IRIS_FWD = 0.9;
-export function synth({ s = 1, yaw = 0, pitch = 0, roll = 0, dist = 45, noise = 0, bridge = [0, 0, 0], W = 1280, H = 720, irisMm = 11.7, pdScale = 1, noseShift = [0, 0, 0], eyeDy = [0, 0], tx = 0.6, ty = -0.4, matrixBias = [0, 0], matNoise = 0 }) {
-  const R = mul(mul(Ry(rad(yaw)), Rx(rad(pitch))), Rz(rad(roll)));
+export function synth({ s = 1, yaw = 0, pitch = 0, roll = 0, dist = 45, noise = 0, bridge = [0, 0, 0], W = 1280, H = 720, irisMm = 11.7, pdScale = 1, noseShift = [0, 0, 0], eyeDy = [0, 0], tx = 0.6, ty = -0.4, matrixBias = [0, 0], matNoise = 0, rotNoise = 0, gaze = [0, 0] }) {
+  // rotNoise (derajat): getaran orientasi matriks pose antar-frame seperti pada MediaPipe nyata.
+  const R = mul(mul(Ry(rad(yaw + rotNoise * gauss())), Rx(rad(pitch + rotNoise * gauss()))), Rz(rad(roll + rotNoise * gauss())));
   const C = [];
   for (let i = 0; i < 468; i++) C.push([canon[3 * i] * s, canon[3 * i + 1] * s, canon[3 * i + 2] * s]);
   for (let a = 0; a < 3; a++) C[6][a] += bridge[a] * s;
@@ -22,6 +23,8 @@ export function synth({ s = 1, yaw = 0, pitch = 0, roll = 0, dist = 45, noise = 
     c[0] *= pdScale;
     c[1] += eyeDy[sign ? 1 : 0] * s;
     c[2] += IRIS_FWD * s; // iris menonjol ±9 mm di depan garis sudut mata (asumsi anatomi; mesh kanonik tidak memodelkan bola mata)
+    // arah pandang: iris bergeser di dalam rongga mata (mm → cm); sudut mata & landmark wajah lain tidak ikut
+    c[0] += gaze[0] / 10; c[1] += gaze[1] / 10; c[2] -= (Math.hypot(gaze[0], gaze[1]) ** 2) / 24 / 10;
     const r = irisMm / 20; // iris tidak ikut membesar bersama wajah
     return [c, [c[0] + r, c[1], c[2]], [c[0], c[1] + r, c[2]], [c[0] - r, c[1], c[2]], [c[0], c[1] - r, c[2]]];
   };
@@ -38,6 +41,6 @@ export function synth({ s = 1, yaw = 0, pitch = 0, roll = 0, dist = 45, noise = 
   }));
   // Matriks pose MediaPipe: wajah dianggap berukuran kanonik -> translasi = T0 / s.
   const d = [R[0][0], R[1][0], R[2][0], 0, R[0][1], R[1][1], R[2][1], 0, R[0][2], R[1][2], R[2][2], 0, (T0[0] + matrixBias[0] + matNoise * gauss()) / s, (T0[1] + matrixBias[1] + matNoise * gauss()) / s, (T0[2] + matNoise * gauss()) / s, 1];
-  return { res: { faceLandmarks: [lm], facialTransformationMatrixes: [{ data: d }], faceBlendshapes: [{ categories: [] }] }, W, H, T0 };
+  return { R, res: { faceLandmarks: [lm], facialTransformationMatrixes: [{ data: d }], faceBlendshapes: [{ categories: [] }] }, W, H, T0, R };
 }
 

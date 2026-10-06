@@ -10,12 +10,19 @@
 //
 // Dengan begitu, node pupil di wajah menjadi acuan magnet untuk node pusat-lensa di kacamata: yang bergerak
 // mengikuti adalah kacamata, bukan wajah.
+// `eye: true` = node bola mata. Iris ikut bergeser saat pandangan melirik (±3–4 mm), padahal kepala diam — kalau ikut
+// menentukan posisi kepala, kacamata ikut "melirik" (jiggle). Maka posisi kepala ditentukan node KAKU (tulang/hidung/dahi/
+// tulang pipi); node mata hanya diterima bila sepakat dengan konsensus node kaku, dan bobotnya kecil.
 export const NODES = [
-  { id: "pupilR", idx: 468, wx: 2, wy: 3 },
-  { id: "pupilL", idx: 473, wx: 2, wy: 3 },
-  { id: "ridgeTop", idx: 168, wx: 1, wy: 1.5 },
-  { id: "ridgeMid", idx: 6, wx: 1, wy: 1.5 },
-  { id: "ridgeLow", idx: 197, wx: 1, wy: 1.5 },
+  { id: "pupilR", idx: 468, wx: 1, wy: 1, eye: true },
+  { id: "pupilL", idx: 473, wx: 1, wy: 1, eye: true },
+  { id: "ridgeTop", idx: 168, wx: 1.5, wy: 2 },
+  { id: "ridgeMid", idx: 6, wx: 1.5, wy: 2 },
+  { id: "ridgeLow", idx: 197, wx: 1.5, wy: 2 },
+  { id: "glabella", idx: 9, wx: 1, wy: 1.5 },
+  { id: "forehead", idx: 151, wx: 1, wy: 1.5 },
+  { id: "cheekR", idx: 123, wx: 1, wy: 1 },
+  { id: "cheekL", idx: 352, wx: 1, wy: 1 },
   { id: "templeR", idx: 234, wx: 1, wy: 0.5 },
   { id: "templeL", idx: 454, wx: 1, wy: 0.5 }
 ];
@@ -57,23 +64,47 @@ const wmedian = (vals, ws) => {
  * Suara akhir = median berbobot (bukan rata-rata), jadi satu node yang lolos tapi melenceng tidak menyeret hasil.
  * Mengembalikan { origin, spread, used, dropped:[id] }; `used` < 3 → pemanggil memakai matriks pose.
  */
-export function nodeOrigin({ lm, W, H, R, D0, f, locals, inst, k, c0, skip = null, tol = 0.4 }) {
+export function nodeOrigin({ lm, W, H, R, D0, f, locals, inst, k, c0, skip = null, wscale = null, tol = 0.4, eyeTol = 0.12, soft = 0.08 }) {
   const P = worldNodes(lm, W, H, D0, f);
-  const xs = [], ys = [], wx = [], wy = [], dropped = [];
+  const votes = [], dropped = [];
   NODES.forEach((n, i) => {
     if (skip?.has(n.id)) { dropped.push(n.id); return; }
     if (inst && Math.hypot(inst[3 * i] - locals[3 * i], inst[3 * i + 1] - locals[3 * i + 1], inst[3 * i + 2] - locals[3 * i + 2]) > tol) { dropped.push(n.id); return; }
     const l = [locals[3 * i] / k + c0[0], locals[3 * i + 1] / k + c0[1], locals[3 * i + 2] / k + c0[2]];
-    xs.push(P[i][0] - (R[0][0] * l[0] + R[0][1] * l[1] + R[0][2] * l[2]));
-    ys.push(P[i][1] - (R[1][0] * l[0] + R[1][1] * l[1] + R[1][2] * l[2]));
-    wx.push(n.wx);
-    wy.push(n.wy);
+    votes.push({
+      n,
+      x: P[i][0] - (R[0][0] * l[0] + R[0][1] * l[1] + R[0][2] * l[2]),
+      y: P[i][1] - (R[1][0] * l[0] + R[1][1] * l[1] + R[1][2] * l[2])
+    });
   });
-  const used = xs.length;
+  const ws = (v) => wscale?.[v.n.id] ?? 1;
+  const med = (vs) => [wmedian(vs.map((v) => v.x), vs.map((v) => v.n.wx * ws(v))), wmedian(vs.map((v) => v.y), vs.map((v) => v.n.wy * ws(v)))];
+  // Rata-rata berbobot yang kokoh: bobot tiap node dikecilkan mulus menurut jaraknya dari median (Cauchy). Median murni
+  // melompat saat urutan suara berganti (node masuk/keluar); rata-rata kokoh ini bergerak mulus dan tetap menolak outlier.
+  const robust = (vs) => {
+    const [mx, my] = med(vs);
+    let sx = 0, sy = 0, tx = 0, ty = 0;
+    for (const v of vs) {
+      const cx = 1 / (1 + ((v.x - mx) / soft) ** 2), cy = 1 / (1 + ((v.y - my) / soft) ** 2);
+      const wx = v.n.wx * ws(v) * cx, wy = v.n.wy * ws(v) * cy;
+      sx += wx * v.x; tx += wx; sy += wy * v.y; ty += wy;
+    }
+    return tx > 0 && ty > 0 ? [sx / tx, sy / ty] : [mx, my];
+  };
+  const rigid = votes.filter((v) => !v.n.eye), eyes = votes.filter((v) => v.n.eye);
+  let use = votes;
+  if (rigid.length >= 3) {
+    // Konsensus node kaku dulu; node mata hanya ikut bila searah (pandangan lurus / mata bergeser sangat kecil).
+    const [rx, ry] = med(rigid);
+    const okEyes = eyes.filter((v) => Math.hypot(v.x - rx, v.y - ry) <= eyeTol);
+    eyes.forEach((v) => { if (!okEyes.includes(v)) dropped.push(v.n.id); });
+    use = [...rigid, ...okEyes];
+  }
+  const used = use.length;
   if (used < 3) return { origin: null, spread: null, used, dropped };
-  const ox = wmedian(xs, wx), oy = wmedian(ys, wy);
-  const sd = (v, o) => Math.sqrt(v.reduce((s, x) => s + (x - o) ** 2, 0) / v.length);
-  return { origin: [ox, oy], spread: [sd(xs, ox), sd(ys, oy)], used, dropped };
+  const [ox, oy] = robust(use);
+  const sd = (key, o) => Math.sqrt(use.reduce((s, v) => s + (v[key] - o) ** 2, 0) / use.length);
+  return { origin: [ox, oy], spread: [sd("x", ox), sd("y", oy)], used, dropped };
 }
 
 /** Centroid 468 landmark wajah di ruang dunia (satuan matriks) — acuan menghitung offset titik asal kepala per pengguna. */

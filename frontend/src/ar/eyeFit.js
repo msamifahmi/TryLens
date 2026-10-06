@@ -119,7 +119,7 @@ export function placeOnEyes({ spec, tg, k, c0, userScale = 1, limits = FIT_LIMIT
 const side = (v) => (Math.abs(v) < 0.5 ? "tepat" : `${Math.abs(v).toFixed(1).replace(".", ",")} mm ${v > 0 ? "ke luar" : "ke dalam"}`);
 
 /** Laporan kecocokan (mm). Semua angka perkiraan kamera (±2–3 mm). */
-export function describeFit({ frameMm, faceMm, fit }) {
+export function describeFit({ frameMm, faceMm, fit, estimated = false }) {
   const out = [];
   if (frameMm && faceMm) {
     const r = frameMm / faceMm;
@@ -163,6 +163,15 @@ export function describeFit({ frameMm, faceMm, fit }) {
         note: fit.browMm >= 0 ? "Frame di bawah alis" : fit.browMm >= -6 ? "Frame menyentuh alis" : "Frame menutupi alis"
       });
     }
+  }
+  if (estimated && out.length) {
+    out.push({
+      key: "estimated",
+      title: "Dimensi frame diperkirakan",
+      value: "dari bentuk model 3D",
+      status: "warn",
+      note: "Angka kurang pasti — minta toko mengunggah model ber-rig untuk hasil akurat"
+    });
   }
   return out;
 }

@@ -162,7 +162,7 @@ export class PoseEngine {
     const faceMm = this.mmBuf.length ? median(this.mmBuf) : null;
     return {
       fit: { position: f.p, roll: f.roll, contact: r.contact, rollClamped: r.rollClamped, noseBlocked: r.noseBlocked },
-      report: describeFit({ frameMm: spec.frameWidthMm * this.userScale, faceMm, fit: r })
+      report: describeFit({ frameMm: spec.frameWidthMm * this.userScale, faceMm, fit: r, estimated: !!spec.estimated })
     };
   }
 
@@ -279,9 +279,12 @@ export class PoseEngine {
       const skip = new Set();
       if (blinkL > 0.25) skip.add("pupilL");
       if (blinkR > 0.25) skip.add("pupilR");
-      if (Math.abs(angles.yaw) > 22) { skip.add("templeL"); skip.add("templeR"); }
+      // Pelipis memudar mulus (bukan putus) antara |yaw| 14° → 24°: node masuk/keluar mendadak menggeser hasil voting.
+      const fade = clamp((24 - Math.abs(angles.yaw)) / 10, 0, 1);
+      const wscale = { templeL: fade, templeR: fade };
+      if (fade <= 0) { skip.add("templeL"); skip.add("templeR"); }
       const Fm = reconstructFrontal(lm, W, H, R, Math.max(10, -T[2]));
-      const r = nodeOrigin({ lm, W, H, R, D0: this.depthC(T, R), f, locals: this.nodeMed, inst: nodeLocals(Fm, this.mCal), k: this.kSm, c0: this.cuMed, skip });
+      const r = nodeOrigin({ lm, W, H, R, D0: this.depthC(T, R), f, locals: this.nodeMed, inst: nodeLocals(Fm, this.mCal), k: this.kSm, c0: this.cuMed, skip, wscale });
       this.nodeInfo = { used: r.used, dropped: r.dropped };
       if (r.origin && Math.hypot(r.origin[0] - T[0], r.origin[1] - T[1]) < NODE_OUTLIER) {
         tx = r.origin[0];

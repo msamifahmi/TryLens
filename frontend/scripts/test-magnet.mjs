@@ -10,6 +10,8 @@ import { PoseEngine } from "../src/ar/PoseEngine.js";
 import { MagnetQuat } from "../src/ar/magnet.js";
 import { OneEuroQuat } from "../src/ar/oneEuro.js";
 import { canon, synth, gauss } from "./lib/synthFace.mjs";
+import { measure, PATHS, SPEC } from "./bench-smooth.mjs";
+import { estimateSpecFromBox } from "../src/ar/rigSpec.js";
 
 const tests = [];
 const test = (n, f) => tests.push([n, f]);
@@ -212,6 +214,41 @@ test("ML (Python→JSON→JS): prediksi JS identik dengan numpy; model sintetis 
   const a = fitZ(null), b = fitZ(flat), c = fitZ(model); // c: sintetis → identik dengan a
   assert.deepEqual(c.position, a.position);
   assert.ok(Math.abs(b.position[2] - a.position[2]) > 0.05, `koreksi z memengaruhi kedalaman (${a.position[2].toFixed(3)} → ${b.position[2].toFixed(3)})`);
+});
+
+test("Melirik (iris bergeser ±3,5 mm, kepala diam): kacamata tidak ikut bergerak — getaran layar < 0,15 px", () => {
+  const m = measure(PATHS.melirik), j = Math.max(...Object.values(m).map((v) => v.jitter));
+  console.log(`   getaran tampil saat melirik: ${j.toFixed(3)} px (sebelum node kaku: ±0,75 px)`);
+  assert.ok(j < 0.15);
+});
+
+test("Gerak cepat (sapuan ±3 cm, yaw ±25°) dengan noise landmark & rotasi: getaran tampil < 1 px, galat < 4 px", () => {
+  const m = measure(PATHS.sapuan), v = Object.values(m), j = Math.max(...v.map((x) => x.jitter)), e = Math.max(...v.map((x) => x.err));
+  console.log(`   sapuan: getaran ${j.toFixed(2)} px, galat ${e.toFixed(2)} px (One Euro: galat ±14 px)`);
+  assert.ok(j < 1.0, `getaran ${j}`);
+  assert.ok(e < 4, `galat ${e}`);
+});
+
+test("Diam & gerak pelan: getaran tampil < 0,1 px", () => {
+  for (const k of ["diam", "pelan"]) {
+    const j = Math.max(...Object.values(measure(PATHS[k])).map((v) => v.jitter));
+    assert.ok(j < 0.1, `${k}: ${j}`);
+  }
+});
+
+test("Model tanpa rig: dimensi diperkirakan dari kotak batas → laporan kecocokan tetap muncul (diberi catatan 'diperkirakan')", () => {
+  const cm = estimateSpecFromBox({ min: [-7.2, -2.3, -9], max: [7.2, 2.3, 0.9] });
+  const mm = estimateSpecFromBox({ min: [-72, -23, -90], max: [72, 23, 9] });
+  assert.ok(cm.estimated && Math.abs(cm.frameWidthMm - 144) < 0.5);
+  assert.ok(Math.abs(mm.frameWidthMm - 144) < 0.5 && Math.abs(mm.unit - 0.1) < 1e-9, "satuan mm terdeteksi");
+  assert.equal(estimateSpecFromBox({ min: [-1, -1, -1], max: [1, 1, 1] }), null, "bukan ukuran kacamata → ditolak");
+  const eng = new PoseEngine(canon, { tracker: "magnet" });
+  eng.setModel(cm);
+  let out;
+  for (let i = 0; i < 90; i++) { const sy = synth({ noise: 0.3 }); out = eng.update(sy.res, sy.W, sy.H, i * 33.333); }
+  assert.ok(out.fit && out.report?.length >= 4, "ada fit + laporan");
+  assert.ok(out.report.some((r) => r.key === "estimated"), "catatan perkiraan ada");
+  assert.ok(out.report.some((r) => r.key === "width") && out.report.some((r) => r.key === "pupil"));
 });
 
 let fail = 0;

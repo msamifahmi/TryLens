@@ -6,6 +6,16 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 19
+
+- **Anchor kacamata lebih halus** (diukur dengan `frontend/scripts/bench-smooth.mjs`, satuan piksel layar, data sintetis):
+  - *Penyebab jiggle yang ditemukan*: (1) iris ikut menentukan posisi kepala, jadi saat pandangan melirik (±3–4 mm) kacamata ikut bergerak — getaran 0,75 px → 0,06 px setelah posisi kepala ditentukan node KAKU (hidung, glabella, dahi, tulang pipi, pelipis) dan node mata hanya diterima bila sepakat; (2) saat kepala bergerak cepat, gain filter naik ke 1 sehingga noise landmark/rotasi diteruskan penuh — getaran 1,2 px → ±0,8 px dengan galat tetap kecil.
+  - Filter posisi jadi g-h-k (posisi+kecepatan+percepatan) kritis-teredam, "snap" bila selisih jauh di luar jangkauan; gain kecepatan rotasi dikecilkan; voting node memakai rata-rata kokoh (bukan median yang melompat) dan pelipis memudar mulus saat menoleh.
+  - Diam/gerak pelan: getaran tampil < 0,1 px. Belum diuji pada wajah nyata; sumber getaran nyata (noise MediaPipe) bisa lebih besar dari simulasi.
+- **Kecocokan di wajahmu aktif untuk SEMUA frame**: model tanpa rig kini dikunci ke pupil dengan dimensi diperkirakan dari kotak batas model (diberi catatan "diperkirakan"); bila model 3D tidak ada, laporan memakai dimensi standar. Model ber-rig tetap memakai node (akurat).
+- **Halaman Coba Virtual**: katalog di bawah kamera (rak Serupa/Promo/Terbaru/Pria/Wanita/Anak/Semua, urutkan harga, muat lebih banyak, "Coba Sekarang" langsung memakai frame di kamera) + daftar toko optik lain.
+- Tes: test-magnet 16 (tambah: melirik, gerak cepat, diam, estimasi tanpa rig).
+
 ## Update 18
 
 - **Magnet VTO stabil**: kesehatan node diperiksa (satu mata dipejamkan / ujung alis tertutup rambut tidak lagi mengubah skala); relock butuh stabilitas + cooldown; laju perubahan skala dibatasi; konsistensi pasangan node. Divalidasi hanya dengan data sintetis — belum dengan wajah nyata.

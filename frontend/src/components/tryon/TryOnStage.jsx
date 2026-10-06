@@ -8,7 +8,8 @@ import ProductImage from "../ProductImage.jsx";
 import { createLandmarker } from "../consult/landmarker.js";
 import { PoseEngine } from "../../ar/PoseEngine.js";
 import { LumaProbe } from "../../ar/quality.js";
-import { readRigSpec } from "../../ar/rigSpecThree.js";
+import { estimateRigSpec, readRigSpec } from "../../ar/rigSpecThree.js";
+import { estimateSpecFromBox } from "../../ar/rigSpec.js";
 import { FOV_DEG } from "../../ar/faceMetrics.js";
 import canonical from "../../data/canonicalFace.json";
 import { getTryOnConfig } from "./glassesConfig.js";
@@ -289,11 +290,13 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       (gltf) => {
         if (cancelled) return disposeTree(gltf.scene);
         rig.add(gltf.scene);
-        const spec = readRigSpec(gltf.scene); // null = model lama tanpa rig → penempatan cadangan
+        const real = readRigSpec(gltf.scene); // model ber-rig: dimensi & pusat lensa dari node
+        const spec = real || estimateRigSpec(gltf.scene); // tanpa rig: dimensi diperkirakan dari bentuk model → fitur tetap sama (kunci pupil + laporan)
+        live.current.estimated = !real && !!spec;
         live.current.spec = spec;
         engine?.setModel(spec);
         engine?.setUserScale(fitRef.current.adj.s);
-        setRigged(!!spec);
+        setRigged(!!spec && !spec.estimated);
         live.current.mode = "3d";
         setMode("3d");
       },
@@ -301,6 +304,9 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       () => {
         if (cancelled) return;
         live.current.mode = "2d"; // tidak ada model -> ilustrasi 2D
+        // Laporan kecocokan tetap jalan: dimensi frame standar (≈14,2 cm) sebagai perkiraan.
+        engine?.setModel(estimateSpecFromBox({ min: [-7.1, -2.2, -9], max: [7.1, 2.2, 0.8] }));
+        setRigged(false);
         setMode("2d");
       }
     );
@@ -362,7 +368,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
 
         {phase === "ready" && ui.tracked && ui.calibrated && is3d && (
           <span className="absolute bottom-3 left-3 bg-black/45 text-white/90 text-[10.5px] px-2 py-0.5 rounded-full">
-            Ukuran asli terkalibrasi{ui.pd ? ` · PD ≈ ${ui.pd} mm` : ""}{rigged ? (ui.locked ? " · lensa dikunci ke pupil" : "") : " · model tanpa rig: penempatan perkiraan"}
+            Ukuran asli terkalibrasi{ui.pd ? ` · PD ≈ ${ui.pd} mm` : ""}{rigged ? (ui.locked ? " · lensa dikunci ke pupil" : "") : ui.locked ? " · lensa dikunci ke pupil (dimensi frame diperkirakan)" : " · model tanpa rig: penempatan perkiraan"}
           </span>
         )}
       </div>
