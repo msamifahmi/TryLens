@@ -1,8 +1,8 @@
 // Harga & aturan produk — SUMBER KEBENARAN di server (harga dari klien tidak pernah dipercaya).
 // Harus sama dengan frontend/src/data/partnerMock.js; test/pricing-sync.test.mjs memeriksanya.
 export const PLANS = {
-  basic: { name: "Basic", priceMonth: 299000, priceYear: 2990000, frameLimit: 50, features: { advancedAnalytics: false, featuredStore: false, sponsoredFrame: false } },
-  pro: { name: "Pro", priceMonth: 799000, priceYear: 7990000, frameLimit: 9999, features: { advancedAnalytics: true, featuredStore: true, sponsoredFrame: true } }
+  basic: { name: "Basic", priceMonth: 299000, priceYear: 2990000, frameLimit: Infinity, vtoLimit: 20, features: { advancedAnalytics: false, featuredStore: false, sponsoredFrame: false } },
+  pro: { name: "Pro", priceMonth: 799000, priceYear: 7990000, frameLimit: Infinity, vtoLimit: Infinity, features: { advancedAnalytics: true, featuredStore: true, sponsoredFrame: true } }
 };
 export const INTERVALS = { month: { label: "Bulanan", months: 1 }, year: { label: "Tahunan", months: 12 } };
 export const AD_TYPES = {

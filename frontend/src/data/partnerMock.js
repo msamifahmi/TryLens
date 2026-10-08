@@ -15,11 +15,11 @@ export const PLANS = {
     priceMonth: 299000,
     priceYear: 2990000,
     tagline: "Untuk toko yang baru mulai tampil di TryLens",
-    limits: { frames: 50 },
+    limits: { frames: Infinity, vto: 20 },
     features: { advancedAnalytics: false, featuredStore: false, sponsoredFrame: false },
     perks: [
-      "Profil toko & etalase hingga 50 frame",
-      "Virtual Try-On untuk semua frame",
+      "Profil toko & etalase dengan frame tanpa batas",
+      "Virtual Try-On untuk hingga 20 model frame",
       "Konsultasi pelanggan langsung ke WhatsApp toko (bisa disertai hasil scan wajah)",
       "Analitik dasar (ikhtisar)",
       "Bisa memesan slot iklan banner (per minggu)"
@@ -31,11 +31,11 @@ export const PLANS = {
     priceMonth: 799000,
     priceYear: 7990000,
     tagline: "Untuk toko yang ingin tumbuh lebih cepat",
-    limits: { frames: 9999 },
+    limits: { frames: Infinity, vto: Infinity },
     features: { advancedAnalytics: true, featuredStore: true, sponsoredFrame: true },
     perks: [
       "Semua fitur Basic",
-      "Frame tanpa batas",
+      "Virtual Try-On untuk model frame tanpa batas",
       "Analitik Lanjutan (pengunjung, produk, try-on)",
       "Bisa memesan Highlighted Brand (per minggu)",
       "Bisa memesan Sponsored Frame (per minggu)"

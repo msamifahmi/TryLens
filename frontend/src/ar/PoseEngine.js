@@ -6,6 +6,8 @@ import { assessQuality } from "./quality.js";
 import { MagnetQuat, MagnetVec, MAGNET_POS, MAGNET_ROT } from "./magnet.js";
 import { NODE_LEN, centroidWorld, nodeLocals, nodeOrigin } from "./faceNodes.js";
 import { featuresOf, makeCorrector } from "./nodeCorrector.js";
+import { StableTracker, matToQuat } from "./stable.js";
+import { quatToMat } from "./rigid.js";
 import { EYE_LEN, describeFit, eyeTargets, packEyeTargets, placeOnEyes, unpackEyeTargets } from "./eyeFit.js";
 
 // Penghalusan (satuan: cm/s untuk posisi, rad/s untuk rotasi). Naikkan beta bila terasa tertinggal,
@@ -20,6 +22,7 @@ const PAIR_SPREAD = 0.06; // taksiran skala antar-pasangan landmark harus sepaka
 const CU_GATE = 0.12; // cm: batas selisih offset titik-asal yang masih dianggap konsisten
 const NODE_OUTLIER = 1.5; // satuan matriks (cm): suara node yang menyimpang jauh dari matriks pose diabaikan
 const K_RANGE = [0.8, 1.25];
+const EYE_DEV = 0.15; // cm: pupil menyimpang >1,5 mm dari median kalibrasi → bukan frame kalibrasi
 const ANCHOR_W = [0, 0.8, 0.6]; // bobot koreksi titik tempel (x,y,z) — z (kedalaman) kurang pasti
 const ANCHOR_CLAMP = 0.7; // cm
 
@@ -41,7 +44,8 @@ const push = (buf, v) => {
  *  - Gerbang kualitas: pose, kedipan, cahaya, jarak, kecepatan gerak.
  */
 export class PoseEngine {
-  constructor(canon, { mode = "tryon", tracker = "magnet", corrector = null } = {}) {
+  constructor(canon, { mode = "tryon", tracker = "magnet", corrector = null, faces = null } = {}) {
+    this.faces = faces;
     this.corrector = makeCorrector(corrector);
     this.canon = canon;
     this.mode = mode;
@@ -51,10 +55,12 @@ export class PoseEngine {
     this.userScale = 1;
     this.pos = tracker === "magnet" ? new MagnetVec(3, MAGNET_POS) : new OneEuroVec(3, POS);
     this.rot = tracker === "magnet" ? new MagnetQuat(MAGNET_ROT) : new OneEuroQuat(ROT);
+    this.stab = tracker === "stable" ? new StableTracker(canon, faces || [], {}) : null;
     this.reset();
   }
 
   reset() {
+    this.stab?.reset();
     this.pos.reset();
     this.rot.reset();
     this.kBuf = [];
@@ -67,6 +73,7 @@ export class PoseEngine {
     this.recent = [];
     this.cuBuf = [[], [], []];
     this.cuRej = 0;
+    this.eyeRej = 0;
     this.nodeMed = null;
     this.cuMed = null;
     this.justRelocked = false;
@@ -178,12 +185,26 @@ export class PoseEngine {
    * deteksi berikutnya lalu melompat — terlihat sebagai tersendat/lag. null bila belum ada pelacakan.
    */
   predict(nowMs) {
+    if (this.tracker === "stable") {
+      if (!this.tracked || !this.stab?.ready) return null;
+      const since = clamp((nowMs - this.lastNow) / 1000, 0, 0.08);
+      const at = this.stab.at(this.stab.o.lead + since);
+      return this.stabPose(at.A, at.q);
+    }
     if (this.tracker !== "magnet" || !this.tracked || !this.pos.x || !this.rot.q) return null;
     const since = clamp((nowMs - this.lastNow) / 1000, 0, 0.08);
     return { position: this.pos.at(this.pos.o.lead + since), quaternion: this.rot.at(this.rot.o.lead + since) };
   }
 
+  /** Pose kepala dunia (titik asal kepala) dari pivot A dan quaternion q: T = A − k·R·a. */
+  stabPose(A, q) {
+    const R = quatToMat(q), a = this.stab.a, k = this.stab.k;
+    const position = [0, 1, 2].map((r) => A[r] - k * (R[r][0] * a[0] + R[r][1] * a[1] + R[r][2] * a[2]));
+    return { position, quaternion: q };
+  }
+
   resetTracking() {
+    this.stab?.reset();
     this.pos.reset();
     this.rot.reset();
     this.tracked = false;
@@ -192,14 +213,38 @@ export class PoseEngine {
   update(res, W, H, nowMs, luma = null) {
     const lm = res?.faceLandmarks?.[0];
     const mat = res?.facialTransformationMatrixes?.[0];
-    if (!lm || !mat) {
+    if (!lm || (!mat && this.tracker !== "stable")) {
       if (++this.miss > 6 && this.tracked) this.resetTracking();
       return this.snapshot(null);
     }
     this.miss = 0;
     const t = nowMs / 1000;
     this.lastNow = nowMs;
-    const { t: T, R, q } = decomposeMatrix(mat.data);
+    let T, R, q, sm = null;
+    const fpx = H / 2 / Math.tan((FOV_DEG * Math.PI) / 360);
+    if (this.tracker === "stable") {
+      // Pose dari PnP robust ±250 landmark kaku (stable.js); matriks MediaPipe hanya tebakan awal.
+      const st = this.stab;
+      st.fpx = fpx;
+      st.setScale(this.kSm);
+      let prior = null;
+      if (mat) { const d = decomposeMatrix(mat.data); prior = { R: d.R, T: d.t }; }
+      else if (!st.R) {
+        const spanPx = Math.hypot((lm[454].x - lm[234].x) * W, (lm[454].y - lm[234].y) * H) || 1;
+        const D = (fpx * 14.5 * this.kSm) / spanPx;
+        prior = { R: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], T: [(lm[6].x - 0.5) * W * D / fpx / this.kSm, -(lm[6].y - 0.5) * H * D / fpx / this.kSm, -D / this.kSm] };
+      }
+      sm = st.measure(lm, W, H, fpx, prior);
+      if (!sm.ok) {
+        st.filter(sm, t, 50);
+        if (++this.miss > 6 && this.tracked) this.resetTracking();
+        return this.snapshot(null);
+      }
+      const k0 = st.k, a = st.a;
+      R = sm.R;
+      T = [0, 1, 2].map((r) => (sm.A[r] - k0 * (R[r][0] * a[0] + R[r][1] * a[1] + R[r][2] * a[2])) / k0);
+      q = matToQuat(R);
+    } else ({ t: T, R, q } = decomposeMatrix(mat.data));
     const angles = poseAngles(R);
 
     const cats = res.faceBlendshapes?.[0]?.categories;
@@ -223,7 +268,7 @@ export class PoseEngine {
       const F = reconstructFrontal(lm, W, H, R, D0);
       const est = estimateScale(F, this.canon);
       const calibOK =
-        est && !blink && est.iris.asym < 0.25 && irisPx >= 8 &&
+        est && !blink && (this.tracker !== "stable" || this.stab.clean) && est.iris.asym < 0.25 && irisPx >= 8 &&
         (Math.max(...est.pairs) - Math.min(...est.pairs)) / median(est.pairs) < PAIR_SPREAD &&
         Math.abs(angles.yaw) < 30 && Math.abs(angles.pitch) < 22 && Math.abs(angles.roll) < 25 &&
         est.k > 0.7 && est.k < 1.4;
@@ -240,6 +285,14 @@ export class PoseEngine {
           cu: [0, 1, 2].map((a) => R[0][a] * dv[0] + R[1][a] * dv[1] + R[2][a] * dv[2]), // offset centroid dari titik asal, ruang kepala
           ms: measureFrontal(F, est.m)
         };
+        // Frame yang pupilnya menyimpang dari median kalibrasi (kelopak menutup, lirikan, mata terhalang) tidak ikut kalibrasi.
+        let skipCal = false;
+        if (this.tracker === "stable" && this.kBuf.length >= MIN_CALIB) {
+          const med = this.tBuf.slice(0, 6).map(median);
+          const dev = Math.max(...pack.eye.slice(0, 6).map((v, j) => Math.abs(v - med[j])));
+          if (dev > EYE_DEV && this.eyeRej < 60) { this.eyeRej++; skipCal = true; } else this.eyeRej = 0;
+        }
+        if (!skipCal) {
         // Kalibrasi ulang cepat: ukuran wajah menyimpang konsisten dari median → buang riwayat lama.
         this.recent.push(pack);
         if (this.recent.length > RELOCK.frames) this.recent.shift();
@@ -250,6 +303,7 @@ export class PoseEngine {
           if (this.kRun >= RELOCK.frames && this.since > RELOCK.cooldown) this.relock();
         }
         this.pushCalib(pack);
+        }
         if (pack.ms) frame = pack.ms;
       }
     }
@@ -289,6 +343,13 @@ export class PoseEngine {
         this.nodeSpread = r.spread;
       }
     }
+    if (this.tracker === "stable") {
+      this.stab.setScale(k);
+      this.stab.filter(sm, t, -sm.A[2]);
+      const sp = this.stabPose(...(() => { const a = this.stab.at(this.stab.o.lead); return [a.A, a.q]; })());
+      this.tracked = true;
+      return this.snapshot({ p: sp.position, q: sp.quaternion, k, angles, quality, calibrated, frame });
+    }
     const p = this.pos.filter([tx * k, ty * k, T[2] * k], t);
     const qf = this.rot.filter(q, t);
     this.tracked = true;
@@ -307,6 +368,7 @@ export class PoseEngine {
     const dy = this.dyBuf.length >= MIN_CALIB ? clamp(median(this.dyBuf) * ANCHOR_W[1], -ANCHOR_CLAMP, ANCHOR_CLAMP) : 0;
     const dz = this.dzBuf.length >= MIN_CALIB ? clamp(median(this.dzBuf) * ANCHOR_W[2], -ANCHOR_CLAMP, ANCHOR_CLAMP) : 0;
     const pf = this.computeFit(s.k);
+    if (this.stab && pf?.fit) this.stab.setPivot(pf.fit.position, s.k);
     return {
       tracked: true,
       fit: pf?.fit ?? null,

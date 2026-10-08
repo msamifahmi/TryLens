@@ -88,7 +88,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
     };
     video.play?.().catch(() => {});
 
-    const engine = new PoseEngine(canonArr, { mode: "tryon", corrector: CORRECTOR, tracker: new URLSearchParams(location.search).get("tracker") === "oneEuro" ? "oneEuro" : "magnet" });
+    const engine = new PoseEngine(canonArr, { mode: "tryon", corrector: CORRECTOR, faces: canonical.f, tracker: ((t) => (t === "oneEuro" || t === "magnet" ? t : "stable"))(new URLSearchParams(location.search).get("tracker")) });
     const luma = new LumaProbe();
 
     const canvas = canvasRef.current;

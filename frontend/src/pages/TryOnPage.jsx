@@ -8,6 +8,7 @@ import { useConsult } from "../store/useConsult.js";
 import { useRecommendations } from "../rec/useRecommendations.js";
 import RecommendedStrip from "../components/RecommendedStrip.jsx";
 import FitReport from "../components/tryon/FitReport.jsx";
+import TryOnExtras from "../components/tryon/TryOnExtras.jsx";
 import { formatRp } from "../data/mockData.js";
 
 // three.js + MediaPipe cukup berat, jadi baru dimuat saat kamera dinyalakan.
@@ -217,6 +218,8 @@ export default function TryOnPage() {
               </div>
             </div>
           )}
+
+          <TryOnExtras product={product} merchant={merchant} camera={cameraStatus === "granted"} />
         </div>
 
         {/* ===== KANAN: CHECKOUT + KECOCOKAN + TOKO SERUPA (menempel saat layar lebar) ===== */}

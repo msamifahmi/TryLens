@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PageTransition from "../components/ui/PageTransition.jsx";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import TopPromoBar from "../components/TopPromoBar.jsx";
 import MainNav from "../components/MainNav.jsx";
@@ -63,7 +64,7 @@ export default function Layout() {
       <CategoryNav onJumpToFeed={jumpToFeed} onJumpToMerchant={goToMitra} />
 
       <main>
-        <Outlet context={{ onTryOn: handleTryOn, showToast, goToProduct, jumpToFeed }} />
+        <PageTransition><Outlet context={{ onTryOn: handleTryOn, showToast, goToProduct, jumpToFeed }} /></PageTransition>
       </main>
 
       <FloatingWishlistButton onClick={() => setDrawerOpen(true)} />

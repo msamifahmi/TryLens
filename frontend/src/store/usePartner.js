@@ -1,7 +1,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ApiError, api, apiUrl, backend, probe } from "../api/http.js";
-import { AD_TYPES, INTERVALS, addMonths, endsOn, planLabel, planPrice, seedAccounts } from "../data/partnerMock.js";
+import { AD_TYPES, INTERVALS, PLANS, addMonths, endsOn, planLabel, planPrice, seedAccounts } from "../data/partnerMock.js";
+import { vtoToDisable } from "../data/quota.js";
+
+/** Mode demo: terapkan turun paket yang jatuh tempo + jaga kuota VTO (cermin svc.settle di server). */
+export function settleAcc(acc) {
+  const s = acc?.subscription;
+  if (!s || !PLANS[s.plan]) return acc;
+  let sub = s, prefer = null;
+  if (s.pendingPlan && s.currentPeriodEnd && Date.parse(s.currentPeriodEnd) <= Date.now()) {
+    prefer = s.pendingVtoFrameIds || null;
+    sub = { ...s, plan: s.pendingPlan, pendingPlan: null, pendingVtoFrameIds: null };
+  }
+  const off = new Set(vtoToDisable([...acc.frames].reverse(), PLANS[sub.plan].limits.vto, prefer));
+  if (sub === s && !off.size) return acc;
+  return { ...acc, subscription: sub, frames: acc.frames.map((f) => (off.has(f.id) ? { ...f, vto: false } : f)), vtoNotice: off.size ? { at: new Date().toISOString(), disabled: off.size } : acc.vtoNotice };
+}
 
 // Sementara semua data mitra disimpan di localStorage (mode demo tanpa backend).
 // Setiap aksi di bawah nanti diganti dengan pemanggilan API PHP; bentuk datanya
@@ -158,7 +173,7 @@ export const usePartner = create(
         }
         const acc = get().accounts[email.trim().toLowerCase()];
         if (!acc || acc.password !== password) return { ok: false, error: "Email atau password salah." };
-        set({ session: { email: acc.email } });
+        set({ session: { email: acc.email }, accounts: { ...get().accounts, [acc.email]: settleAcc(acc) } });
         return { ok: true };
       },
 
@@ -175,7 +190,7 @@ export const usePartner = create(
         const key = s.session?.email;
         const prev = key && s.accounts[key];
         if (!prev) return;
-        const next = fn(prev);
+        const next = s.server ? fn(prev) : settleAcc(fn(prev));
         set({ accounts: { ...s.accounts, [key]: next } });
         if (!s.server) return;
 
@@ -260,7 +275,7 @@ export const usePartner = create(
           const end = addMonths(iso, INTERVALS[interval].months);
           invoice = { id: invNo, date: iso.slice(0, 10), kind: "subscription", label: planLabel(plan, interval), plan, amount: planPrice(plan, interval), status: "paid", method };
           const subscription = { plan, interval, status: "active", startedAt: iso, currentPeriodEnd: end, nextBillingAt: end, cancelAtPeriodEnd: false, pendingPlan: null };
-          next = { ...acc, subscription, invoices: [invoice, ...acc.invoices] };
+          next = settleAcc({ ...acc, subscription, invoices: [invoice, ...acc.invoices] });
         }
         set((s) => ({ accounts: { ...s.accounts, [acc.email]: next }, checkout: null, lastInvoiceId: invoice.id }));
         return invoice;

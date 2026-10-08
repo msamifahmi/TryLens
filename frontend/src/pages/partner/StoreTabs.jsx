@@ -43,6 +43,8 @@ export function ProductsTab() {
   const patch = usePartner((s) => s.patch);
   const plan = acc.subscription.plan;
   const limit = PLANS[plan].limits.frames;
+  const vtoLimit = PLANS[plan].limits.vto;
+  const vtoUsed = acc.frames.filter((f) => f.vto).length;
   const [form, setForm] = useState(null); // null = tertutup; {id?} = tambah/ubah
   const [assets, setAssets] = useState({ photos: [], glb: null });
   const [saving, setSaving] = useState(false);
@@ -78,7 +80,7 @@ export function ProductsTab() {
       oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
       stock: Number(form.stock) || 0,
       published: form.published ?? true,
-      vto: form.vto ?? true
+      vto: form.vto ?? vtoUsed < vtoLimit // kuota VTO penuh → frame baru masuk katalog tanpa try-on
     };
     const prevMedia = acc.frames.find((f) => f.id === form.id)?.media;
     const put = (frame) => patch((a) => ({ ...a, frames: form.isNew ? [frame, ...a.frames] : a.frames.map((f) => (f.id === form.id ? frame : f)) }));
@@ -136,12 +138,13 @@ export function ProductsTab() {
           </Btn>
         }
       />
-      <div className="max-w-[360px] mb-4">
-        <Meter label={`Kuota frame paket ${PLANS[plan].name}`} value={acc.frames.length} max={limit} />
+      <div className="max-w-[360px] mb-4 flex flex-col gap-3">
+        <Meter label="Frame di katalog (tanpa batas)" value={acc.frames.length} max={limit} />
+        <Meter label={`Frame Virtual Try-On paket ${PLANS[plan].name}`} value={vtoUsed} max={vtoLimit} />
       </div>
-      {atLimit && (
+      {vtoUsed >= vtoLimit && (
         <div className="rounded-xl border border-accent-yellow bg-surface-cream px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[13px] text-ink-text m-0">Kuota frame paket Basic penuh. Upgrade ke Pro untuk frame tanpa batas.</p>
+          <p className="text-[13px] text-ink-text m-0">Kuota Virtual Try-On paket Basic ({vtoLimit} frame) penuh. Frame baru tetap tampil di katalog tanpa try-on. Upgrade ke Pro untuk try-on tanpa batas.</p>
           <UpgradeLink size="sm" />
         </div>
       )}

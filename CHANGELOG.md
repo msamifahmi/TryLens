@@ -6,6 +6,37 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 19
+
+> Catatan penomoran: CHANGELOG/HANDOFF sebelumnya sudah berisi Update 18, jadi pekerjaan ini dicatat sebagai Update 19.
+
+### A. VTO: pelacak "stable" (menggantikan magnet sebagai default)
+- **Masalah**: frame bergerak sendiri saat diam; memejamkan satu mata / poni menutup alis membuat frame goyang. Penyebab di kode lama: pelacakan bergantung pada 7 node (pupil, pangkal hidung, pelipis) yang keanggotaannya berubah saat mata menutup; pupil ikut arah pandang; rotasi dari matriks MediaPipe (±24 landmark, z berderau) diperbesar lengan tuas dari titik asal kepala ke mata; kalibrasi bisa "teracuni" oleh poni/kedip.
+- **Pendekatan baru** (`frontend/src/ar/stable.js`, `rigid.js`): PnP kokoh (Gauss-Newton pada galat reproyeksi 2D, bobot Tukey, bobot visibilitas dari normal vertex) atas ±325 landmark kaku (bukan 7 node); pose diparameterkan di sekitar titik pivot di kacamata (menghapus lengan tuas); filter Kalman kecepatan-konstan per sumbu dengan lonjakan derau proses bila inovasi besar ("tersedot" ke gerakan nyata, tanpa lag); pengukuran tidak sehat (galat reproyeksi naik, inlier turun) tidak dipakai kalibrasi; kalibrasi dilewati bila pupil menyimpang (kedip/melirik); zona-mati keluaran (histeresis) agar diam benar-benar diam, otomatis lepas saat bergerak.
+- Aktif di `TryOnStage` secara default. Pembanding lama tetap ada: `?tracker=magnet` atau `?tracker=oneEuro`.
+- **Validasi pada jaringan MediaPipe ASLI** (`ml/realnet/`, `scripts/bench-realnet.mjs`): foto wajah nyata + transformasi dalam-bidang yang diketahui + derau sensor + JPEG, dijalankan lewat model TFLite `face_landmark`/`iris_landmark`. Hasil piksel layar (seq3): getaran diam 0,14 px (magnet 0,14, oneEuro 0,18); galat saat gerak/geser turun dari ±3,6 ke ±1,5 px; loncatan 3,0 → 0,5 px; kedip sebelah mata 15 → 1,4 px; poni menutup 15 → 12 px. Pada seq9 getaran diam 0,38 px (magnet 0,25) tetapi galat gerak, kedip, dan poni jauh lebih kecil.
+- **Batas yang jujur**: hanya gerak dalam-bidang (belum yaw/pitch nyata); derau sensor disimulasikan; matriks MediaPipe dan sinyal kedip dalam harness adalah pengganti; belum diuji pada webcam sungguhan. Poni tebal tetap menyisakan galat (12 px pada skenario terburuk). Perlu uji lapangan.
+- Tes baru: `npm run test:stable` (penyelaras rigid Horn). `npm test` frontend lolos semua.
+
+### B. Aturan paket: katalog tanpa batas, VTO dibatasi
+- Semua paket boleh menambah frame tanpa batas ke katalog. Frame yang bisa dicoba VTO: **Basic 20, Pro tanpa batas** (`PLANS[...].vtoLimit` di server, `limits.vto` di front-end, dicek test anti-drift).
+- Server: `PUT /frames/:id` menolak mengaktifkan VTO ke-21 di Basic (402); `src/quota.js` (salinan identik di `frontend/src/data/quota.js`, dicek test) berisi `pickVtoKeep/vtoToDisable`.
+- **Turun paket Pro→Basic**: Mitra memilih di dialog baru — **Otomatis** (20 frame tertua/berurutan dari unggahan pertama) atau **Pilih sendiri** (maks. 20, `subscription.pendingVtoFrameIds`). Diterapkan saat periode berakhir (penyelesaian "malas" di `svc.settle`, dipanggil saat akun/katalog dibaca) dan saat pindah paket lewat checkout. Frame yang dimatikan tetap tampil di katalog tanpa try-on; Mitra melihat pemberitahuan di Frame Library.
+- UI Mitra: meter kuota VTO (Produk/Frame, Frame Library, Penggunaan Paket), toggle terkunci saat penuh, "Aktifkan semua" hanya mengisi sisa kuota, frame baru otomatis tanpa VTO bila kuota penuh. Mode demo memakai logika yang sama (`settleAcc`).
+- Tes backend: 27 (kuota 20, turun otomatis, turun manual, parity kuota).
+
+### C. Halaman Coba Virtual
+- Ruang kosong di bawah kamera kini berisi tips agar frame pas, detail frame, dan kartu toko (`components/tryon/TryOnExtras.jsx`).
+
+### D. Animasi
+- Transisi antarhalaman (situs & area Mitra), efek tekan/hover/fokus di semua tombol, tautan, tab, toggle; kartu naik saat disorot; dialog/overlay memudar masuk; daftar kartu muncul berurutan (`data-stagger`); dialog turun paket memakai animasi pegas. Semua dimatikan bila pengguna memilih "kurangi gerak" (`prefers-reduced-motion`).
+
+### Belum dikerjakan / perlu dicek
+- `backend-php/` tetap usang (tidak ikut aturan kuota VTO).
+- Uji tampilan di browser sungguhan belum dilakukan di sesi ini (hanya build + tes otomatis).
+
+---
+
 ## Update 18
 
 - **Magnet VTO stabil**: kesehatan node diperiksa (satu mata dipejamkan / ujung alis tertutup rambut tidak lagi mengubah skala); relock butuh stabilitas + cooldown; laju perubahan skala dibatasi; konsistensi pasangan node. Divalidasi hanya dengan data sintetis — belum dengan wajah nyata.

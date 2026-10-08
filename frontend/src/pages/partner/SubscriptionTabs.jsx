@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import PlanCard, { PlanPicker } from "../../components/partner/PlanCard.jsx";
 import { Badge, Btn, Card, CardHeader, Flash, Meter, Tile, Toggle, useFlash } from "../../components/partner/ui.jsx";
+import DowngradeModal from "../../components/partner/DowngradeModal.jsx";
+import { useState } from "react";
 import { usePartner, useAccount } from "../../store/usePartner.js";
 import { INTERVALS, PLANS, fmtDate, fmtRp, planLabel, planPrice } from "../../data/partnerMock.js";
 
@@ -19,7 +21,8 @@ export function CurrentPlanTab() {
         <Card>
           <CardHeader title="Penggunaan paket" subtitle={`Kuota paket ${plan.name}`} />
           <div className="flex flex-col gap-4 max-w-[420px]">
-            <Meter label="Frame" value={acc.frames.length} max={plan.limits.frames} />
+            <Meter label="Frame di katalog" value={acc.frames.length} max={plan.limits.frames} />
+            <Meter label="Frame Virtual Try-On" value={acc.frames.filter((f) => f.vto).length} max={plan.limits.vto} />
             <p className="text-[12.5px] text-ink-muted m-0">Iklan (banner, Highlighted Brand, Sponsored Frame) dibeli per minggu di menu Promosi, terpisah dari langganan.</p>
           </div>
         </Card>
@@ -37,7 +40,7 @@ export function CurrentPlanTab() {
           {sub.pendingPlan && (
             <p className="text-[13px] text-ink-text mt-3 mb-0">
               Paket akan turun ke <strong>{PLANS[sub.pendingPlan].name}</strong> pada {fmtDate(sub.currentPeriodEnd)}.{" "}
-              <button className="underline" onClick={() => setSub({ pendingPlan: null })}>Batalkan</button>
+              <button className="underline" onClick={() => setSub({ pendingPlan: null, pendingVtoFrameIds: null })}>Batalkan</button>
             </p>
           )}
         </Card>
@@ -98,21 +101,27 @@ export function UpgradePlanTab() {
   const navigate = useNavigate();
   const [msg, flash] = useFlash(4000);
   const sub = acc.subscription;
+  const [ask, setAsk] = useState(false);
 
   function select(code, interval) {
     if ((code === "pro" && sub.plan === "basic") || (code === sub.plan && interval === "year" && sub.interval === "month")) {
       startCheckout({ kind: "subscription", plan: code, interval, upgrade: true });
       navigate("/partner/checkout");
     } else if (code === "basic" && sub.plan === "pro") {
-      patch((a) => ({ ...a, subscription: { ...a.subscription, pendingPlan: "basic" } }));
-      flash(`Paket turun ke Basic pada ${fmtDate(sub.currentPeriodEnd)}. Fitur Pro tetap aktif sampai saat itu.`);
+      setAsk(true);
     }
+  }
+  function confirmDown(ids) {
+    patch((a) => ({ ...a, subscription: { ...a.subscription, pendingPlan: "basic", pendingVtoFrameIds: ids } }));
+    setAsk(false);
+    flash(`Paket turun ke Basic pada ${fmtDate(sub.currentPeriodEnd)}. Fitur Pro tetap aktif sampai saat itu.`);
   }
 
   return (
     <div>
       <CardHeader title="Upgrade Plan" subtitle="Bandingkan paket dan ganti kapan saja." right={<Flash msg={msg} />} />
       <PlanPicker current={{ plan: sub.plan, interval: sub.interval }} onSelect={select} />
+      <DowngradeModal open={ask} frames={acc.frames} endsAt={sub.currentPeriodEnd} onClose={() => setAsk(false)} onConfirm={confirmDown} />
     </div>
   );
 }
