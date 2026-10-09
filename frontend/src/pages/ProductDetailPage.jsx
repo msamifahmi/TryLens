@@ -1,3 +1,4 @@
+import { SIZE_FIELDS, sizeCode } from "../data/frameSize.js";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { PRODUCTS, MERCHANTS, FRAME_COLORS, formatRp } from "../data/mockData.js";
@@ -100,6 +101,16 @@ export default function ProductDetailPage() {
               ))}
             </div>
           </div>
+
+          {product.size && (
+            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 mb-6 max-w-md text-[13px]" aria-label="Ukuran frame">
+              {sizeCode(product.size) && <div className="col-span-full"><dt className="text-ink-muted text-[11.5px]">Ukuran (lensa–jembatan–gagang)</dt><dd className="m-0 font-bold text-ink">{sizeCode(product.size)} mm</dd></div>}
+              {Object.entries(SIZE_FIELDS).filter(([k]) => product.size[k]).map(([k, r]) => (
+                <div key={k}><dt className="text-ink-muted text-[11.5px]">{r.label.replace(" (gram)", "")}</dt><dd className="m-0 font-semibold text-ink-text">{product.size[k]} {k === "weightG" ? "g" : "mm"}</dd></div>
+              ))}
+              {product.size.material && <div><dt className="text-ink-muted text-[11.5px]">Bahan</dt><dd className="m-0 font-semibold text-ink-text">{product.size.material}</dd></div>}
+            </dl>
+          )}
 
           {product.description ? (
             <p className="text-[14.5px] text-ink-muted leading-relaxed mb-7 max-w-md whitespace-pre-line">{product.description}</p>

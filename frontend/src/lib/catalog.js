@@ -28,7 +28,7 @@ export function mergeCatalog(data) {
       const cur = PRODUCTS[i];
       const disc = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
       PRODUCTS[i] = {
-        ...cur, name: p.name, style: p.style, colorKey: p.colorKey, cat: p.cat, description: p.description, buy: p.buy, price: p.price, oldPrice: p.oldPrice, stock: p.stock, vto: p.vto, assets: p.assets,
+        ...cur, name: p.name, style: p.style, colorKey: p.colorKey, cat: p.cat, description: p.description, buy: p.buy, price: p.price, oldPrice: p.oldPrice, stock: p.stock, vto: p.vto, size: p.size || null, assets: p.assets,
         flash: cur.flash && !!p.oldPrice, badge: disc ? `-${disc}%` : cur.isNew ? "BARU" : null
       };
     } else PRODUCTS.push(p);

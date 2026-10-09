@@ -8,6 +8,7 @@ import { PLATFORMS, cleanBuyUrl } from "../../lib/ecommerce.js";
 import StoreForm from "../../components/partner/StoreForm.jsx";
 import FramePreviewModal from "../../components/partner/FramePreviewModal.jsx";
 import MerchantAvatar from "../../components/MerchantAvatar.jsx";
+import { SIZE_FIELDS, cleanSize, effectiveFrameWidthMm, sizeCode } from "../../data/frameSize.js";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Flash, Meter, Tile, Toggle, UpgradeLink, inputCls, useFlash } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount, whenSynced } from "../../store/usePartner.js";
 import { FRAME_COLORS, STYLE_LABELS } from "../../data/mockData.js";
@@ -36,7 +37,7 @@ export function StoreProfileTab() {
 }
 
 /* --------------------------------------------------------- Produk / Frame */
-const EMPTY = { name: "", description: "", buy: {}, style: "aviator", colorKey: "black", category: "Pria", price: "", oldPrice: "", stock: "10" };
+const EMPTY = { name: "", description: "", size: {}, buy: {}, style: "aviator", colorKey: "black", category: "Pria", price: "", oldPrice: "", stock: "10" };
 
 export function ProductsTab() {
   const acc = useAccount();
@@ -49,7 +50,7 @@ export function ProductsTab() {
   const [assets, setAssets] = useState({ photos: [], glb: null });
   const [saving, setSaving] = useState(false);
   const openForm = (f) => {
-    const base = f ? { ...f, oldPrice: f.oldPrice ?? "" } : { ...EMPTY, id: `f-${Date.now().toString(36)}`, isNew: true };
+    const base = f ? { ...f, oldPrice: f.oldPrice ?? "", size: { ...(f.size || {}) } } : { ...EMPTY, id: `f-${Date.now().toString(36)}`, isNew: true };
     setAssets(f ? assetsInitial(f) : { photos: [], glb: null });
     setForm(base);
   };
@@ -68,10 +69,14 @@ export function ProductsTab() {
       if (!u) { setSaving(false); return alert(`Tautan ${p.label} tidak valid${p.hosts ? ` — gunakan alamat https dari ${p.hosts[0]}` : " — gunakan alamat https"}.`); }
       buy[p.key] = u;
     }
+    const sc = cleanSize(form.size);
+    if (sc.error) { setSaving(false); return alert(sc.error); }
+    const sizeOut = sc.value;
     const base = {
       id: form.id,
       name: form.name.trim(),
       description: (form.description || "").trim().slice(0, 800),
+      size: sizeOut,
       buy,
       style: form.style,
       colorKey: form.colorKey,
@@ -171,6 +176,22 @@ export function ProductsTab() {
           <Field label="Harga (Rp) *"><input className={inputCls} type="number" min="1000" value={form.price} onChange={set("price")} required /></Field>
           <Field label="Harga coret (Rp)"><input className={inputCls} type="number" min="0" value={form.oldPrice ?? ""} onChange={set("oldPrice")} /></Field>
           <Field label="Stok"><input className={inputCls} type="number" min="0" value={form.stock} onChange={set("stock")} /></Field>
+          <fieldset className="col-span-full rounded-xl border border-[#DDE8F4] p-3 m-0">
+            <legend className="px-1.5 text-[12.5px] font-semibold text-ink-text">Ukuran asli frame (mm) — opsional</legend>
+            <p className="text-[12px] text-ink-muted m-0 mb-2.5">
+              Bila diisi, frame di Coba Virtual tampil berukuran <strong>1:1</strong> sesuai ukuran asli. Bila kosong, ukuran otomatis disesuaikan dengan lebar wajah pengguna.
+              Notasi optik: lebar lensa–jembatan–gagang{sizeCode(form.size) ? <> (saat ini <strong>{sizeCode(form.size)}</strong>)</> : ""}.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+              {Object.entries(SIZE_FIELDS).map(([k, r]) => (
+                <Field key={k} label={`${r.label} (${r.min}–${r.max})`}>
+                  <input className={inputCls} type="number" step="0.5" min={r.min} max={r.max} inputMode="decimal" value={form.size?.[k] ?? ""} onChange={(e) => setForm((p) => ({ ...p, size: { ...(p.size || {}), [k]: e.target.value } }))} placeholder="—" />
+                </Field>
+              ))}
+              <Field label="Bahan (opsional)"><input className={inputCls} maxLength={60} value={form.size?.material ?? ""} onChange={(e) => setForm((p) => ({ ...p, size: { ...(p.size || {}), material: e.target.value } }))} placeholder="Asetat, titanium…" /></Field>
+            </div>
+            {!form.size?.frameWidthMm && effectiveFrameWidthMm(cleanSize(form.size).value) ? <p className="text-[12px] text-ink-muted m-0 mt-2">Lebar total diperkirakan ±{effectiveFrameWidthMm(cleanSize(form.size).value)} mm (2×lensa + jembatan + 12).</p> : null}
+          </fieldset>
           <Field label={`Deskripsi produk (${(form.description || "").length}/800)`} className="col-span-full">
             <textarea className={`${inputCls} h-24 py-2.5 resize-none`} maxLength={800} value={form.description || ""} onChange={set("description")} placeholder="Bahan, ukuran lensa, cocok untuk bentuk wajah apa, garansi… Tampil di halaman produk. Kosongkan untuk deskripsi otomatis." />
           </Field>

@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Link } from "react-router-dom";
 import { STYLE_LABELS } from "../../data/mockData.js";
+import { sizeCode } from "../../data/frameSize.js";
 
 const TIPS = [
   ["Cahaya dari depan", "Hadapkan wajah ke sumber cahaya. Hindari lampu tepat di belakang kepala."],
@@ -17,6 +18,7 @@ export default function TryOnExtras({ product, merchant, camera }) {
     ["Gaya", STYLE_LABELS[product.style] || product.style],
     ["Kategori", product.cat],
     ["Stok", product.stock != null ? `${product.stock} unit` : "Tanya toko"],
+    ["Ukuran", sizeCode(product.size) ? `${sizeCode(product.size)} mm (skala 1:1)` : "Menyesuaikan wajahmu"],
     ["Try-On", product.vto === false ? "Tidak tersedia" : "Tersedia"]
   ];
   return (

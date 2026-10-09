@@ -13,6 +13,7 @@ import { estimateSpecFromBox } from "../../ar/rigSpec.js";
 import { FOV_DEG } from "../../ar/faceMetrics.js";
 import canonical from "../../data/canonicalFace.json";
 import { getTryOnConfig } from "./glassesConfig.js";
+import { applyRealSize, autoFitScale } from "../../ar/sizeSpec.js";
 // Opsional: model hasil ml/train_node_corrector.py (frontend/src/data/nodeCorrector.json). Tanpa berkas itu = tanpa koreksi.
 const CORRECTOR = Object.values(import.meta.glob("../../data/nodeCorrector.json", { eager: true }))[0]?.default ?? null;
 
@@ -127,13 +128,13 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       if (spec && fit) {
         rig.position.set(fit.position[0], fit.position[1] + a.y / k, fit.position[2] + a.z / k);
         rig.rotation.set(0, 0, fit.roll);
-        rig.scale.setScalar((spec.unit * cfg.scale * a.s) / k);
+        rig.scale.setScalar((spec.unit * cfg.scale * a.s * (live.current.auto || 1)) / k);
         return;
       }
       const d = lastOut?.anchorDelta || [0, 0, 0];
       rig.position.set(cfg.anchor[0] + d[0], cfg.anchor[1] + d[1] + a.y, cfg.anchor[2] + d[2] + a.z);
       rig.rotation.set(0, 0, 0);
-      rig.scale.setScalar((cfg.scale * a.s) / k); // head diskalakan k, jadi dibagi k -> frame tetap berukuran asli
+      rig.scale.setScalar((cfg.scale * a.s * (live.current.auto || 1)) / k); // head diskalakan k, jadi dibagi k -> frame tetap berukuran asli
     }
     ctx.current = { head, rig, applyRig, engine };
 
@@ -218,6 +219,15 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
         setUi(next);
         if (out.calibrated && out.faceMm) profileCb.current?.({ mm: Math.round(out.faceMm), pd: next.pd, scale: next.k });
       }
+      // Tanpa ukuran dari Mitra: sesuaikan lebar frame dengan wajah (perubahan kecil diabaikan agar tidak bergetar).
+      if (!live.current.realSize && live.current.spec && out.calibrated && out.faceMm) {
+        const want = autoFitScale(live.current.spec, out.faceMm);
+        if (Math.abs(want / (live.current.auto || 1) - 1) > 0.015) {
+          live.current.auto = want;
+          engine.setUserScale(fitRef.current.adj.s * want);
+          applyRig();
+        }
+      }
     }
 
     // Sinkron dengan frame kamera (lebih hemat & lebih sedikit lag); cadangan: cek currentTime tiap rAF.
@@ -291,8 +301,11 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
         if (cancelled) return disposeTree(gltf.scene);
         rig.add(gltf.scene);
         const real = readRigSpec(gltf.scene); // model ber-rig: dimensi & pusat lensa dari node
-        const spec = real || estimateRigSpec(gltf.scene); // tanpa rig: dimensi diperkirakan dari bentuk model → fitur tetap sama (kunci pupil + laporan)
-        live.current.estimated = !real && !!spec;
+        const base = real || estimateRigSpec(gltf.scene); // tanpa rig: dimensi diperkirakan dari bentuk model → fitur tetap sama (kunci pupil + laporan)
+        const spec = base && product.size ? applyRealSize(base, product.size) : base; // ukuran asli dari Mitra → skala 1:1
+        live.current.estimated = !real && !!spec && !spec.realSize;
+        live.current.realSize = !!spec?.realSize;
+        live.current.auto = 1; // tanpa ukuran Mitra: diisi otomatis dari lebar wajah setelah kalibrasi
         live.current.spec = spec;
         engine?.setModel(spec);
         engine?.setUserScale(fitRef.current.adj.s);
@@ -318,7 +331,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
   // 3) Geseran pengguna / konfigurasi berubah -> terapkan langsung.
   useEffect(() => {
     fitRef.current = { cfg: getTryOnConfig(product.id), adj };
-    ctx.current.engine?.setUserScale(adj.s);
+    ctx.current.engine?.setUserScale(adj.s * (live.current.auto || 1));
     ctx.current.applyRig?.();
   }, [adj, product.id, mode]);
 

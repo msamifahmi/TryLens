@@ -6,6 +6,7 @@ import ProductDetailPage from "./pages/ProductDetailPage.jsx";
 import MerchantPage from "./pages/MerchantPage.jsx";
 import MitraPage from "./pages/MitraPage.jsx";
 import TryOnPage from "./pages/TryOnPage.jsx";
+import InfoPage from "./pages/InfoPage.jsx";
 import ConsultPage from "./pages/ConsultPage.jsx";
 import Gate from "./components/partner/Gate.jsx";
 import PartnerLayout from "./layouts/PartnerLayout.jsx";
@@ -29,6 +30,9 @@ export default function App() {
           <Route path="/toko/:id" element={<MerchantPage />} />
           <Route path="/try-on/:id" element={<TryOnPage />} />
           <Route path="/konsultasi" element={<ConsultPage />} />
+          {["tentang", "cara-kerja", "virtual-try-on", "karier", "cara-belanja", "faq", "bantuan", "panduan-merchant", "kontak"].map((k) => (
+            <Route key={k} path={`/${k}`} element={<InfoPage page={k} />} />
+          ))}
         </Route>
 
         {/* ===== Area Mitra (tanpa header/footer beranda) ===== */}

@@ -49,7 +49,7 @@ export const STAGE_PATH = {
 // Mode server: UI tetap optimistis (state lokal berubah dulu), perubahan dikirim berurutan lewat antrean,
 // lalu setelah antrean kosong akun dimuat ulang dari server (sumber kebenaran: media, status, nomor invoice).
 const SYNC_KEYS = ["name", "phone", "store", "collections", "banners", "vto", "storeSettings", "notif", "notifRead", "subscription"];
-const FRAME_SEND = ["name", "description", "buy", "style", "colorKey", "category", "price", "oldPrice", "stock", "published", "vto"];
+const FRAME_SEND = ["name", "description", "buy", "style", "colorKey", "category", "price", "oldPrice", "stock", "published", "vto", "size"];
 const pick = (o, ks) => Object.fromEntries(ks.filter((k) => k in o).map((k) => [k, o[k]]));
 let chain = Promise.resolve();
 let pending = 0;

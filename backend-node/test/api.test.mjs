@@ -401,6 +401,24 @@ test("Aturan kuota VTO: salinan front-end identik dengan server", () => {
   assert.equal(fs.readFileSync(new URL("../src/quota.js", import.meta.url), "utf8"), fs.readFileSync(new URL("../../frontend/src/data/quota.js", import.meta.url), "utf8"));
 });
 
+test("Ukuran frame: disimpan, divalidasi, tidak hilang saat ubah field lain; salinan frameSize identik", async () => {
+  assert.equal(fs.readFileSync(new URL("../src/frameSize.js", import.meta.url), "utf8"), fs.readFileSync(new URL("../../frontend/src/data/frameSize.js", import.meta.url), "utf8"));
+  const c = new Client();
+  await c.req("POST", "/api/auth/register", { name: "Ukuran Uji", email: "ukuran@optik.id", password: "abcdefgh1" });
+  const o = await c.req("POST", "/api/billing/checkout", { kind: "subscription", plan: "basic", interval: "month" });
+  await c.req("POST", `/api/billing/orders/${o.body.orderId}/pay`, {});
+  await c.req("PATCH", "/api/partner/me", { store: { name: "Optik Ukuran", city: "Solo", province: "Jawa Tengah", whatsapp: "081234567890", address: "Jl. Uji 1" } });
+  const base = { name: "Frame Ukuran", style: "round", colorKey: "black", category: "Pria", price: 100000 };
+  assert.equal((await c.req("PUT", "/api/partner/frames/u-1", { ...base, size: { lensWidthMm: 99 } })).status, 400, "lensa 99 mm ditolak");
+  const ok = await c.req("PUT", "/api/partner/frames/u-1", { ...base, size: { lensWidthMm: "52", bridgeMm: 18, templeMm: 140, material: "Asetat" } });
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.body.frame.size, { lensWidthMm: 52, bridgeMm: 18, templeMm: 140, material: "Asetat" });
+  const none = await c.req("PUT", "/api/partner/frames/u-2", base);
+  assert.equal(none.body.frame.size ?? null, null, "tanpa ukuran → null (fit otomatis ke wajah)");
+  const keep = await c.req("PUT", "/api/partner/frames/u-1", { name: "Frame Ukuran 2" });
+  assert.equal(keep.body.frame.size.lensWidthMm, 52, "ubah field lain tidak menghapus ukuran");
+});
+
 let fail = 0;
 for (const [n, f] of tests) {
   try { await f(); console.log("✓", n); } catch (e) { fail++; console.log("✗", n, "\n  ", e.message); }

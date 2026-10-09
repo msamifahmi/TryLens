@@ -69,7 +69,7 @@ export default function Layout() {
 
       <FloatingWishlistButton onClick={() => setDrawerOpen(true)} />
       <WishlistDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onTryOn={handleTryOn} showToast={showToast} />
-      <Footer />
+      <Footer onOpenWishlist={() => setDrawerOpen(true)} />
     </div>
   );
 }

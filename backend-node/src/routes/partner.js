@@ -5,6 +5,7 @@ import { PLANS } from "../pricing.js";
 import { CATEGORIES, COLORS, STYLES } from "../service.js";
 import { inspectGlb, isJpeg } from "../glb.js";
 import { PLATFORMS, cleanBuyUrl } from "../ecommerce.js";
+import { cleanSize } from "../frameSize.js";
 import { bad, str, wrap } from "./util.js";
 import { requireAuth, sessionMiddleware } from "./auth.js";
 
@@ -143,7 +144,13 @@ export function partnerRouter(ctx) {
         buy[p.key] = u;
       }
     }
-    return { name, description, buy, style, colorKey, category, price, oldPrice, stock, vto: "vto" in b ? !!b.vto : v.vto ?? true, published: "published" in b ? !!b.published : v.published ?? true };
+    let size = v.size ?? null;
+    if ("size" in b) {
+      const c = cleanSize(b.size);
+      need(!c.error, c.error);
+      size = c.value;
+    }
+    return { name, description, buy, size, style, colorKey, category, price, oldPrice, stock, vto: "vto" in b ? !!b.vto : v.vto ?? true, published: "published" in b ? !!b.published : v.published ?? true };
   }
 
   r.put("/frames/:id", (req, res) => {

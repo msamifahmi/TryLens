@@ -6,6 +6,17 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 20
+
+- **Ganti frame tanpa minta kamera lagi**: transisi halaman (Update 19) me-remount Coba Virtual tiap `:id` berubah sehingga kamera mati. Kunci transisi kini stabil untuk `/try-on/*`.
+- **Ukuran frame 1:1**: Mitra bisa mengisi ukuran asli per frame (lebar lensa, tinggi lensa, jembatan, panjang gagang, lebar total, berat, bahan) di form Tambah/Ubah Frame. Disimpan di server (`size`, divalidasi rentang), ikut ke katalog publik, tampil di halaman produk dan Coba Virtual (notasi 52-18-140). Di AR, model diskalakan agar lebar frame = ukuran asli (`ar/sizeSpec.js`). Tanpa ukuran, lebar frame otomatis disesuaikan dengan lebar wajah terukur (dibatasi ±12%) dan ditandai "Menyesuaikan wajahmu". Lebar total bila kosong diperkirakan dari 2×lensa + jembatan + 12 mm. `frameSize.js` ada di dua tempat (server dan front-end) dan dicek test.
+- **Footer**: semua menu kini berisi: Tentang, Cara Kerja, Virtual Try-On, Karier, Cara Belanja, FAQ, Bantuan, Panduan Merchant, Kontak (halaman info `pages/InfoPage.jsx`, isi di `data/infoPages.js`), Wishlist membuka laci wishlist, Daftar Merchant dan Merchant Center menuju area Mitra. Ikon sosial memakai ikon sungguhan.
+- **Perlu diisi**: `frontend/src/data/siteInfo.js` (email, WhatsApp, alamat, tautan Instagram/TikTok/LinkedIn). Nilai bawaan email hanyalah contoh; tautan sosial kosong diarahkan ke halaman Kontak.
+- **Batas**: skala memakai satu faktor seragam (lebar frame); panjang gagang dan tinggi lensa dari Mitra dipakai untuk laporan/tampilan, bukan membentuk ulang model 3D. Ukuran 1:1 hanya sebenar kalibrasi skala wajah dari iris (±beberapa %).
+- Tes: backend 28, frontend semua lolos (+ `test:size`).
+
+---
+
 ## Update 19
 
 - **Anchor kacamata lebih halus** (diukur dengan `frontend/scripts/bench-smooth.mjs`, satuan piksel layar, data sintetis):

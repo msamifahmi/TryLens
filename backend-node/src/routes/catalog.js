@@ -33,7 +33,7 @@ export function catalogRouter({ db, svc }) {
         merchant: s.name, merchantId: mid, city: (s.city || "").split(",")[0], cat: d.category,
         isNew: Date.now() - created < 14 * DAY, order: order++, flash: false, flashSold: 0,
         badge: disc ? `-${disc}%` : Date.now() - created < 14 * DAY ? "BARU" : null,
-        stock: d.stock, vto: d.vto, description: d.description || "", buy: d.buy || {},
+        stock: d.stock, vto: d.vto, size: d.size || null, description: d.description || "", buy: d.buy || {},
         // Hanya bila Mitra mengunggah sendiri; selain itu klien memakai /products/<id> bawaan.
         assets: row.photos || row.has_model ? { base: `/media/${row.id}`, photos: row.photos, model: !!row.has_model, rigComplete: !!(row.rig && JSON.parse(row.rig).complete), v: row.media_v } : null
       });

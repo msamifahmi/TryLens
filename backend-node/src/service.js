@@ -3,7 +3,7 @@ import { defaultDoc } from "./defaults.js";
 import { PLANS } from "./pricing.js";
 import { vtoToDisable } from "./quota.js";
 
-export const FRAME_FIELDS = ["name", "description", "buy", "style", "colorKey", "category", "price", "oldPrice", "stock", "published", "vto"];
+export const FRAME_FIELDS = ["name", "description", "buy", "style", "colorKey", "category", "price", "oldPrice", "stock", "published", "vto", "size"];
 export const STYLES = ["aviator", "round", "square", "cateye", "rect", "browline"];
 export const COLORS = ["brown", "black", "gold", "tort", "clear", "blue", "navy", "red"];
 export const CATEGORIES = ["Pria", "Wanita", "Anak"];
