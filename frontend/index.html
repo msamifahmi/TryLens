@@ -10,10 +10,25 @@
       rel="stylesheet"
     />
     <title>TryLens — Coba Kacamata Secara Virtual</title>
+    <style>
+      body{margin:0}
+      .tl-splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#F5F7FA;font-family:"Plus Jakarta Sans",system-ui,sans-serif;color:#0F172A}
+      .tl-splash__ring{width:44px;height:44px;border-radius:50%;border:4px solid #CBD5E1;border-top-color:#2563EB;animation:tl-splash-spin .8s linear infinite}
+      .tl-splash__brand{font-family:"Bebas Neue",system-ui,sans-serif;font-size:28px;letter-spacing:.08em}
+      .tl-splash__text{font-size:13px;color:#64748B}
+      @keyframes tl-splash-spin{to{transform:rotate(360deg)}}
+      @media (prefers-reduced-motion:reduce){.tl-splash__ring{animation-duration:2.4s}}
+    </style>
   </head>
   <body class="bg-[#F5F7FA]">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Layar muat: tampil sampai React siap, lalu otomatis diganti oleh React -->
+      <div class="tl-splash" role="status" aria-live="polite">
+        <div class="tl-splash__ring" aria-hidden="true"></div>
+        <div class="tl-splash__brand">TryLens</div>
+        <div class="tl-splash__text">Memuat…</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-git
