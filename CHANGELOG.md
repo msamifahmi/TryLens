@@ -10,6 +10,7 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 - **Layar muat**: `index.html` kini menampilkan logo + spinner (CSS murni, tanpa JS) sampai React siap, jadi tidak lagi putih kosong saat backend/katalog dimuat. Teks "git" yang terselip di akhir `index.html` pada commit juga dihapus.
 - **Deploy**: `frontend/public/.htaccess` (fallback SPA) ikut tersalin ke `dist/` tiap build, sehingga tidak perlu disetel ulang di Hostinger.
+- **Deploy ke Hostinger**: workflow `deploy.yml` membangun front-end saat `main` berubah dan mendorong hasilnya (isi `dist`) ke branch `deploy`. Hostinger menarik branch itu ke `public_html`, jadi `index.html` ada di root dan tidak lagi 403.
 - **Pengaman merge**: `scripts/check-conflict-markers.sh` dan workflow GitHub Actions `check.yml` (tanda konflik, test, build) berjalan di tiap branch/PR selain `main`.
 
 ---

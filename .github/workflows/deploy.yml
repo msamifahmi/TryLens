@@ -1,0 +1,42 @@
+name: Build & siapkan deploy
+# Hanya jalan saat main berubah (setelah kamu merge PR).
+# Hasil build (isi frontend/dist) dipush ke branch "deploy". Hostinger menarik branch "deploy" itu.
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+concurrency: deploy
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Build
+        working-directory: src/frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Ambil / buat branch deploy
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" deploy >/dev/null 2>&1; then
+            git clone --branch deploy --depth 1 "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" out
+          else
+            git init -b deploy out
+            git -C out remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          fi
+      - name: Salin hasil build lalu commit
+        run: |
+          find out -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a src/frontend/dist/. out/
+          cd out
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "Tidak ada perubahan" && exit 0
+          git commit -m "Deploy dari ${GITHUB_SHA::7}"
+          git push origin deploy
