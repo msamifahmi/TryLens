@@ -1,3 +1,4 @@
+import PageTransition from "../components/ui/PageTransition.jsx";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Crown, Settings } from "lucide-react";
@@ -100,7 +101,7 @@ export default function PartnerLayout() {
 
         <motion.main key={pathname.split("/").slice(0, 3).join("/")} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
           <SyncError />
-          <Outlet />
+          <PageTransition><Outlet /></PageTransition>
         </motion.main>
       </div>
     </div>

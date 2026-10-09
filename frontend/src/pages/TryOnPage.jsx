@@ -9,6 +9,7 @@ import { useRecommendations } from "../rec/useRecommendations.js";
 import RecommendedStrip from "../components/RecommendedStrip.jsx";
 import FitReport from "../components/tryon/FitReport.jsx";
 import TryOnCatalog from "../components/tryon/TryOnCatalog.jsx";
+import TryOnExtras from "../components/tryon/TryOnExtras.jsx";
 import { formatRp } from "../data/mockData.js";
 
 // three.js + MediaPipe cukup berat, jadi baru dimuat saat kamera dinyalakan.
@@ -218,6 +219,11 @@ export default function TryOnPage() {
               </div>
             </div>
           )}
+<<<<<<< HEAD
+=======
+
+          <TryOnExtras product={product} merchant={merchant} camera={cameraStatus === "granted"} />
+>>>>>>> origin/update-19
         </div>
 
         {/* ===== KANAN: CHECKOUT + KECOCOKAN + TOKO SERUPA (menempel saat layar lebar) ===== */}
@@ -293,6 +299,7 @@ export default function TryOnPage() {
         </aside>
       </div>
 
+<<<<<<< HEAD
       <TryOnCatalog
         product={product}
         merchant={merchant}
@@ -303,6 +310,8 @@ export default function TryOnPage() {
         }}
       />
 
+=======
+>>>>>>> origin/update-19
       <ConnectMerchantModal open={connectOpen} onClose={() => setConnectOpen(false)} merchant={merchant} product={product} qty={1} />
     </div>
   );

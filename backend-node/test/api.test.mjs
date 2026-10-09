@@ -45,6 +45,7 @@ function glb({ rig = true } = {}) {
 }
 
 const tests = [];
+// (parity kuota ditambahkan di bawah)
 const test = (n, f) => tests.push([n, f]);
 
 test("Harga & aturan server identik dengan front-end (anti-drift)", () => {
@@ -52,6 +53,7 @@ test("Harga & aturan server identik dengan front-end (anti-drift)", () => {
     assert.equal(P.PLANS[c].priceMonth, FP.PLANS[c].priceMonth);
     assert.equal(P.PLANS[c].priceYear, FP.PLANS[c].priceYear);
     assert.equal(P.PLANS[c].frameLimit, FP.PLANS[c].limits.frames);
+    assert.equal(P.PLANS[c].vtoLimit, FP.PLANS[c].limits.vto);
     for (const f of Object.keys(P.PLANS[c].features)) assert.equal(P.PLANS[c].features[f], FP.PLANS[c].features[f]);
   }
   assert.equal(P.AD_TYPES.highlighted.price, FP.AD_TYPES.highlighted.price);
@@ -340,14 +342,63 @@ test("Hapus frame: berkas ikut terhapus, hilang dari koleksi & katalog", async (
   assert.ok(!(await new Client().req("GET", "/api/catalog")).body.products.some((x) => x.id === "p-001"));
 });
 
-test("Kuota Basic: frame ke-51 ditolak 402", async () => {
+const mk = (i, vto = true) => ({ name: `Frame ${i}`, style: "round", colorKey: "black", category: "Pria", price: 100000, vto });
+test("Kuota: katalog tanpa batas, VTO Basic maks. 20 (frame ke-21 ber-VTO ditolak, tanpa VTO boleh)", async () => {
   const c = new Client();
   await c.req("POST", "/api/auth/register", { name: "Kuota Uji", email: "kuota@optik.id", password: "abcdefgh1" });
   const o = await c.req("POST", "/api/billing/checkout", { kind: "subscription", plan: "basic", interval: "month" });
   await c.req("POST", `/api/billing/orders/${o.body.orderId}/pay`, {});
-  let last;
-  for (let i = 0; i < 51; i++) last = await c.req("PUT", `/api/partner/frames/q-${i}`, { name: `Frame ${i}`, style: "round", colorKey: "black", category: "Pria", price: 100000 });
-  assert.equal(last.status, 402);
+  for (let i = 0; i < 20; i++) assert.equal((await c.req("PUT", `/api/partner/frames/q-${i}`, mk(i))).status, 200);
+  assert.equal((await c.req("PUT", "/api/partner/frames/q-20", mk(20))).status, 402, "VTO ke-21 ditolak");
+  assert.equal((await c.req("PUT", "/api/partner/frames/q-20", mk(20, false))).status, 200, "frame tanpa VTO tetap boleh");
+  for (let i = 21; i < 55; i++) assert.equal((await c.req("PUT", `/api/partner/frames/q-${i}`, mk(i, false))).status, 200);
+  assert.equal((await c.req("PUT", "/api/partner/frames/q-0", mk(0, false))).status, 200);
+  assert.equal((await c.req("PUT", "/api/partner/frames/q-20", mk(20))).status, 200, "kuota VTO kosong lagi setelah dimatikan");
+});
+
+async function proWith(email, n) {
+  const c = new Client();
+  await c.req("POST", "/api/auth/register", { name: "Pro Uji", email, password: "abcdefgh1" });
+  const o = await c.req("POST", "/api/billing/checkout", { kind: "subscription", plan: "pro", interval: "month" });
+  await c.req("POST", `/api/billing/orders/${o.body.orderId}/pay`, {});
+  for (let i = 0; i < n; i++) await c.req("PUT", `/api/partner/frames/${email[0]}-${i}`, mk(i));
+  return c;
+}
+const expire = (email) => {
+  const row = app.locals.ctx.db.prepare("SELECT id, doc FROM accounts WHERE email=?").get(email);
+  const doc = JSON.parse(row.doc);
+  doc.subscription.currentPeriodEnd = new Date(Date.now() - 1000).toISOString();
+  app.locals.ctx.db.prepare("UPDATE accounts SET doc=? WHERE id=?").run(JSON.stringify(doc), row.id);
+};
+const vtoOn = async (c) => (await c.req("GET", "/api/partner/me")).body.account.frames.filter((f) => f.vto).map((f) => f.id).sort();
+
+test("Turun Pro→Basic otomatis: 20 frame tertua tetap VTO", async () => {
+  const c = await proWith("auto@optik.id", 30);
+  assert.equal((await vtoOn(c)).length, 30, "Pro: 30 frame ber-VTO");
+  assert.equal((await c.req("PATCH", "/api/partner/me", { subscription: { pendingPlan: "basic" } })).status, 200);
+  assert.equal((await vtoOn(c)).length, 30, "sebelum jatuh tempo masih Pro");
+  expire("auto@optik.id");
+  const on = await vtoOn(c);
+  assert.equal(on.length, 20);
+  assert.deepEqual(on, Array.from({ length: 20 }, (_, i) => `a-${i}`).sort(), "yang tertua dipertahankan");
+  assert.equal((await c.req("GET", "/api/partner/me")).body.account.subscription.plan, "basic");
+});
+
+test("Turun Pro→Basic manual: pilihan Mitra dipakai; >20 ditolak; id asing dibuang", async () => {
+  const c = await proWith("manual@optik.id", 30);
+  const bad = await c.req("PATCH", "/api/partner/me", { subscription: { pendingPlan: "basic", pendingVtoFrameIds: Array.from({ length: 21 }, (_, i) => `m-${i}`) } });
+  assert.equal(bad.status, 400);
+  const pick = ["m-29", "m-28", "m-27", "zzz"];
+  assert.equal((await c.req("PATCH", "/api/partner/me", { subscription: { pendingPlan: "basic", pendingVtoFrameIds: pick } })).status, 200);
+  expire("manual@optik.id");
+  const on = await vtoOn(c);
+  assert.equal(on.length, 20);
+  for (const id of ["m-29", "m-28", "m-27"]) assert.ok(on.includes(id), id + " dipilih Mitra");
+  assert.ok(on.includes("m-0") && !on.includes("m-26"), "sisa kuota diisi berurutan dari yang tertua");
+});
+
+test("Aturan kuota VTO: salinan front-end identik dengan server", () => {
+  assert.equal(fs.readFileSync(new URL("../src/quota.js", import.meta.url), "utf8"), fs.readFileSync(new URL("../../frontend/src/data/quota.js", import.meta.url), "utf8"));
 });
 
 let fail = 0;

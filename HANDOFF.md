@@ -18,7 +18,10 @@ Baca file ini dulu, lalu `CHANGELOG.md` (riwayat per update) dan `README.md` (ca
 - Dashboard Mitra: `frontend/src/pages/partner/` (`StoreTabs.jsx`, `AnalyticsTabs.jsx`), store `store/usePartner.js` (mode server vs demo, antrean sinkron).
 - Backend: `backend-node/src/routes/{auth,partner,billing,catalog}.js`, `service.js`, `db.js`.
 
-## Status (sampai Update 18)
+## Status (sampai Update 19)
+
+Update 19: pelacak VTO default "stable" (lihat CHANGELOG), kuota VTO Basic 20 / Pro tanpa batas dengan alur turun paket, isi ruang bawah kamera, animasi global.
+
 Selesai: backend sungguhan (sesi cookie, scrypt, upload tervalidasi, harga server-side, pembayaran sandbox+webhook), magnet VTO stabil, link e-commerce per produk, deskripsi produk, foto profil toko, popup Store Preview, analitik kaya + insight.
 
 ## Batasan jujur (jangan diklaim lain)

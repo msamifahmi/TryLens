@@ -96,6 +96,7 @@ export function billingRouter(ctx) {
       }
       doc.invoices = [invoice, ...doc.invoices];
       svc.saveDoc(o.account_id, doc);
+      if (p.kind === "subscription") svc.enforceVto(o.account_id); // pindah paket langsung (mis. Pro→Basic): jaga kuota VTO
       p.invoiceId = invoice.id;
       db.prepare("UPDATE orders SET status='paid', method=?, paid_at=?, payload=? WHERE id=?").run(method, iso, JSON.stringify(p), orderId);
       return { account: svc.account(o.account_id), invoiceId: invoice.id };

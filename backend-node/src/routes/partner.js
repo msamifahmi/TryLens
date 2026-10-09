@@ -95,9 +95,19 @@ export function partnerRouter(ctx) {
       if (typeof s.cancelAtPeriodEnd === "boolean") doc.subscription.cancelAtPeriodEnd = s.cancelAtPeriodEnd;
       if ("pendingPlan" in s) {
         // Hanya turun paket (pro → basic) atau membatalkannya; naik paket wajib lewat pembayaran.
-        if (s.pendingPlan === null) doc.subscription.pendingPlan = null;
+        if (s.pendingPlan === null) { doc.subscription.pendingPlan = null; doc.subscription.pendingVtoFrameIds = null; }
         else if (s.pendingPlan === "basic" && doc.subscription.plan === "pro") doc.subscription.pendingPlan = "basic";
         else return bad(res, "Perubahan paket tidak valid.");
+      }
+      if ("pendingVtoFrameIds" in s) {
+        // Pilihan Mitra: frame mana yang tetap ber-VTO setelah turun ke Basic. null = otomatis (berurutan dari yang tertua).
+        if (s.pendingVtoFrameIds === null) doc.subscription.pendingVtoFrameIds = null;
+        else {
+          const mine = new Set(svc.q.framesOf.all(req.accountId).map((f) => f.id));
+          const ids = Array.isArray(s.pendingVtoFrameIds) ? [...new Set(s.pendingVtoFrameIds.filter((x) => mine.has(x)))] : null;
+          if (!ids || ids.length > PLANS.basic.vtoLimit) return bad(res, `Pilih maksimal ${PLANS.basic.vtoLimit} frame untuk VTO.`, 400);
+          doc.subscription.pendingVtoFrameIds = ids;
+        }
       }
     }
     svc.saveDoc(req.accountId, doc, { name, phone });
@@ -148,12 +158,19 @@ export function partnerRouter(ctx) {
       if (/^f\d+$/.test(id)) return bad(res, "ID frame sudah dipakai.", 409);
       if (svc.frameCount(req.accountId) >= PLANS[doc.subscription.plan].frameLimit) return bad(res, `Kuota frame paket ${PLANS[doc.subscription.plan].name} penuh.`, 402);
     }
+    svc.settle(req.accountId);
     let data;
     try {
       const { published, ...rest } = cleanFrame(req.body || {}, row ? JSON.parse(row.data) : null);
       data = { ...rest, published };
     } catch (e) {
       return bad(res, e.message, e.status || 400);
+    }
+    // Katalog tak terbatas, tetapi frame ber-VTO dibatasi per paket (Basic 20, Pro tanpa batas).
+    if (data.vto && !(row && JSON.parse(row.data).vto)) {
+      const lim = PLANS[svc.docOf(svc.q.accById.get(req.accountId)).subscription.plan].vtoLimit;
+      const used = svc.q.framesOf.all(req.accountId).filter((f) => f.id !== id && JSON.parse(f.data).vto).length;
+      if (used >= lim) return bad(res, `Kuota Virtual Try-On paket ${PLANS[doc.subscription.plan].name} (${lim} frame) penuh. Matikan VTO di frame lain atau upgrade ke Pro.`, 402);
     }
     const now = new Date().toISOString();
     const { published, ...stored } = data;

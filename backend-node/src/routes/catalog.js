@@ -6,6 +6,7 @@ const DAY = 86400e3;
 export function catalogRouter({ db, svc }) {
   const r = Router();
   r.get("/", (req, res) => {
+    svc.settleAll(); // turun paket jatuh tempo → kuota VTO diterapkan sebelum katalog dibaca
     const rows = db.prepare("SELECT f.*, a.doc AS adoc, a.id AS aid FROM frames f JOIN accounts a ON a.id=f.account_id").all();
     const products = [];
     const hidden = []; // id yang tidak boleh tampil (diturunkan/ditarik) — dipakai klien untuk menyaring data statis
