@@ -221,8 +221,8 @@ function partnerAccount({ id, name, email, merchantId, plan }) {
       { id: `AO-20260901-${String(id.slice(1)).padStart(4, "0")}`, type: "banner", placement: "mitra", label: "Slot Iklan Banner — Halaman Mitra", weeks: 4, unit: 500000, total: 2000000, startsOn: "2026-09-01", endsOn: "2026-09-28", status: "paid", frameIds: [], slot: null },
       ...(plan === "pro"
         ? [
-            { id: "AO-20260920-0002", type: "highlighted", placement: null, label: "Highlighted Brand — Slot 1", weeks: 2, unit: 350000, total: 700000, startsOn: "2026-09-20", endsOn: "2026-10-03", status: "paid", frameIds: [], slot: 1 },
-            { id: "AO-20260920-0003", type: "sponsored", placement: "pencarian", label: "Sponsored Frame — Hasil Pencarian", weeks: 2, unit: 450000, total: 900000, startsOn: "2026-09-20", endsOn: "2026-10-03", status: "paid", frameIds: ids.slice(0, 1), slot: null }
+            { id: "AO-20260920-0002", type: "highlighted", placement: null, label: "Highlighted Brand — Slot 1", weeks: 2, unit: 350000, total: 700000, startsOn: dayStr(new Date(Date.now() - 3 * 864e5)), endsOn: dayStr(new Date(Date.now() + 11 * 864e5)), status: "paid", frameIds: [], slot: 1 },
+            { id: "AO-20260920-0003", type: "sponsored", placement: "pencarian", label: "Sponsored Frame — Hasil Pencarian", weeks: 2, unit: 450000, total: 900000, startsOn: dayStr(new Date(Date.now() - 3 * 864e5)), endsOn: dayStr(new Date(Date.now() + 11 * 864e5)), status: "paid", frameIds: ids.slice(0, 1), slot: null }
           ]
         : [])
     ],

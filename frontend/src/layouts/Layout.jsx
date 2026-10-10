@@ -17,7 +17,7 @@ export default function Layout() {
 
   // Halaman baru selalu mulai dari atas (tanpa ini, /mitra terbuka di posisi scroll halaman sebelumnya).
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
   function handleTryOn(product) {

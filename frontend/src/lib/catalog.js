@@ -2,8 +2,10 @@
 // digabungkan ke dalam PRODUCTS/MERCHANTS (diubah di tempat, SEBELUM App dimuat — lihat main.jsx).
 import { MERCHANTS, PRODUCTS } from "../data/mockData.js";
 import { api, apiUrl, backend } from "../api/http.js";
+import { usePartner } from "../store/usePartner.js";
+import { activeHighlight } from "../data/partnerMock.js";
 
-export const catalogInfo = { source: "static", loadedAt: null };
+export const catalogInfo = { source: "static", loadedAt: null, highlighted: [] };
 
 /** Alamat aset frame: unggahan Mitra (/media/<id>) bila ada, jika tidak berkas bawaan /products/<id>. */
 export function assetBase(productId) {
@@ -18,7 +20,20 @@ export const assetUrl = (productId, file) => {
 /** true bila berkas tersebut diketahui ada (unggahan Mitra) atau produk statis (cek tersedia lewat fetch/onerror). */
 export const hasUploadedModel = (productId) => PRODUCTS.find((x) => x.id === productId)?.assets?.model === true;
 
+/** Id toko yang Highlighted Brand-nya sedang tayang. Mode server: dari katalog; mode demo: dari akun Mitra di perangkat ini. */
+export function highlightedMerchantIds() {
+  const ids = new Set(catalogInfo.highlighted || []);
+  if (catalogInfo.source !== "server") {
+    try {
+      const { accounts = {} } = usePartner.getState();
+      for (const a of Object.values(accounts)) if (a?.store?.merchantId && activeHighlight(a)) ids.add(a.store.merchantId);
+    } catch { /* tanpa data Mitra → tidak ada Highlighted Brand */ }
+  }
+  return ids;
+}
+
 export function mergeCatalog(data) {
+  catalogInfo.highlighted = data.highlighted || [];
   const hidden = new Set(data.hidden || []);
   for (let i = PRODUCTS.length - 1; i >= 0; i--) if (hidden.has(PRODUCTS[i].id)) PRODUCTS.splice(i, 1);
   for (const p of data.products) {

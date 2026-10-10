@@ -28,7 +28,7 @@ function LinkItem({ item, url, sublabel }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-3 rounded-xl border border-border bg-white p-3 hover:border-blue hover:shadow-sm transition-all"
+      className="group flex items-center gap-3 rounded-xl border border-border bg-white p-3 hover:border-blue hover:shadow-sm transition-[transform,box-shadow,border-color] duration-200"
     >
       <span className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${tone}`}>
         <Icon />

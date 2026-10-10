@@ -12,7 +12,7 @@ export default function QuickCategorySection() {
         {QUICK_CATEGORIES.map((c) => (
           <div
             key={c.name}
-            className="flex-shrink-0 w-[148px] bg-white border border-border rounded-2xl overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all"
+            className="flex-shrink-0 w-[148px] bg-white border border-border rounded-2xl overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200"
           >
             <div className="aspect-square bg-[#F8FAFC] flex items-center justify-center p-[18px]">
               <FrameIcon style={c.style} colorKey={c.color} className="w-full h-full" />

@@ -372,7 +372,7 @@ export function PreviewTab() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {published.map((f) => (
-            <Tile key={f.id} className="p-3 relative cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all focus-within:ring-2 focus-within:ring-blue-deep">
+            <Tile key={f.id} className="p-3 relative cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-blue-deep">
               {sponsored.has(f.id) && <Badge tone="gold" className="absolute top-2 left-2">Sponsored</Badge>}
               <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameThumb frame={f} /></div>
               <button type="button" onClick={() => setOpen(f)} aria-label={`Lihat ${f.name}`} className="text-left w-full after:absolute after:inset-0 after:content-[''] focus:outline-none">

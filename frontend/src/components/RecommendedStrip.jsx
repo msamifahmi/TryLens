@@ -7,7 +7,7 @@ import { formatRp } from "../data/mockData.js";
  * Strip rekomendasi (hasil rec/recommend.js). `result` = keluaran useRecommendations.
  * Persen = skor heuristik dari bentuk wajah, lebar frame, dan riwayat; bukan jaminan pas.
  */
-export default function RecommendedStrip({ result, onPick, pickLabel = "Pilih", title = "Rekomendasi untuk wajahmu", subtitle = null, className = "", vertical = false }) {
+export default function RecommendedStrip({ result, onPick, pickLabel = "Pilih", title = "Rekomendasi untuk wajahmu", subtitle = null, className = "", vertical = false, large = false }) {
   const { items, confidence, basis } = result;
   if (!items.length) return null;
   const personal = confidence > 0;
@@ -17,11 +17,12 @@ export default function RecommendedStrip({ result, onPick, pickLabel = "Pilih", 
     <section className={className} aria-label={personal ? title : "Frame populer"}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="flex items-center gap-1.5 text-sm font-bold text-ink-text m-0">
-            <Sparkles size={15} className="text-blue" aria-hidden="true" />
+          {large && <p className="text-[11.5px] font-bold tracking-[.14em] uppercase text-blue m-0 mb-1.5 flex items-center gap-2"><Sparkles size={13} aria-hidden="true" /> Cocok untukmu</p>}
+          <h3 className={large ? "text-[22px] md:text-[26px] font-extrabold text-ink tracking-tight leading-tight m-0" : "flex items-center gap-1.5 text-sm font-bold text-ink-text m-0"}>
+            {!large && <Sparkles size={15} className="text-blue" aria-hidden="true" />}
             {personal ? title : "Populer minggu ini"}
           </h3>
-          <p className="text-[11.5px] text-ink-muted m-0 mt-0.5">
+          <p className={large ? "text-[13.5px] text-ink-muted m-0 mt-1" : "text-[11.5px] text-ink-muted m-0 mt-0.5"}>
             {subtitle || (personal ? `Disusun dari ${used.join(", ")}.` : "Scan wajah agar rekomendasi sesuai bentuk dan lebar wajahmu.")}
           </p>
         </div>
@@ -39,7 +40,7 @@ export default function RecommendedStrip({ result, onPick, pickLabel = "Pilih", 
               <button
                 onClick={() => onPick(p.id)}
                 aria-label={`${pickLabel} ${p.name}${personal ? `, skor kecocokan ${percent} persen` : ""}`}
-                className="w-full flex items-center gap-3 text-left bg-white border border-border rounded-xl p-2 hover:border-blue hover:shadow-sm transition-all"
+                className="w-full flex items-center gap-3 text-left bg-white border border-border rounded-xl p-2 hover:border-blue hover:shadow-sm transition-[transform,box-shadow,border-color] duration-200"
               >
                 <span className="w-16 h-16 flex-shrink-0 rounded-lg bg-[#F8FAFC] p-1.5">
                   <ProductImage productId={p.id} variant="main" style={p.style} colorKey={p.colorKey} className="w-full h-full" alt="" />
@@ -60,13 +61,13 @@ export default function RecommendedStrip({ result, onPick, pickLabel = "Pilih", 
           ))}
         </ul>
       ) : (
-      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 snap-x snap-proximity">
         {items.map(({ product: p, percent, reasons, caution }) => (
           <button
             key={p.id}
             onClick={() => onPick(p.id)}
             aria-label={`${pickLabel} ${p.name}${personal ? `, skor kecocokan ${percent} persen` : ""}`}
-            className="flex-shrink-0 w-[148px] text-left bg-white border border-border rounded-xl overflow-hidden hover:border-blue hover:shadow-md transition-all"
+            className="snap-start flex-shrink-0 w-[148px] sm:w-[168px] text-left bg-white border border-border rounded-xl overflow-hidden hover:border-blue hover:shadow-md transition-[box-shadow,border-color] duration-200"
           >
             <div className="relative aspect-square bg-[#F8FAFC] p-4">
               {personal && (
