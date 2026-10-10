@@ -1,0 +1,10 @@
+# Disalin otomatis ke dist/ oleh Vite setiap build, jadi tidak hilang saat deploy/pull.
+# Fallback SPA: semua rute React (mis. /try-on/3, /tentang) dibuka lewat index.html.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
