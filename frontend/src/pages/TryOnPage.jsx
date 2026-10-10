@@ -74,10 +74,17 @@ export default function TryOnPage() {
     }
     setCameraStatus("requesting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (e) {
+        // Izin ditolak → jangan ulangi. Selain itu (kamera depan/resolusi tak cocok di HP tertentu) coba setelan paling longgar.
+        if (e?.name === "NotAllowedError" || e?.name === "SecurityError") throw e;
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
       streamRef.current = stream;
       setStream(stream);
       setCameraStatus("granted");
@@ -130,7 +137,7 @@ export default function TryOnPage() {
         {cameraStatus === "granted" && stream ? (
           <Suspense
             fallback={
-              <div className="aspect-[4/3] md:aspect-video bg-ink rounded-2xl mb-2 flex items-center justify-center text-white/70 text-sm">
+              <div className="min-h-[400px] md:min-h-0 md:aspect-video bg-ink rounded-2xl mb-2 flex items-center justify-center text-white/70 text-sm">
                 Menyiapkan pratinjau…
               </div>
             }
@@ -138,12 +145,12 @@ export default function TryOnPage() {
             <TryOnStage stream={stream} product={product} onProfile={setLiveProfile} onReport={setFitReport} />
           </Suspense>
         ) : (
-        <div className="relative aspect-[4/3] md:aspect-video bg-ink rounded-2xl overflow-hidden mb-2">
+        <div className="relative flex min-h-[400px] md:min-h-0 md:aspect-video bg-ink rounded-2xl overflow-hidden mb-2">
           {cameraStatus !== "granted" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 gap-4">
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-5 py-8 md:px-8 md:py-0 gap-4">
               {(cameraStatus === "idle" || cameraStatus === "requesting") && (
                 <>
-                  <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-28 h-28 opacity-90" alt={product.name} />
+                  <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-24 h-24 md:w-28 md:h-28 opacity-90" alt={product.name} />
                   <div>
                     <p className="text-white font-semibold mb-1">Izinkan akses kamera untuk melihat bagaimana frame ini terlihat di wajahmu.</p>
                     <p className="text-white/60 text-xs flex items-center justify-center gap-1.5">
@@ -153,7 +160,7 @@ export default function TryOnPage() {
                   <button
                     onClick={startCamera}
                     disabled={cameraStatus === "requesting"}
-                    className="h-12 px-7 rounded-full bg-white text-ink font-bold text-sm hover:bg-white/90 disabled:opacity-60"
+                    className="min-h-12 w-full max-w-[280px] px-7 rounded-full bg-white text-ink font-bold text-sm hover:bg-white/90 disabled:opacity-60"
                   >
                     {cameraStatus === "requesting" ? "Menunggu izin kamera…" : "Nyalakan Kamera"}
                   </button>
@@ -161,12 +168,12 @@ export default function TryOnPage() {
               )}
               {cameraStatus === "denied" && (
                 <>
-                  <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-28 h-28 opacity-90" alt={product.name} />
+                  <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-24 h-24 md:w-28 md:h-28 opacity-90" alt={product.name} />
                   <div>
                     <p className="text-white font-semibold mb-1">Akses kamera tidak diizinkan.</p>
                     <p className="text-white/60 text-xs">Kamu tetap bisa melihat foto produk di bawah, atau coba nyalakan kamera lagi.</p>
                   </div>
-                  <div className="flex gap-2.5">
+                  <div className="flex flex-wrap justify-center gap-2.5">
                     <button onClick={startCamera} className="h-11 px-5 rounded-full bg-white text-ink font-bold text-sm hover:bg-white/90">
                       Coba Lagi
                     </button>
@@ -178,7 +185,7 @@ export default function TryOnPage() {
               )}
               {cameraStatus === "unsupported" && (
                 <>
-                  <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-28 h-28 opacity-90" alt={product.name} />
+                  <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-24 h-24 md:w-28 md:h-28 opacity-90" alt={product.name} />
                   <div>
                     <p className="text-white font-semibold mb-1">Perangkat/browser ini tidak mendukung akses kamera.</p>
                     <p className="text-white/60 text-xs">Coba buka lewat browser lain, atau lihat foto produknya di halaman detail.</p>
@@ -208,7 +215,7 @@ export default function TryOnPage() {
                   <button
                     key={p.id}
                     onClick={() => switchFrame(p.id)}
-                    className={`flex-shrink-0 w-20 aspect-square rounded-xl border-2 bg-[#F8FAFC] flex items-center justify-center p-2.5 transition-colors ${
+                    className={`flex-shrink-0 w-[72px] sm:w-20 aspect-square rounded-xl border-2 bg-[#F8FAFC] flex items-center justify-center p-2.5 transition-colors ${
                       p.id === product.id ? "border-blue" : "border-transparent hover:border-border"
                     }`}
                     aria-label={`Coba ${p.name}`}
@@ -244,7 +251,7 @@ export default function TryOnPage() {
               <button
                 onClick={() => toggle(product, showToast)}
                 aria-pressed={isWished}
-                className={`w-12 h-12 flex-shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
+                className={`tl-still w-12 h-12 flex-shrink-0 rounded-full border-2 flex items-center justify-center ${
                   isWished ? "border-error text-error bg-red-50" : "border-border text-ink-text hover:border-ink"
                 }`}
                 aria-label="Tambah ke wishlist"

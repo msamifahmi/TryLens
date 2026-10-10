@@ -110,7 +110,7 @@ export default function ConsultPage() {
                 {frames.map((f) => (
                   <span key={f.id} className="inline-flex items-center gap-1 rounded-full bg-surface-blue text-ink-text text-[12px] pl-3 pr-1.5 py-1">
                     {f.name}
-                    <button type="button" onClick={() => removeViewed(f.id)} aria-label={`Hapus ${f.name}`} className="w-5 h-5 rounded-full hover:bg-white flex items-center justify-center"><X size={12} /></button>
+                    <button type="button" onClick={() => removeViewed(f.id)} aria-label={`Hapus ${f.name}`} className="w-8 h-8 -mr-1 rounded-full hover:bg-white flex items-center justify-center"><X size={14} /></button>
                   </span>
                 ))}
               </div>
