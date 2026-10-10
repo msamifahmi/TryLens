@@ -6,6 +6,12 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 22
+
+- **Preloader TryLens**: tulisan TRYLENS (Bebas Neue) muncul dengan animasi naik, terisi air bergelombang (dua lapis gelombang, naik-turun), tagline, dan bar gelombang di bawahnya. CSS murni di `index.html`, tampil minimal ±1,2 dtk lalu fade-out lewat `main.jsx`. Mengikuti `prefers-reduced-motion` (animasi diperlambat).
+
+---
+
 ## Update 21
 
 - **Layar muat**: `index.html` kini menampilkan logo + spinner (CSS murni, tanpa JS) sampai React siap, jadi tidak lagi putih kosong saat backend/katalog dimuat. Teks "git" yang terselip di akhir `index.html` pada commit juga dihapus.
