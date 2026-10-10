@@ -8,13 +8,33 @@ import { Pause, Play, RotateCw } from "lucide-react";
 // Cek apakah produk punya model .glb. Server dev/SPA mengembalikan index.html (200) untuk file yang tak ada,
 // jadi isi file diperiksa: GLB selalu diawali "glTF".
 const cache = new Map();
+const isGlb = (bytes) => new TextDecoder().decode(bytes.slice(0, 4)) === "glTF";
+// Baca hanya 4 byte pertama dari respons (aliran dibatalkan setelahnya) supaya file besar tidak diunduh penuh.
+async function sniff(url, headers) {
+  const r = await fetch(url, { headers });
+  if (!r.ok) return false;
+  if (!r.body?.getReader) return isGlb(new Uint8Array(await r.arrayBuffer()));
+  const reader = r.body.getReader();
+  let buf = new Uint8Array(0);
+  while (buf.length < 4) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const m = new Uint8Array(buf.length + value.length);
+    m.set(buf); m.set(value, buf.length);
+    buf = m;
+  }
+  reader.cancel().catch(() => {});
+  return isGlb(buf);
+}
 export function hasModel(productId) {
   if (!cache.has(productId)) {
+    const url = assetUrl(productId, "model.glb");
+    // Beberapa hosting menolak header Range → coba tanpa Range bila percobaan pertama gagal.
     cache.set(
       productId,
-      fetch(assetUrl(productId, "model.glb"), { headers: { Range: "bytes=0-3" } })
-        .then(async (r) => r.ok && new TextDecoder().decode(new Uint8Array(await r.arrayBuffer()).slice(0, 4)) === "glTF")
+      sniff(url, { Range: "bytes=0-3" })
         .catch(() => false)
+        .then((ok) => ok || sniff(url).catch(() => false))
     );
   }
   return cache.get(productId);

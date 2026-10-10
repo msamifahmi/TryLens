@@ -11,6 +11,8 @@ await usePartner.getState().init();
 await loadCatalog();
 const { default: App } = await import("./App.jsx");
 
+const splash = document.getElementById("tl-splash");
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
@@ -18,3 +20,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Sembunyikan preloader dengan fade; tampil minimal ±1,2 dtk supaya animasinya terbaca dan tidak berkedip.
+if (splash) {
+  const wait = Math.max(0, 1200 - performance.now());
+  setTimeout(() => {
+    splash.classList.add("is-out");
+    setTimeout(() => splash.remove(), 600);
+  }, wait);
+}

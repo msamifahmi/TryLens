@@ -21,6 +21,8 @@ jobs:
           npm ci
           npm test
           npm run build
+      - name: Tanda versi (cek di https://domainmu/version.txt)
+        run: echo "commit ${GITHUB_SHA::7} · $(date -u +'%Y-%m-%d %H:%M UTC')" > src/frontend/dist/version.txt
       - name: Ambil / buat branch deploy
         run: |
           if git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" deploy >/dev/null 2>&1; then
