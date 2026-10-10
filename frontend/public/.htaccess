@@ -8,3 +8,17 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
 </IfModule>
+
+# Tipe berkas model 3D & kompresi (Apache bisa menolak/salah menyajikan ekstensi yang tak dikenal).
+<IfModule mod_mime.c>
+  AddType model/gltf-binary .glb
+  AddType model/gltf+json .gltf
+  AddType application/wasm .wasm
+  AddType application/octet-stream .task .tflite
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(glb|gltf|wasm|task|tflite|jpg|jpeg|png|webp)$">
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+</IfModule>
+Options -Indexes

@@ -6,6 +6,14 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 23
+
+- **Foto + model f1** (dari branch `tambah-frame-f1`) digabung. Catatan: `f1/model.glb` belum punya rig (GlassesRoot, Bridge, dst.); pratinjau 360° tetap jalan, try-on memakai model cadangan sampai model dirapikan (`npm run glb:check`).
+- **Pratinjau 360° tidak muncul di situs live**: deteksi `model.glb` kini tidak bergantung pada header `Range` (dicoba ulang tanpa Range, hanya 4 byte pertama dibaca). `.htaccess` menambah tipe MIME `.glb/.gltf`, cache aset, dan `Options -Indexes`.
+- **Tanda versi**: deploy menulis `version.txt` (commit + waktu build) ke root situs; buka `/version.txt` untuk memastikan situs memakai build terbaru.
+
+---
+
 ## Update 22
 
 - **Preloader TryLens**: tulisan TRYLENS (Bebas Neue) muncul dengan animasi naik, terisi air bergelombang (dua lapis gelombang, naik-turun), tagline, dan bar gelombang di bawahnya. CSS murni di `index.html`, tampil minimal ±1,2 dtk lalu fade-out lewat `main.jsx`. Mengikuti `prefers-reduced-motion` (animasi diperlambat).
