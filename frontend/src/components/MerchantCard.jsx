@@ -26,7 +26,7 @@ export default function MerchantCard({ merchant: m, productCount, promoCount }) 
   return (
     <Link
       to={`/toko/${m.id}`}
-      className="bg-white border border-border rounded-2xl p-4 flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all"
+      className="bg-white border border-border rounded-2xl p-4 flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200"
       aria-label={`Lihat katalog ${m.name}`}
     >
       <div className="flex gap-3 items-center mb-3">

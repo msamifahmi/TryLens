@@ -59,12 +59,12 @@ export default function WishlistDrawer({ open, onClose, onTryOn, showToast }) {
                   <p className="text-[11.5px] text-ink-muted m-0 mb-1.5">{p.merchant} · {p.city}</p>
                   <p className="text-[13.5px] font-extrabold text-blue-deep m-0 mb-2">{formatRp(p.price)}</p>
                   <div className="flex gap-2">
-                    <button onClick={() => onTryOn(p)} className="text-xs font-bold rounded-[7px] px-2.5 py-1.5 bg-blue text-white hover:bg-blue-deep">
+                    <button onClick={() => onTryOn(p)} className="text-xs font-bold rounded-lg px-3 min-h-10 bg-blue text-white hover:bg-blue-deep">
                       Coba Sekarang
                     </button>
                     <button
                       onClick={() => remove(p.id, showToast)}
-                      className="text-xs font-bold rounded-[7px] px-2.5 py-1.5 border border-border text-ink-muted hover:text-error hover:border-error"
+                      className="text-xs font-bold rounded-lg px-3 min-h-10 border border-border text-ink-muted hover:text-error hover:border-error"
                     >
                       Hapus
                     </button>

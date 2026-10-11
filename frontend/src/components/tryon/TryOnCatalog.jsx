@@ -90,7 +90,7 @@ export default function TryOnCatalog({ product, merchant, onPick, showToast }) {
         <div className="mt-12">
           <div className="flex items-end justify-between mb-4">
             <h2 className="text-xl font-extrabold text-ink tracking-tight m-0">Toko optik lainnya</h2>
-            <Link to="/mitra" className="text-[13px] font-semibold text-blue hover:text-blue-deep">Lihat semua toko</Link>
+            <Link to="/mitra" className="inline-flex items-center min-h-10 text-[13px] font-semibold text-blue hover:text-blue-deep">Lihat semua toko</Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {otherShops.map((m) => (

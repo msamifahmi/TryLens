@@ -51,7 +51,7 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
               role="tab"
               aria-selected={activeCategory === tab.value}
               onClick={() => setCategory(tab.value)}
-              className={`text-sm font-semibold whitespace-nowrap pb-2 border-b-2 flex-shrink-0 ${
+              className={`text-sm font-semibold whitespace-nowrap min-h-11 border-b-2 flex-shrink-0 ${
                 activeCategory === tab.value ? "text-blue border-blue" : "text-ink-muted border-transparent"
               }`}
             >
@@ -79,7 +79,7 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
               Paling cocok
             </button>
           ) : (
-            <Link to="/konsultasi" className="text-[12.5px] font-semibold text-blue hover:text-blue-deep">Scan wajah untuk urutan paling cocok</Link>
+            <Link to="/konsultasi" className="inline-flex items-center min-h-10 text-[12.5px] font-semibold text-blue hover:text-blue-deep">Scan wajah untuk urutan paling cocok</Link>
           )}
           <span className="text-[13px] text-ink-muted" aria-live="polite">{filtered.length} frame</span>
         </div>

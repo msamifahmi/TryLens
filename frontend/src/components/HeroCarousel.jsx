@@ -114,7 +114,7 @@ export default function HeroCarousel({ onCtaClick }) {
   return (
     <section className="max-w-[1280px] mx-auto px-5 pt-4 pb-2">
       <div
-        className="relative rounded-2xl overflow-hidden aspect-[3/1] max-[700px]:aspect-[5/6]"
+        className="relative rounded-2xl overflow-hidden aspect-[3/1] max-[700px]:aspect-auto max-[700px]:h-[480px]"
         onMouseEnter={stopAutoplay}
         onMouseLeave={startAutoplay}
         role="region"
@@ -126,13 +126,14 @@ export default function HeroCarousel({ onCtaClick }) {
           return (
             <div
               key={slide.headline}
-              className={`absolute inset-0 flex items-center transition-opacity duration-500 ${
-                i === index ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+              aria-hidden={i !== index}
+              className={`absolute inset-0 flex items-center transition-[opacity,visibility] duration-500 ${
+                i === index ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"
               }`}
               style={{ background: slide.bg }}
             >
-              <div className="flex items-center w-full h-full px-8 md:px-14 max-[700px]:flex-col-reverse max-[700px]:justify-end max-[700px]:px-7 max-[700px]:pb-7 max-[700px]:text-center">
-                <div className="flex-1 max-w-[480px] relative z-10">
+              <div className="flex items-center w-full h-full px-8 md:px-14 max-[700px]:flex-col-reverse max-[700px]:justify-end max-[700px]:px-7 max-[700px]:pb-12 max-[700px]:text-center">
+                <div className="flex-1 max-w-[480px]">
                   <h1 className="text-[24px] md:text-[34px] font-extrabold text-white leading-tight mb-3 tracking-tight">
                     {slide.headline}
                   </h1>
@@ -164,26 +165,28 @@ export default function HeroCarousel({ onCtaClick }) {
         <button
           onClick={() => goTo(index - 1)}
           aria-label="Slide sebelumnya"
-          className="absolute top-1/2 -translate-y-1/2 left-4 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md z-[5]"
+          className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md z-20 max-[700px]:top-[22%]"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         <button
           onClick={() => goTo(index + 1)}
           aria-label="Slide berikutnya"
-          className="absolute top-1/2 -translate-y-1/2 right-4 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md z-[5]"
+          className="absolute top-1/2 -translate-y-1/2 right-2 md:right-4 w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md z-20 max-[700px]:top-[22%]"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
 
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-[5]">
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex z-20">
           {SLIDES.map((s, i) => (
             <button
               key={s.headline}
               onClick={() => goTo(i)}
               aria-label={`Ke slide ${i + 1}`}
-              className={`h-[7px] rounded-full transition-all ${i === index ? "w-5 bg-white" : "w-[7px] bg-white/50"}`}
-            />
+              className="h-8 px-[5px] flex items-center"
+            >
+              <span className={`block h-[7px] rounded-full transition-all ${i === index ? "w-5 bg-white" : "w-[7px] bg-white/50"}`} />
+            </button>
           ))}
         </div>
       </div>

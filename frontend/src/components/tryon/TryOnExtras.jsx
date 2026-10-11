@@ -46,7 +46,7 @@ export default function TryOnExtras({ product, merchant, camera }) {
           ))}
         </dl>
         {product.description && <p className="text-[12.5px] leading-snug text-ink-muted m-0 mb-3 line-clamp-2">{product.description}</p>}
-        <Link to={`/produk/${product.id}`} className="text-[13px] font-bold text-blue-deep hover:underline">Lihat detail lengkap →</Link>
+        <Link to={`/produk/${product.id}`} className="inline-flex items-center min-h-10 text-[13px] font-bold text-blue-deep hover:underline">Lihat detail lengkap →</Link>
       </motion.section>
 
       {merchant && (

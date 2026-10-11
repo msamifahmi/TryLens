@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { todayStr } from "../pricing.js";
 
 const DAY = 86400e3;
 
@@ -11,6 +12,8 @@ export function catalogRouter({ db, svc }) {
     const products = [];
     const hidden = []; // id yang tidak boleh tampil (diturunkan/ditarik) — dipakai klien untuk menyaring data statis
     const merchants = new Map();
+    const highlighted = new Set(); // id toko dengan Highlighted Brand yang sedang tayang (dibayar, dalam periode)
+    const today = todayStr();
     let order = 1000;
     for (const row of rows) {
       const doc = JSON.parse(row.adoc);
@@ -19,6 +22,7 @@ export function catalogRouter({ db, svc }) {
       if (!live) { hidden.push(row.id); continue; }
       const s = doc.store;
       const mid = s.merchantId || `s_${row.aid}`;
+      if ((doc.adOrders || []).some((o) => o.type === "highlighted" && o.status === "paid" && o.startsOn <= today && o.endsOn >= today)) highlighted.add(mid);
       if (!merchants.has(mid)) {
         merchants.set(mid, {
           id: mid, name: s.name, city: [s.city, s.province].filter(Boolean).join(", ") || s.city || "", province: s.province || "",
@@ -40,7 +44,7 @@ export function catalogRouter({ db, svc }) {
     }
     for (const m of merchants.values()) m.count = `${products.filter((p) => p.merchantId === m.id).length} frame`;
     res.setHeader("Cache-Control", "public, max-age=30");
-    res.json({ products, merchants: [...merchants.values()], hidden, generatedAt: new Date().toISOString() });
+    res.json({ products, merchants: [...merchants.values()], hidden, highlighted: [...highlighted], generatedAt: new Date().toISOString() });
   });
   return r;
 }

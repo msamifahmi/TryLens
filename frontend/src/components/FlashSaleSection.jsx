@@ -54,7 +54,7 @@ function FlashCard({ product: p, showMerchant }) {
   return (
     <Link
       to={`/produk/${p.id}`}
-      className="flex w-full gap-3 bg-white border border-border rounded-xl p-2.5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+      className="flex w-full gap-3 bg-white border border-border rounded-xl p-2.5 hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200"
     >
       <div className="relative w-[88px] h-[88px] flex-shrink-0 rounded-lg bg-[#F8FAFC] overflow-hidden p-2.5">
         <span className="absolute top-1 left-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded bg-error text-white">-{discount}%</span>

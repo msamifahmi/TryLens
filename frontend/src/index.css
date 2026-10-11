@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply font-sans text-ink-text;
@@ -33,6 +33,9 @@
   @keyframes tl-rise { from { opacity: 0; transform: translateY(14px); } }
   @keyframes tl-pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
   @keyframes tl-pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(30 95 175 / .35); } 100% { box-shadow: 0 0 0 10px rgb(30 95 175 / 0); } }
+  .tl-fade-in { animation: tl-fade .35s ease-out; }
+  /* Tanpa animasi sama sekali (tombol suka/wishlist: respons instan) */
+  .tl-still, .tl-still *, .tl-still:active { animation: none !important; transition: none !important; transform: none !important; filter: none !important; }
   .tl-rise { animation: tl-rise .4s cubic-bezier(.22, 1, .36, 1) backwards; }
   .tl-pop { animation: tl-pop .32s ease-out; }
   /* Anak langsung muncul berurutan (kartu, baris, chip) */
@@ -49,11 +52,16 @@
     transition: transform .16s cubic-bezier(.22, 1, .36, 1), background-color .18s, border-color .18s, color .18s, box-shadow .18s, opacity .18s;
   }
   button:not(:disabled):active, [role="button"]:active, [role="tab"]:active, a[class*="rounded-"]:active { transform: scale(.96); }
-  button:not(:disabled):hover:not([role="switch"]), a[class*="rounded-full"]:hover { filter: brightness(1.03); }
   button:focus-visible, a:focus-visible, [role="switch"]:focus-visible { outline: 2px solid #1E5FAF; outline-offset: 2px; animation: tl-pulse-ring .5s ease-out; }
   /* Kartu yang bisa diklik naik sedikit saat disorot */
   a[class*="rounded-2xl"], article[class*="rounded-2xl"], [class*="group"][class*="rounded-"] { transition: transform .22s cubic-bezier(.22, 1, .36, 1), box-shadow .22s; }
-  a[class*="rounded-2xl"]:hover, article[class*="rounded-2xl"]:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -12px rgb(15 40 80 / .28); }
+  @media (hover: hover) {
+    a[class*="rounded-2xl"]:hover, article[class*="rounded-2xl"]:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -12px rgb(15 40 80 / .28); }
+  }
+  /* Sentuh: area ketuk jelas, tanpa jeda 300 ms dan tanpa zoom ganda */
+  button, a, [role="button"], [role="tab"], summary, label[for], select { touch-action: manipulation; }
+  /* Isi halaman tidak boleh tergeser ke samping di layar sempit */
+  html, body { overflow-x: clip; }
   /* Overlay dan dialog memudar masuk */
   [role="dialog"], div.fixed.inset-0 { animation: tl-fade .2s ease-out; }
   /* Daftar/elemen yang disisipkan */

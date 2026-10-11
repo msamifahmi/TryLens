@@ -52,13 +52,13 @@ export default function Footer({ onOpenWishlist }) {
         {COLUMNS.map((col) => (
           <div key={col.title}>
             <h4 className="text-[13px] font-bold text-ink mb-3.5">{col.title}</h4>
-            <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
+            <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
               {col.links.map((link) => (
                 <li key={link.label}>
                   {link.action === "wishlist" ? (
-                    <button type="button" onClick={onOpenWishlist} className="text-[13.5px] text-ink-muted hover:text-blue p-0 bg-transparent border-0 cursor-pointer">{link.label}</button>
+                    <button type="button" onClick={onOpenWishlist} className="inline-flex items-center min-h-[40px] text-[13.5px] text-ink-muted hover:text-blue p-0 bg-transparent border-0 cursor-pointer">{link.label}</button>
                   ) : (
-                    <Link to={link.to} className="text-[13.5px] text-ink-muted hover:text-blue">{link.label}</Link>
+                    <Link to={link.to} className="inline-flex items-center min-h-[40px] text-[13.5px] text-ink-muted hover:text-blue">{link.label}</Link>
                   )}
                 </li>
               ))}
@@ -76,7 +76,7 @@ export default function Footer({ onOpenWishlist }) {
               {...(SOCIAL[label] ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               aria-label={label}
               title={label}
-              className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-ink-muted hover:text-blue hover:border-blue"
+              className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-ink-muted hover:text-blue hover:border-blue"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">{ICONS[label]}</svg>
             </a>

@@ -6,6 +6,15 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 24
+
+- **Mobile**: tombol "Nyalakan Kamera" terpotong (panggung kamera berukuran tetap 4:3 dengan `overflow-hidden`) → kini tinggi minimal, tombol penuh dan bisa diketuk; getUserMedia mencoba lagi dengan setelan longgar bila kamera depan/resolusi ditolak (kecuali izin ditolak). Kolom cari tidak lagi menimpa tombol Konsultasi; panah/titik hero tidak tertutup teks; tombol wishlist melayang disembunyikan di HP (sudah ada di header); target ketuk ≥40 px (qty, hati kartu, tautan footer, hapus wishlist, tab kategori); tinggi hero HP tetap agar tombol tidak bertumpuk dengan titik.
+- **Halaman Produk**: ditata ulang (galeri kiri + info kanan), pemilih warna dihapus, animasi tombol suka dihapus (`.tl-still`). Foto: hanya yang ada yang tampil — cukup `main.jpg` → satu foto tanpa thumbnail; ilustrasi SVG hanya bila tidak ada foto sama sekali. Katalog di bawah: paling cocok di wajah → Highlighted Brand → acak (muat lebih banyak).
+- **Highlighted Brand publik**: `/api/catalog` kini mengirim `highlighted` (id toko dengan iklan Highlighted aktif); mode demo membacanya dari akun Mitra di perangkat. Data demo Pro memakai tanggal relatif agar tidak kedaluwarsa.
+- **Animasi lebih halus**: `scroll-behavior:smooth` global dihapus (reset scroll antarhalaman jadi instan), efek hover-angkat hanya di perangkat dengan hover, hover `filter` dihapus, `transition-all` pada kartu diganti transisi spesifik (transform/shadow/border), `touch-action: manipulation`.
+
+---
+
 ## Update 23
 
 - **Foto + model f1** (dari branch `tambah-frame-f1`) digabung. Catatan: `f1/model.glb` belum punya rig (GlassesRoot, Bridge, dst.); pratinjau 360° tetap jalan, try-on memakai model cadangan sampai model dirapikan (`npm run glb:check`).

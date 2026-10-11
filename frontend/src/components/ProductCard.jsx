@@ -38,7 +38,7 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
   }
 
   return (
-    <div ref={cardRef} data-id={product.id} className="bg-white border border-border rounded-xl overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all group">
+    <div ref={cardRef} data-id={product.id} className="bg-white border border-border rounded-xl overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200 group">
       <div className="relative aspect-square bg-[#F8FAFC] overflow-hidden">
         {product.badge && (
           <span
@@ -56,7 +56,7 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
           }}
           aria-pressed={isWished}
           aria-label={`Tambah ke wishlist ${product.name}`}
-          className={`absolute top-[7px] right-[7px] w-[30px] h-[30px] rounded-full bg-white/95 shadow-sm flex items-center justify-center hover:scale-110 transition-transform ${
+          className={`tl-still absolute top-1.5 right-1.5 w-10 h-10 md:w-[34px] md:h-[34px] rounded-full bg-white/95 shadow-sm flex items-center justify-center ${
             isWished ? "text-error" : "text-ink-muted"
           }`}
         >
@@ -100,7 +100,7 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
             e.stopPropagation();
             onTryOn(product);
           }}
-          className="mt-1 w-full h-[34px] rounded-lg bg-blue hover:bg-blue-deep text-white text-[12.5px] font-bold flex items-center justify-center gap-1.5"
+          className="mt-auto pt-0 w-full min-h-10 rounded-lg bg-blue hover:bg-blue-deep text-white text-[12.5px] font-bold flex items-center justify-center gap-1.5"
         >
           <TryIcon /> Coba Sekarang
         </button>

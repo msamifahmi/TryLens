@@ -40,7 +40,7 @@ export default function SearchBar({ onSelectProduct, onSelectMerchant }) {
           autoComplete="off"
           role="combobox"
           aria-expanded={open}
-          className="flex-1 outline-none border-none bg-transparent text-sm text-ink-text placeholder:text-ink-muted"
+          className="flex-1 min-w-0 w-full outline-none border-none bg-transparent text-sm text-ink-text placeholder:text-ink-muted"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

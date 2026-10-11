@@ -219,6 +219,7 @@ test("Katalog publik memuat frame Mitra (dengan aset), toko sebagai merchant, da
   assert.equal(p.assets.rigComplete, true);
   assert.equal(p.badge, "-13%".replace("13", String(Math.round((1 - 260000 / 300000) * 100))));
   assert.ok(cat.merchants.some((m) => m.name === "Optik Sari" && m.id === p.merchantId));
+  assert.ok(Array.isArray(cat.highlighted) && !cat.highlighted.includes(p.merchantId), "katalog memuat daftar Highlighted Brand aktif (Basic: tidak ada)");
   await sari.req("PUT", "/api/partner/frames/p-001", { published: false });
   const cat2 = (await new Client().req("GET", "/api/catalog")).body;
   assert.ok(!cat2.products.some((x) => x.id === "p-001"));
