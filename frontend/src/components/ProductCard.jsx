@@ -100,7 +100,7 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
             e.stopPropagation();
             onTryOn(product);
           }}
-          className="mt-auto pt-0 w-full min-h-10 rounded-lg bg-blue hover:bg-blue-deep text-white text-[12.5px] font-bold flex items-center justify-center gap-1.5"
+          className="tl-cta tl-ripple mt-auto pt-0 w-full min-h-10 rounded-lg bg-blue hover:bg-blue-deep text-white text-[12.5px] font-bold flex items-center justify-center gap-1.5"
         >
           <TryIcon /> Coba Sekarang
         </button>

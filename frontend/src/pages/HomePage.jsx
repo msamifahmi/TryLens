@@ -27,7 +27,11 @@ export default function HomePage() {
 
   return (
     <>
-      <HeroCarousel onCtaClick={scrollToFeed} />
+      <HeroCarousel
+        onFeed={scrollToFeed}
+        onMerchants={() => document.getElementById("merchant")?.scrollIntoView({ behavior: "smooth" })}
+        onPromo={seeAllFlash}
+      />
       <div className="max-w-[1280px] mx-auto px-5 pt-2 pb-1">
         <FlashSaleSection id="flash-sale" products={FLASH_ITEMS} limit={12} layout="slider" rows={1} showMerchant onSeeAll={seeAllFlash} />
       </div>

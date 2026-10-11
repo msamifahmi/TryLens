@@ -172,7 +172,7 @@ export default function ProductDetailPage() {
           </div>
 
           {merchant && (
-            <button onClick={() => setConnectOpen(true)} className="flex items-center justify-center gap-2 min-h-14 px-4 rounded-full border-2 border-blue text-blue font-bold text-[15px] text-center hover:bg-surface-blue">
+            <button onClick={() => setConnectOpen(true)} className="tl-ripple flex items-center justify-center gap-2 min-h-14 px-4 rounded-full border-2 border-blue text-blue font-bold text-[15px] text-center hover:bg-surface-blue">
               <Store size={18} aria-hidden="true" /> Checkout — Hubungkan ke {merchant.name}
             </button>
           )}

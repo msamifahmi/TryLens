@@ -118,17 +118,19 @@ export default function TryOnPage() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto px-5 py-8">
-      <p className="text-[13px] text-ink-muted mb-5">
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-5 py-5 md:py-8">
+      <p className="text-[12.5px] md:text-[13px] text-ink-muted mb-3 md:mb-5 truncate">
         <Link to="/" className="hover:text-blue">TryLens</Link> /{" "}
         <Link to={`/produk/${product.id}`} className="hover:text-blue">{product.name}</Link> / Coba Virtual
       </p>
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 lg:gap-8 items-start">
-        {/* ===== KIRI: KAMERA ===== */}
-        <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight mb-1">Coba Langsung di Wajahmu</h1>
-          <p className="text-sm text-ink-muted mb-5">
+      {/* HP: kamera → kecocokan & hubungkan → frame lain → tips → toko serupa (urutan, bukan kolom).
+          Desktop: kolom kiri (kamera, frame lain, tips) + kolom kanan menempel (checkout, kecocokan, toko serupa). */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-x-8 gap-y-4 md:gap-y-5 items-start">
+        {/* ===== KAMERA ===== */}
+        <div className="min-w-0 order-1 lg:order-none lg:col-start-1 lg:row-start-1">
+          <h1 className="text-[22px] md:text-3xl font-extrabold text-ink tracking-tight mb-0.5 md:mb-1">Coba Langsung di Wajahmu</h1>
+          <p className="text-[13px] md:text-sm text-ink-muted mb-3 md:mb-5">
             Sedang mencoba <span className="font-semibold text-ink-text">{product.name}</span>
             {merchant && <> dari <span className="font-semibold text-ink-text">{merchant.name}</span></>}.
           </p>
@@ -137,7 +139,7 @@ export default function TryOnPage() {
         {cameraStatus === "granted" && stream ? (
           <Suspense
             fallback={
-              <div className="min-h-[400px] md:min-h-0 md:aspect-video bg-ink rounded-2xl mb-2 flex items-center justify-center text-white/70 text-sm">
+              <div className="aspect-[3/4] max-h-[78svh] md:max-h-none md:aspect-video bg-ink rounded-2xl mb-2 flex items-center justify-center text-white/70 text-sm">
                 Menyiapkan pratinjau…
               </div>
             }
@@ -145,7 +147,7 @@ export default function TryOnPage() {
             <TryOnStage stream={stream} product={product} onProfile={setLiveProfile} onReport={setFitReport} />
           </Suspense>
         ) : (
-        <div className="relative flex min-h-[400px] md:min-h-0 md:aspect-video bg-ink rounded-2xl overflow-hidden mb-2">
+        <div className="relative flex aspect-[3/4] max-h-[78svh] md:max-h-none md:aspect-video bg-ink rounded-2xl overflow-hidden mb-2">
           {cameraStatus !== "granted" && (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-5 py-8 md:px-8 md:py-0 gap-4">
               {(cameraStatus === "idle" || cameraStatus === "requesting") && (
@@ -160,7 +162,7 @@ export default function TryOnPage() {
                   <button
                     onClick={startCamera}
                     disabled={cameraStatus === "requesting"}
-                    className="min-h-12 w-full max-w-[280px] px-7 rounded-full bg-white text-ink font-bold text-sm hover:bg-white/90 disabled:opacity-60"
+                    className="tl-ripple min-h-12 w-full max-w-[280px] px-7 rounded-full bg-white text-ink font-bold text-sm shadow-[0_10px_24px_-10px_rgb(255_255_255/.5)] hover:bg-white/90 disabled:opacity-60"
                   >
                     {cameraStatus === "requesting" ? "Menunggu izin kamera…" : "Nyalakan Kamera"}
                   </button>
@@ -201,38 +203,16 @@ export default function TryOnPage() {
         )}
 
           {cameraStatus === "granted" && (
-            <button onClick={stopCamera} className="text-xs text-ink-muted hover:text-ink-text mb-6 mx-auto block">
+            <button onClick={stopCamera} className="min-h-10 px-4 text-xs text-ink-muted hover:text-ink-text mx-auto block">
               Matikan kamera
             </button>
           )}
 
-          {/* ===== SWITCH FRAME TANPA KELUAR SESI ===== */}
-          {otherFrames.length > 0 && (
-            <div className="mb-2">
-              <p className="text-sm font-semibold text-ink-text mb-3">Coba frame lain dari toko yang sama</p>
-              <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-                {[product, ...otherFrames].map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => switchFrame(p.id)}
-                    className={`flex-shrink-0 w-[72px] sm:w-20 aspect-square rounded-xl border-2 bg-[#F8FAFC] flex items-center justify-center p-2.5 transition-colors ${
-                      p.id === product.id ? "border-blue" : "border-transparent hover:border-border"
-                    }`}
-                    aria-label={`Coba ${p.name}`}
-                  >
-                    <ProductImage productId={p.id} variant="main" style={p.style} colorKey={p.colorKey} className="w-full h-full" alt={p.name} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <TryOnExtras product={product} merchant={merchant} camera={cameraStatus === "granted"} />
         </div>
 
-        {/* ===== KANAN: CHECKOUT + KECOCOKAN + TOKO SERUPA (menempel saat layar lebar) ===== */}
-        <aside className="lg:sticky lg:top-[84px] flex flex-col gap-4" aria-label="Checkout dan rekomendasi">
-          <section className="bg-white border border-border rounded-2xl p-4">
+        {/* ===== CHECKOUT + KECOCOKAN + TOKO SERUPA (HP: `contents` supaya tiap bagian bisa diurutkan; desktop: kolom kanan menempel) ===== */}
+        <aside className="contents lg:flex lg:flex-col lg:gap-4 lg:sticky lg:top-[84px] lg:col-start-2 lg:row-start-1 lg:row-span-3" aria-label="Checkout dan rekomendasi">
+          <section className="order-2 lg:order-none bg-white border border-border rounded-2xl p-4 shadow-[0_10px_30px_-22px_rgb(30_60_120/.5)]">
             <div className="flex gap-3 items-center mb-3">
               <span className="w-16 h-16 flex-shrink-0 rounded-xl bg-[#F8FAFC] p-1.5">
                 <ProductImage productId={product.id} variant="main" style={product.style} colorKey={product.colorKey} className="w-full h-full" alt="" />
@@ -263,7 +243,7 @@ export default function TryOnPage() {
               {merchant ? (
                 <button
                   onClick={() => setConnectOpen(true)}
-                  className="flex-1 min-h-12 py-2 px-4 rounded-full bg-blue text-white font-bold text-[13.5px] leading-tight hover:bg-blue-deep transition-colors"
+                  className="tl-cta tl-ripple flex-1 min-h-12 py-2 px-4 rounded-full bg-blue text-white font-bold text-[13.5px] leading-tight hover:bg-blue-deep"
                 >
                   Cocok! Hubungkan ke {merchant.name}
                 </button>
@@ -278,7 +258,7 @@ export default function TryOnPage() {
             </div>
             <Link
               to={`/konsultasi?frame=${product.id}${merchantId ? `&toko=${merchantId}` : ""}`}
-              className="mt-2.5 flex items-center justify-center gap-2 h-10 rounded-full border-[1.5px] border-blue text-blue-deep font-bold text-[13px] hover:bg-surface-blue"
+              className="tl-ripple mt-2.5 flex items-center justify-center gap-2 min-h-11 px-3 text-center rounded-full border-[1.5px] border-blue text-blue-deep font-bold text-[13px] hover:bg-surface-blue"
             >
               Scan bentuk wajah &amp; konsultasi dengan optik
             </Link>
@@ -287,11 +267,12 @@ export default function TryOnPage() {
             </p>
           </section>
 
-          <section className="bg-white border border-border rounded-2xl p-4" aria-label="Kecocokan frame di wajahmu">
+          <section className="order-3 lg:order-none bg-white border border-border rounded-2xl p-4" aria-label="Kecocokan frame di wajahmu">
             <h2 className="text-sm font-bold text-ink-text m-0 mb-3">Kecocokan di wajahmu</h2>
             <FitReport report={fitReport} />
           </section>
 
+          <div className="order-6 lg:order-none min-w-0">
           <RecommendedStrip
             vertical
             result={recs}
@@ -300,7 +281,35 @@ export default function TryOnPage() {
             title="Dari toko serupa"
             subtitle={similarIds.length ? "Toko lain di wilayah yang sama, disusun dari wajah dan riwayat cobamu." : undefined}
           />
+          </div>
         </aside>
+
+        <div className="order-4 lg:order-none min-w-0 lg:col-start-1 lg:row-start-2 empty:hidden">
+          {/* ===== SWITCH FRAME TANPA KELUAR SESI ===== */}
+          {otherFrames.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-ink-text mb-3">Coba frame lain dari toko yang sama</p>
+              <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+                {[product, ...otherFrames].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => switchFrame(p.id)}
+                    className={`flex-shrink-0 w-[72px] sm:w-20 aspect-square rounded-xl border-2 bg-[#F8FAFC] flex items-center justify-center p-2.5 transition-[border-color,box-shadow] ${
+                      p.id === product.id ? "border-blue shadow-[0_6px_16px_-8px_rgb(64_106_175/.6)]" : "border-transparent hover:border-border"
+                    }`}
+                    aria-label={`Coba ${p.name}`}
+                  >
+                    <ProductImage productId={p.id} variant="main" style={p.style} colorKey={p.colorKey} className="w-full h-full" alt={p.name} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="order-5 lg:order-none min-w-0 lg:col-start-1 lg:row-start-3">
+          <TryOnExtras product={product} merchant={merchant} camera={cameraStatus === "granted"} />
+        </div>
       </div>
 
       <TryOnCatalog

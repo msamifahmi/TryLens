@@ -59,7 +59,7 @@ export default function WishlistDrawer({ open, onClose, onTryOn, showToast }) {
                   <p className="text-[11.5px] text-ink-muted m-0 mb-1.5">{p.merchant} · {p.city}</p>
                   <p className="text-[13.5px] font-extrabold text-blue-deep m-0 mb-2">{formatRp(p.price)}</p>
                   <div className="flex gap-2">
-                    <button onClick={() => onTryOn(p)} className="text-xs font-bold rounded-lg px-3 min-h-10 bg-blue text-white hover:bg-blue-deep">
+                    <button onClick={() => onTryOn(p)} className="tl-cta tl-ripple text-xs font-bold rounded-lg px-3 min-h-10 bg-blue text-white hover:bg-blue-deep">
                       Coba Sekarang
                     </button>
                     <button

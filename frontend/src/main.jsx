@@ -3,7 +3,10 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { usePartner } from "./store/usePartner.js";
 import { loadCatalog } from "./lib/catalog.js";
+import { initTactile } from "./lib/tactile.js";
 import "./index.css";
+
+initTactile();
 
 // 1) Cari backend (maks. 1,5 dtk; tanpa backend → mode demo seperti sebelumnya).
 // 2) Gabungkan frame Mitra ke katalog publik SEBELUM App dimuat: banyak halaman menghitung dari PRODUCTS saat modul dimuat.

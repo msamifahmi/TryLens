@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PRODUCTS } from "../data/mockData.js";
 import FrameIcon from "./icons/FrameIcon.jsx";
 
 const SLIDES = [
@@ -6,6 +8,7 @@ const SLIDES = [
     headline: "Coba Kacamata Sebelum Beli",
     sub: "Lihat langsung bagaimana frame terlihat di wajahmu dengan virtual try-on.",
     cta: "Coba Sekarang",
+    action: "try",
     cta2: "Jelajahi Frame",
     bg: "linear-gradient(120deg, #427AB5 0%, #406AAF 100%)",
     illustration: "face"
@@ -14,6 +17,7 @@ const SLIDES = [
     headline: "Ribuan Frame dari Optik Lokal",
     sub: "Temukan pilihan frame dari toko optik dan UMKM di kotamu.",
     cta: "Jelajahi Toko",
+    action: "merchant",
     cta2: null,
     bg: "linear-gradient(120deg, #406AAF 0%, #2F5586 100%)",
     illustration: "collection"
@@ -22,6 +26,7 @@ const SLIDES = [
     headline: "Temukan Frame yang Cocok untukmu",
     sub: "Bandingkan gaya, bentuk, dan harga dalam satu tempat.",
     cta: "Mulai Eksplorasi",
+    action: "feed",
     cta2: null,
     bg: "linear-gradient(120deg, #4C86BF 0%, #427AB5 100%)",
     illustration: "compare"
@@ -30,6 +35,7 @@ const SLIDES = [
     headline: "Promo Frame Pilihan",
     sub: "Temukan penawaran menarik dari merchant TryLens.",
     cta: "Lihat Promo",
+    action: "promo",
     cta2: null,
     bg: "linear-gradient(120deg, #406AAF 0%, #C9A24B 130%)",
     illustration: "promo"
@@ -90,71 +96,124 @@ const ILLUSTRATIONS = {
   promo: PromoIllustration
 };
 
-export default function HeroCarousel({ onCtaClick }) {
+const AUTOPLAY_MS = 5500;
+
+/**
+ * Props: onFeed (gulir ke daftar frame), onMerchants (gulir ke toko), onPromo (filter Promo + gulir ke daftar).
+ * Pindah slide: panah, titik, geser jari/mouse, atau otomatis (berhenti saat disorot/disentuh dan saat tab tidak terlihat).
+ */
+export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick }) {
+  const navigate = useNavigate();
   const [index, setIndex] = useState(0);
-  const timerRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const [cycle, setCycle] = useState(0); // naik tiap pindah slide → animasi progres titik mulai ulang
+  const drag = useRef(null);
+  const swiped = useRef(false);
 
-  function goTo(i) {
-    setIndex((i + SLIDES.length) % SLIDES.length);
-  }
-
-  function startAutoplay() {
-    stopAutoplay();
-    timerRef.current = setInterval(() => setIndex((i) => (i + 1) % SLIDES.length), 5000);
-  }
-  function stopAutoplay() {
-    if (timerRef.current) clearInterval(timerRef.current);
-  }
-
-  useEffect(() => {
-    startAutoplay();
-    return stopAutoplay;
+  const goTo = useCallback((i) => {
+    setIndex((cur) => {
+      const n = (i + SLIDES.length) % SLIDES.length;
+      return n === cur ? cur : n;
+    });
+    setCycle((c) => c + 1);
   }, []);
 
+  useEffect(() => {
+    if (paused) return undefined;
+    const t = setTimeout(() => goTo(index + 1), AUTOPLAY_MS);
+    return () => clearTimeout(t);
+  }, [index, cycle, paused, goTo]);
+
+  // Tab di latar belakang: jangan terus memutar.
+  useEffect(() => {
+    const onVis = () => setPaused(document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  function runAction(action) {
+    const feed = onFeed || onCtaClick;
+    if (action === "try") navigate(`/try-on/${PRODUCTS[0]?.id || "f0"}`);
+    else if (action === "merchant") (onMerchants || feed)?.();
+    else if (action === "promo") (onPromo || feed)?.();
+    else feed?.();
+  }
+
+  // Geser (sentuh & mouse). Hanya gerak horizontal dominan yang dihitung, sehingga gulir vertikal halaman tetap normal.
+  function onPointerDown(e) {
+    if (e.target.closest("button, a")) return;
+    drag.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    swiped.current = false;
+    setPaused(true);
+  }
+  function onPointerUp(e) {
+    const d = drag.current;
+    drag.current = null;
+    if (e.pointerType !== "mouse") setPaused(document.hidden); // sentuh: lanjut otomatis setelah jari diangkat
+    if (!d) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+      swiped.current = true;
+      goTo(index + (dx < 0 ? 1 : -1));
+    }
+  }
+
   return (
-    <section className="max-w-[1280px] mx-auto px-5 pt-4 pb-2">
+    <section className="max-w-[1280px] mx-auto px-4 sm:px-5 pt-4 pb-2">
       <div
-        className="relative rounded-2xl overflow-hidden aspect-[3/1] max-[700px]:aspect-auto max-[700px]:h-[480px]"
-        onMouseEnter={stopAutoplay}
-        onMouseLeave={startAutoplay}
+        className="relative rounded-2xl overflow-hidden aspect-[3/1] max-[700px]:aspect-auto max-[700px]:h-[460px] select-none shadow-[0_18px_40px_-24px_rgb(30_60_120/.55)]"
+        style={{ touchAction: "pan-y" }}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(document.hidden)}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { drag.current = null; setPaused(false); }}
+        onKeyDown={(e) => { if (e.key === "ArrowLeft") goTo(index - 1); if (e.key === "ArrowRight") goTo(index + 1); }}
         role="region"
         aria-roledescription="carousel"
         aria-label="Promosi TryLens"
       >
         {SLIDES.map((slide, i) => {
           const Illustration = ILLUSTRATIONS[slide.illustration];
+          const active = i === index;
           return (
             <div
               key={slide.headline}
-              aria-hidden={i !== index}
-              className={`absolute inset-0 flex items-center transition-[opacity,visibility] duration-500 ${
-                i === index ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"
+              aria-hidden={!active}
+              data-active={active}
+              inert={!active ? "" : undefined}
+              className={`tl-slide absolute inset-0 flex items-center transition-[opacity,visibility] duration-500 ${
+                active ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"
               }`}
               style={{ background: slide.bg }}
             >
-              <div className="flex items-center w-full h-full px-8 md:px-14 max-[700px]:flex-col-reverse max-[700px]:justify-end max-[700px]:px-7 max-[700px]:pb-12 max-[700px]:text-center">
+              <div className="pointer-events-none absolute -right-24 -top-24 w-80 h-80 rounded-full bg-white/10 blur-2xl" aria-hidden="true" />
+              <div className="flex items-center w-full h-full px-8 md:px-14 max-[700px]:flex-col-reverse max-[700px]:justify-end max-[700px]:px-6 max-[700px]:pt-14 max-[700px]:pb-14 max-[700px]:text-center">
                 <div className="flex-1 max-w-[480px]">
-                  <h1 className="text-[24px] md:text-[34px] font-extrabold text-white leading-tight mb-3 tracking-tight">
+                  <h1 className="tl-s-item text-[24px] md:text-[34px] font-extrabold text-white leading-tight mb-3 tracking-tight">
                     {slide.headline}
                   </h1>
-                  <p className="text-[14.5px] text-white/90 mb-4 leading-relaxed max-w-[400px] max-[700px]:mx-auto">
+                  <p className="tl-s-item text-[14.5px] text-white/90 mb-4 leading-relaxed max-w-[400px] max-[700px]:mx-auto">
                     {slide.sub}
                   </p>
-                  <div className="flex gap-2.5 flex-wrap max-[700px]:justify-center">
+                  <div className="tl-s-item flex gap-2.5 flex-wrap max-[700px]:justify-center">
                     <button
-                      onClick={onCtaClick}
-                      className="h-10 px-5 rounded-[10px] text-sm font-bold bg-accent-yellow text-ink hover:-translate-y-0.5 hover:shadow-lg transition-transform"
+                      onClick={() => runAction(slide.action)}
+                      className="tl-ripple min-h-11 px-6 rounded-xl text-sm font-bold bg-accent-yellow text-ink shadow-[0_8px_18px_-8px_rgb(0_0_0/.45)] hover:-translate-y-0.5 hover:shadow-lg"
                     >
                       {slide.cta}
                     </button>
                     {slide.cta2 && (
-                      <button className="h-10 px-5 rounded-[10px] text-sm font-bold bg-white/15 text-white border border-white/50 hover:bg-white/25">
+                      <button
+                        onClick={() => (onFeed || onCtaClick)?.()}
+                        className="tl-ripple min-h-11 px-6 rounded-xl text-sm font-bold bg-white/15 text-white border border-white/50 hover:bg-white/25"
+                      >
                         {slide.cta2}
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 w-1/3 max-[700px]:w-1/2 max-[700px]:max-w-[150px] max-[700px]:mb-2 flex items-center justify-center relative z-[1]">
+                <div className="tl-s-art flex-shrink-0 w-1/3 max-[700px]:w-1/2 max-[700px]:max-w-[150px] max-[700px]:mb-2 flex items-center justify-center relative z-[1]">
                   <Illustration />
                 </div>
               </div>
@@ -162,30 +221,36 @@ export default function HeroCarousel({ onCtaClick }) {
           );
         })}
 
-        <button
-          onClick={() => goTo(index - 1)}
-          aria-label="Slide sebelumnya"
-          className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md z-20 max-[700px]:top-[22%]"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-        <button
-          onClick={() => goTo(index + 1)}
-          aria-label="Slide berikutnya"
-          className="absolute top-1/2 -translate-y-1/2 right-2 md:right-4 w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md z-20 max-[700px]:top-[22%]"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
+        {/* Panah: posisi tengah memakai inset + my-auto (bukan transform), supaya tidak bergeser saat ditekan. */}
+        {["prev", "next"].map((dir) => (
+          <button
+            key={dir}
+            type="button"
+            onClick={() => goTo(index + (dir === "next" ? 1 : -1))}
+            aria-label={dir === "next" ? "Slide berikutnya" : "Slide sebelumnya"}
+            className={`absolute inset-y-0 my-auto h-11 w-11 rounded-full bg-white/90 hover:bg-white backdrop-blur flex items-center justify-center shadow-md z-20 max-[700px]:inset-y-auto max-[700px]:top-3 max-[700px]:my-0 max-[700px]:h-10 max-[700px]:w-10 ${
+              dir === "next" ? "right-2 md:right-4" : "left-2 md:left-4"
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d={dir === "next" ? "M9 6l6 6-6 6" : "M15 18l-6-6 6-6"} stroke="#111827" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ))}
 
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex z-20">
+        {/* Titik: slide aktif memanjang dan terisi selama hitung mundur otomatis. */}
+        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex z-20">
           {SLIDES.map((s, i) => (
-            <button
-              key={s.headline}
-              onClick={() => goTo(i)}
-              aria-label={`Ke slide ${i + 1}`}
-              className="h-8 px-[5px] flex items-center"
-            >
-              <span className={`block h-[7px] rounded-full transition-all ${i === index ? "w-5 bg-white" : "w-[7px] bg-white/50"}`} />
+            <button key={s.headline} onClick={() => goTo(i)} aria-label={`Ke slide ${i + 1}`} aria-current={i === index} className="h-9 px-[5px] flex items-center">
+              <span className={`relative block h-[7px] rounded-full overflow-hidden transition-[width,background-color] duration-300 ${i === index ? "w-8 bg-white/40" : "w-[7px] bg-white/50"}`}>
+                {i === index && (
+                  <span
+                    key={cycle}
+                    className="absolute inset-0 bg-white origin-left"
+                    style={{ animation: paused ? "none" : `tl-dot-fill ${AUTOPLAY_MS}ms linear forwards`, transform: paused ? "scaleX(1)" : undefined }}
+                  />
+                )}
+              </span>
             </button>
           ))}
         </div>

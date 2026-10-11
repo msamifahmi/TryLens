@@ -8,7 +8,8 @@ import ProductImage from "../ProductImage.jsx";
 import { createLandmarker } from "../consult/landmarker.js";
 import { PoseEngine } from "../../ar/PoseEngine.js";
 import { LumaProbe } from "../../ar/quality.js";
-import { estimateRigSpec, readRigSpec } from "../../ar/rigSpecThree.js";
+import { estimateRigSpec, readRigSpec, TempleReach } from "../../ar/rigSpecThree.js";
+import { CRANIUM } from "../../ar/modelFit.js";
 import { estimateSpecFromBox } from "../../ar/rigSpec.js";
 import { FOV_DEG } from "../../ar/faceMetrics.js";
 import canonical from "../../data/canonicalFace.json";
@@ -64,7 +65,14 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
   const reportCb = useRef(onReport);
   reportCb.current = onReport;
 
-  const [ar, setAr] = useState(4 / 3);
+  const [ar, setAr] = useState(() => {
+    const st = stream?.getVideoTracks?.()[0]?.getSettings?.();
+    return st?.width && st?.height ? st.width / st.height : 3 / 4; // dari trek kamera: ukuran panggung tidak melompat saat metadata tiba
+  });
+  const stageRef = useRef(null);
+  const [cover, setCover] = useState(null); // ukuran kotak video agar menutup panggung (object-fit: cover) tanpa mengubah ukuran panggung
+  const [narrow, setNarrow] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+  const [adjOpen, setAdjOpen] = useState(false);
   const [phase, setPhase] = useState("loading"); // loading | ready | static
   const [mode, setMode] = useState("loading"); // loading | 3d | 2d
   const [ui, setUi] = useState({ tracked: false, calibrated: false, progress: 0, issue: null, pd: null, k: 1 });
@@ -85,9 +93,11 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
 
     const video = videoRef.current;
     video.srcObject = stream;
-    video.onloadedmetadata = () => {
-      if (alive && video.videoWidth) setAr(video.videoWidth / video.videoHeight);
+    const syncAr = () => {
+      if (alive && video.videoWidth) setAr((prev) => { const n = video.videoWidth / video.videoHeight; return Math.abs(n - prev) < 0.01 ? prev : n; });
     };
+    video.onloadedmetadata = syncAr;
+    video.addEventListener("resize", syncAr); // HP diputar / kamera ganti resolusi
     video.play?.().catch(() => {});
 
     const engine = new PoseEngine(canonArr, { mode: "tryon", corrector: CORRECTOR, faces: canonical.f, tracker: ((t) => (t === "oneEuro" || t === "magnet" ? t : "stable"))(new URLSearchParams(location.search).get("tracker")) });
@@ -115,6 +125,17 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
     occluder.renderOrder = -1;
     head.add(occluder);
 
+    // Tempurung kepala (setengah elips di belakang masker): gagang sisi jauh tersembunyi saat menoleh, tidak melayang di belakang kepala.
+    const craniumGeo = new THREE.SphereGeometry(1, 28, 18);
+    const cp = craniumGeo.attributes.position;
+    for (let i = 0; i < cp.count; i++) {
+      const cz = Math.min(cp.getZ(i), 0); // setengah belakang saja
+      cp.setXYZ(i, CRANIUM.center[0] + cp.getX(i) * CRANIUM.radii[0], CRANIUM.center[1] + cp.getY(i) * CRANIUM.radii[1], CRANIUM.center[2] + cz * CRANIUM.radii[2]);
+    }
+    const cranium = new THREE.Mesh(craniumGeo, new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide }));
+    cranium.renderOrder = -1;
+    head.add(cranium);
+
     const rig = new THREE.Group(); // tempat model kacamata (ukuran asli, cm)
     head.add(rig);
 
@@ -129,6 +150,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
         rig.position.set(fit.position[0], fit.position[1] + a.y / k, fit.position[2] + a.z / k);
         rig.rotation.set(0, 0, fit.roll);
         rig.scale.setScalar((spec.unit * cfg.scale * a.s * (live.current.auto || 1)) / k);
+        live.current.reach?.fit(rig.position.z, rig.scale.x); // ujung gagang tepat di belakang telinga
         return;
       }
       const d = lastOut?.anchorDelta || [0, 0, 0];
@@ -275,6 +297,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       envTex.dispose();
       pmrem.dispose();
       renderer.dispose();
+      video.removeEventListener("resize", syncAr);
       video.srcObject = null;
       ctx.current = {};
     };
@@ -287,6 +310,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
     let cancelled = false;
     engine?.setModel(null);
     live.current.spec = null;
+    live.current.reach = null;
     reportCb.current?.(null);
     live.current.mode = "loading";
     setMode("loading");
@@ -307,6 +331,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
         live.current.realSize = !!spec?.realSize;
         live.current.auto = 1; // tanpa ukuran Mitra: diisi otomatis dari lebar wajah setelah kalibrasi
         live.current.spec = spec;
+        if (spec) live.current.reach = new TempleReach(gltf.scene, (spec.templeL[2] + spec.templeR[2]) / 2 / spec.unit);
         engine?.setModel(spec);
         engine?.setUserScale(fitRef.current.adj.s);
         setRigged(!!spec && !spec.estimated);
@@ -335,6 +360,20 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
     ctx.current.applyRig?.();
   }, [adj, product.id, mode]);
 
+  // Panggung punya ukuran TETAP (HP: 3:4; desktop: mengikuti kamera), video ditutup-penuh di dalamnya.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onMq = () => setNarrow(mq.matches);
+    mq.addEventListener?.("change", onMq);
+    const el = stageRef.current;
+    const ro = new ResizeObserver(() => {
+      const cw = el.clientWidth, ch = el.clientHeight;
+      if (cw && ch) setCover((c) => (c && c.cw === cw && c.ch === ch ? c : { cw, ch }));
+    });
+    ro.observe(el);
+    return () => { mq.removeEventListener?.("change", onMq); ro.disconnect(); };
+  }, []);
+
   function update(patch) {
     setAdj((a) => {
       const n = { ...a, ...patch };
@@ -344,17 +383,25 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
   }
 
   const is3d = mode === "3d";
-  const chip = "absolute top-3 left-3 right-3 w-fit max-w-[calc(100%-1.5rem)] bg-black/60 text-white text-[11.5px] font-semibold px-2.5 py-1 rounded-full";
+  const chip = "absolute top-3 left-3 right-3 w-fit max-w-[calc(100%-1.5rem)] bg-black/60 backdrop-blur-sm text-white text-[11.5px] font-semibold px-2.5 py-1 rounded-full";
   const calibrating = phase === "ready" && ui.tracked && !ui.calibrated;
+  const stageAr = narrow ? 3 / 4 : ar;
+  let vw = "100%", vh = "100%";
+  if (cover) {
+    const wide = ar >= cover.cw / cover.ch;
+    vw = `${wide ? cover.ch * ar : cover.cw}px`;
+    vh = `${wide ? cover.ch : cover.cw / ar}px`;
+  }
 
   return (
     <div className="mb-2">
       <div
+        ref={stageRef}
         className="relative mx-auto bg-ink rounded-2xl overflow-hidden"
-        style={{ aspectRatio: ar, width: `min(100%, ${75 * ar}vh)` }}
+        style={{ aspectRatio: stageAr, width: narrow ? "100%" : `min(100%, ${75 * stageAr}vh)`, maxHeight: narrow ? "78svh" : undefined }}
       >
         {/* Semua lapisan di-mirror bersama supaya terasa seperti cermin dan tetap sejajar. */}
-        <div className="absolute inset-0 scale-x-[-1]">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 scale-x-[-1]" style={{ width: vw, height: vh }}>
           <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full" />
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
           {phase === "ready" && mode === "2d" && (
@@ -380,26 +427,38 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
         </span>
 
         {phase === "ready" && ui.tracked && ui.calibrated && is3d && (
-          <span className="absolute bottom-3 left-3 bg-black/45 text-white/90 text-[10.5px] px-2 py-0.5 rounded-full">
-            Ukuran asli terkalibrasi{ui.pd ? ` · PD ≈ ${ui.pd} mm` : ""}{rigged ? (ui.locked ? " · lensa dikunci ke pupil" : "") : ui.locked ? " · lensa dikunci ke pupil (dimensi frame diperkirakan)" : " · model tanpa rig: penempatan perkiraan"}
+          <span className="absolute bottom-3 left-3 right-3 w-fit max-w-[calc(100%-1.5rem)] bg-black/50 backdrop-blur-sm text-white/90 text-[10.5px] px-2.5 py-1 rounded-full truncate">
+            Terkalibrasi{ui.pd ? ` · PD ≈ ${ui.pd} mm` : ""}
+            <span className="max-md:hidden">{rigged ? (ui.locked ? " · lensa dikunci ke pupil" : "") : ui.locked ? " · lensa dikunci ke pupil (dimensi frame diperkirakan)" : " · model tanpa rig: penempatan perkiraan"}</span>
           </span>
         )}
       </div>
 
       {is3d && phase === "ready" && (
-        <div className="mt-4 mx-auto max-w-[520px] grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-3 text-xs text-ink-muted">
-          <Slider label="Naik / turun" min={-1.5} max={1.5} step={0.05} value={adj.y} onChange={(v) => update({ y: v })} />
-          <Slider label="Mundur / maju" min={-1.5} max={1.5} step={0.05} value={adj.z} onChange={(v) => update({ z: v })} />
-          <Slider label="Ukuran" min={0.8} max={1.25} step={0.01} value={adj.s} onChange={(v) => update({ s: v })} />
+        <div className="mt-3 mx-auto max-w-[520px]">
           <button
-            onClick={() => {
-              setAdj({ ...DEFAULT_ADJ });
-              saveAdj(product.id, DEFAULT_ADJ);
-            }}
-            className="sm:col-span-3 justify-self-center text-xs font-semibold text-blue hover:text-blue-deep"
+            type="button"
+            onClick={() => setAdjOpen((o) => !o)}
+            aria-expanded={adjOpen}
+            className="md:hidden tl-press mx-auto flex items-center gap-2 min-h-11 px-4 rounded-full border border-border bg-white text-[13px] font-semibold text-ink-text"
           >
-            Atur ulang posisi
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            {adjOpen ? "Tutup pengaturan posisi" : "Atur posisi manual"}
           </button>
+          <div className={`${adjOpen ? "grid" : "hidden"} md:grid mt-3 md:mt-0 grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-3 text-xs text-ink-muted`}>
+            <Slider label="Naik / turun" min={-1.5} max={1.5} step={0.05} value={adj.y} onChange={(v) => update({ y: v })} />
+            <Slider label="Mundur / maju" min={-1.5} max={1.5} step={0.05} value={adj.z} onChange={(v) => update({ z: v })} />
+            <Slider label="Ukuran" min={0.8} max={1.25} step={0.01} value={adj.s} onChange={(v) => update({ s: v })} />
+            <button
+              onClick={() => {
+                setAdj({ ...DEFAULT_ADJ });
+                saveAdj(product.id, DEFAULT_ADJ);
+              }}
+              className="tl-press sm:col-span-3 justify-self-center min-h-10 px-4 text-xs font-semibold text-blue hover:text-blue-deep"
+            >
+              Atur ulang posisi
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -410,7 +469,7 @@ function Slider({ label, value, onChange, ...rest }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="font-semibold text-ink-text">{label}</span>
-      <input type="range" value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="w-full accent-blue" {...rest} />
+      <input type="range" value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="tl-range w-full" {...rest} />
     </label>
   );
 }
