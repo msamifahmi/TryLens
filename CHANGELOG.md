@@ -6,6 +6,17 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 26
+
+- **Tulisan "Scan bentuk wajah" menabrak paragraf**: penyebab sebenarnya aturan CSS `.tl-ripple.sticky` di dalam `@layer utilities` yang ditulis ulang Tailwind menjadi `.lg\:sticky .tl-ripple { position:absolute }` — tautan di kartu checkout (anak dari aside sticky) jadi absolut dan menimpa paragraf. Aturan senyawa itu dihapus; dicek dengan bounding box Playwright di lebar 360–1100 px.
+- **Kecocokan di wajahmu kosong**: di kode Update 25 bagian ini terisi untuk f0 dan f1 (uji baru `npm run test:models` memuat tiap `public/products/*/model.glb`, memeriksa spesifikasi, panjang gagang, kunci pupil, dan ≥4 baris laporan — 10/10 lolos). Chip "Ukuran asli terkalibrasi · model tanpa rig" di tangkapan layar adalah teks build lama → situs live belum menjalankan build terbaru. Cek `try-lens.id/version.txt` dan tekan Deploy di hPanel.
+- **Jitter AR**: akar masalah di filter Kalman `stable.js`: saat landmark berisik, gerbang inovasi menaikkan gain (maxBoost 4096) sehingga filter mengejar derau. Ditambahkan `ar/outputFilter.js` — One Euro adaptif pada PIVOT kacamata + quaternion di laju render, cutoff turun otomatis menurut σ reproyeksi PnP. Benchmark sintetis (jitter, lebih kecil lebih baik; tanpa → dengan): kamera bersih diam 0,30→0,03, pelan 0,39→0,05; webcam buruk diam 3,30→1,21, pelan 3,15→0,93; sangat buruk 7,5→2,9. Harga: lag saat sapuan cepat naik (galat 4,3→12,9 bersih, 5,7→14,1 webcam buruk).
+- **"Tambah node"**: tidak dilakukan — mode stable sudah memakai ±250 landmark wajah dan kacamata menempel kaku pada satu pose; menambah titik tidak mengurangi derau yang sama, filter keluaran yang melakukannya.
+- **Alur posting produk (Hermes)**: `npm run product:add -- --from <folder> --name … --price … [--push]` menyalin foto/model ke `frontend/public/products/<id>/`, menulis `frontend/public/catalog.json`, lalu commit di cabang fitur, push, dan buka PR ke `main` (tidak pernah ke `deploy`). Mode demo membaca `catalog.json` (hanya menambah produk). Panduan: `docs/HERMES.md`.
+- **Batas yang tercatat**: jitter hanya diuji pada derau sintetis (belum ada data webcam asli); `EAR_TIP_Z` memakai anatomi rata-rata (kepala nyata bisa ±1 cm); posisi lensa-ke-mata vertikal masih ±24 mm dari estimasi kedalaman pupil; Hostinger/HP asli tidak bisa diuji dari sandbox.
+
+---
+
 ## Update 25
 
 - **Hero (iklan) tidak bisa pindah — penyebab ketemu**: aturan tekan global memakai `transform: scale()` yang menimpa `-translate-y-1/2` pada tombol panah, sehingga tombol melompat ±20 px saat ditekan; bila yang ditekan separuh atasnya, pointer lepas di luar tombol dan klik hangus. Kini tekan memakai properti CSS `scale` (tidak menimpa transform) dan panah diposisikan tanpa transform. Ditambah geser jari/mouse, titik dengan bilah progres autoplay, jeda saat disorot/disentuh/tab tersembunyi, dan tombol CTA tiap slide kini punya tujuan sendiri (Coba Sekarang → Coba Virtual, Jelajahi Toko → bagian toko, Lihat Promo → filter Promo).
