@@ -22,7 +22,7 @@ export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerch
 
   return (
     <header className="bg-white border-b border-border sticky top-0 z-40">
-      <div className="max-w-[1280px] mx-auto px-5 h-[60px] md:h-[68px] flex items-center gap-4 md:gap-6">
+      <div className="max-w-[1280px] mx-auto px-3 sm:px-5 h-[60px] md:h-[68px] flex items-center gap-2 sm:gap-4 md:gap-6">
         {!isHome && (
           <button
             onClick={goBack}
@@ -42,7 +42,7 @@ export default function MainNav({ onOpenWishlist, onSelectProduct, onSelectMerch
 
         <SearchBar onSelectProduct={onSelectProduct} onSelectMerchant={onSelectMerchant} />
 
-        <nav className="flex items-center gap-2 md:gap-3 flex-shrink-0 ml-auto" aria-label="Aksi pengguna">
+        <nav className="flex items-center gap-0.5 sm:gap-2 md:gap-3 flex-shrink-0 ml-auto" aria-label="Aksi pengguna">
           <button
             onClick={() => navigate("/konsultasi")}
             className="h-10 px-2.5 md:px-3.5 flex items-center gap-1.5 rounded-lg text-[13px] font-semibold text-blue-deep hover:bg-surface-blue flex-shrink-0"

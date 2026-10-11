@@ -4,7 +4,7 @@ import ProductCard from "../ProductCard.jsx";
 export default function ProductSection({ id, eyebrow, title, subtitle, products, onTryOn, showToast, action, badge }) {
   if (!products.length) return null;
   return (
-    <section id={id} className="mt-14" aria-label={title}>
+    <section id={id} className="mt-14 tl-scroll-reveal" aria-label={title}>
       <div className="flex items-end justify-between gap-4 mb-5">
         <div className="min-w-0">
           {eyebrow && <p className="text-[11.5px] font-bold tracking-[.14em] uppercase text-blue m-0 mb-1.5 flex items-center gap-2">{eyebrow}{badge}</p>}

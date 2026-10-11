@@ -47,12 +47,18 @@
   [data-stagger] > *:nth-child(n+9) { animation-delay: .34s; }
 }
 @layer base {
-  /* Umpan balik tekan untuk semua tombol, tautan bergaya tombol, dan toggle */
-  button, [role="button"], [role="switch"], [role="tab"], a[class*="rounded-"] {
-    transition: transform .16s cubic-bezier(.22, 1, .36, 1), background-color .18s, border-color .18s, color .18s, box-shadow .18s, opacity .18s;
+  /* Umpan balik tekan untuk semua tombol, tautan bergaya tombol, dan toggle.
+     Memakai properti `scale` (bukan `transform`) supaya tidak menimpa -translate-* pada tombol yang diposisikan di tengah:
+     transform scale() sebelumnya membuat tombol panah "melompat" 20 px saat ditekan, dan klik di separuh atasnya tidak terhitung. */
+  :is(button, [role="button"], [role="switch"], [role="tab"], summary, a[class*="rounded-"]):not(:disabled, .tl-still) {
+    transition: scale .45s cubic-bezier(.34, 1.56, .64, 1), transform .2s cubic-bezier(.22, 1, .36, 1), background-color .18s, border-color .18s, color .18s, box-shadow .2s, opacity .18s;
   }
-  button:not(:disabled):active, [role="button"]:active, [role="tab"]:active, a[class*="rounded-"]:active { transform: scale(.96); }
-  button:focus-visible, a:focus-visible, [role="switch"]:focus-visible { outline: 2px solid #1E5FAF; outline-offset: 2px; animation: tl-pulse-ring .5s ease-out; }
+  :is(button, [role="button"], [role="switch"], [role="tab"], summary, a[class*="rounded-"]):not(:disabled, .tl-still):active {
+    scale: .94;
+    transition: scale .09s cubic-bezier(.2, .8, .2, 1), transform .2s cubic-bezier(.22, 1, .36, 1), background-color .18s, border-color .18s, color .18s, box-shadow .2s, opacity .18s;
+  }
+  /* Elemen besar (kartu) cukup mengempis sedikit */
+  :is(a, article, [role="button"])[class*="rounded-2xl"]:not(.tl-still):active, :is(a, article)[class*="rounded-xl"][class*="block"]:not(.tl-still):active { scale: .985; }
   /* Kartu yang bisa diklik naik sedikit saat disorot */
   a[class*="rounded-2xl"], article[class*="rounded-2xl"], [class*="group"][class*="rounded-"] { transition: transform .22s cubic-bezier(.22, 1, .36, 1), box-shadow .22s; }
   @media (hover: hover) {
@@ -60,6 +66,10 @@
   }
   /* Sentuh: area ketuk jelas, tanpa jeda 300 ms dan tanpa zoom ganda */
   button, a, [role="button"], [role="tab"], summary, label[for], select { touch-action: manipulation; }
+  /* iOS Safari memperbesar halaman bila isian berfont < 16px difokus: di HP semua isian minimal 16px */
+  @media (max-width: 767px) {
+    input:not([type="range"], [type="checkbox"], [type="radio"], [type="file"]), select, textarea { font-size: 16px; }
+  }
   /* Isi halaman tidak boleh tergeser ke samping di layar sempit */
   html, body { overflow-x: clip; }
   /* Overlay dan dialog memudar masuk */
@@ -68,7 +78,45 @@
   details > *:not(summary) { animation: tl-fade .25s ease-out; }
   img { transition: opacity .3s; }
 }
+/* ------------------------------------------------------------------ Sentuhan "memuaskan": ripple, CTA utama, slider, muncul saat digulir */
+@layer utilities {
+  @keyframes tl-ripple { from { transform: translate(-50%, -50%) scale(0); opacity: .28; } to { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+  @keyframes tl-sheen { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(260%) skewX(-18deg); } }
+  /* Gelombang dari titik sentuh (disisipkan oleh lib/tactile.js). Warna mengikuti teks tombol, jadi cocok di tombol terang maupun gelap. */
+  .tl-ripple { position: relative; overflow: hidden; isolation: isolate; }
+  .tl-ripple.absolute, .tl-ripple.fixed, .tl-ripple.sticky { position: absolute; }
+  .tl-ripple.fixed { position: fixed; } .tl-ripple.sticky { position: sticky; }
+  .tl-ripple-wave { position: absolute; border-radius: 9999px; background: currentColor; pointer-events: none; z-index: -1; animation: tl-ripple .6s cubic-bezier(.22, 1, .36, 1) forwards; }
+  /* Tombol utama: gradien halus, sorot atas, bayangan berwarna; kilau menyapu saat disorot (hanya perangkat dengan hover) */
+  .tl-cta { position: relative; overflow: hidden; isolation: isolate; background-image: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / 0) 55%); box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), 0 8px 18px -8px rgb(64 106 175 / .75); }
+  .tl-cta.absolute { position: absolute; }
+  .tl-cta::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .35), transparent); transform: translateX(-120%) skewX(-18deg); pointer-events: none; z-index: -1; }
+  @media (hover: hover) { .tl-cta:hover::after { animation: tl-sheen .8s ease-out; } .tl-cta:hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), 0 12px 24px -10px rgb(64 106 175 / .85); } }
+  .tl-cta:active { box-shadow: inset 0 2px 6px rgb(0 0 0 / .18), 0 3px 8px -4px rgb(64 106 175 / .6); }
+  /* Slider: jempol besar (mudah ditarik di HP) dengan umpan balik saat ditarik */
+  .tl-range { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; cursor: pointer; touch-action: pan-y; }
+  .tl-range::-webkit-slider-runnable-track { height: 6px; border-radius: 9999px; background: #E5E7EB; }
+  .tl-range::-moz-range-track { height: 6px; border-radius: 9999px; background: #E5E7EB; }
+  .tl-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 9999px; background: #fff; border: 2px solid #427AB5; box-shadow: 0 2px 8px rgb(15 40 80 / .25); transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .18s; }
+  .tl-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: 9999px; background: #fff; border: 2px solid #427AB5; box-shadow: 0 2px 8px rgb(15 40 80 / .25); transition: transform .18s cubic-bezier(.34, 1.56, .64, 1); }
+  .tl-range:active::-webkit-slider-thumb { transform: scale(1.18); box-shadow: 0 4px 14px rgb(64 106 175 / .5); }
+  .tl-range:active::-moz-range-thumb { transform: scale(1.18); }
+  .tl-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgb(66 122 181 / .3); }
+  /* Muncul saat digulir ke layar (hanya browser yang mendukung animation-timeline; lainnya langsung tampil) */
+  @supports (animation-timeline: view()) {
+    .tl-scroll-reveal { animation: tl-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 28%; }
+  }
+  /* Slide hero: isi masuk berurutan dari bawah, ilustrasi mengembang dengan pegas */
+  .tl-slide .tl-s-item { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .6s cubic-bezier(.22, 1, .36, 1); }
+  .tl-slide .tl-s-art { opacity: 0; transform: scale(.88) translateY(8px); transition: opacity .5s ease, transform .8s cubic-bezier(.34, 1.4, .64, 1); }
+  .tl-slide[data-active="true"] .tl-s-item, .tl-slide[data-active="true"] .tl-s-art { opacity: 1; transform: none; }
+  .tl-slide[data-active="true"] .tl-s-item:nth-child(1) { transition-delay: .08s; } .tl-slide[data-active="true"] .tl-s-item:nth-child(2) { transition-delay: .16s; }
+  .tl-slide[data-active="true"] .tl-s-item:nth-child(3) { transition-delay: .24s; } .tl-slide[data-active="true"] .tl-s-art { transition-delay: .12s; }
+  @keyframes tl-dot-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+}
 @media (prefers-reduced-motion: reduce) {
+  :is(button, a, [role="button"], summary):active { scale: none !important; }
+  .tl-slide .tl-s-item, .tl-slide .tl-s-art { transition: none !important; opacity: 1; transform: none; }
+  .tl-scroll-reveal { animation: none !important; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  button:active, a:active { transform: none !important; }
 }
