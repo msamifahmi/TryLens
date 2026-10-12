@@ -7,6 +7,7 @@ import { MagnetQuat, MagnetVec, MAGNET_POS, MAGNET_ROT } from "./magnet.js";
 import { NODE_LEN, centroidWorld, nodeLocals, nodeOrigin } from "./faceNodes.js";
 import { featuresOf, makeCorrector } from "./nodeCorrector.js";
 import { StableTracker, matToQuat } from "./stable.js";
+import { OutputFilter } from "./outputFilter.js";
 import { quatToMat } from "./rigid.js";
 import { EYE_LEN, describeFit, eyeTargets, packEyeTargets, placeOnEyes, unpackEyeTargets } from "./eyeFit.js";
 
@@ -44,7 +45,7 @@ const push = (buf, v) => {
  *  - Gerbang kualitas: pose, kedipan, cahaya, jarak, kecepatan gerak.
  */
 export class PoseEngine {
-  constructor(canon, { mode = "tryon", tracker = "magnet", corrector = null, faces = null } = {}) {
+  constructor(canon, { mode = "tryon", tracker = "magnet", corrector = null, faces = null, post = true } = {}) {
     this.faces = faces;
     this.corrector = makeCorrector(corrector);
     this.canon = canon;
@@ -56,11 +57,13 @@ export class PoseEngine {
     this.pos = tracker === "magnet" ? new MagnetVec(3, MAGNET_POS) : new OneEuroVec(3, POS);
     this.rot = tracker === "magnet" ? new MagnetQuat(MAGNET_ROT) : new OneEuroQuat(ROT);
     this.stab = tracker === "stable" ? new StableTracker(canon, faces || [], {}) : null;
+    this.post = this.stab && post ? new OutputFilter(post === true ? {} : post) : null; // penghalus tahap-render (outputFilter.js)
     this.reset();
   }
 
   reset() {
     this.stab?.reset();
+    this.post?.reset();
     this.pos.reset();
     this.rot.reset();
     this.kBuf = [];
@@ -189,11 +192,19 @@ export class PoseEngine {
       if (!this.tracked || !this.stab?.ready) return null;
       const since = clamp((nowMs - this.lastNow) / 1000, 0, 0.08);
       const at = this.stab.at(this.stab.o.lead + since);
+      if (this.post) { const f = this.post.filter(at.A, at.q, nowMs / 1000); return this.stabPose(f.A, f.q); }
       return this.stabPose(at.A, at.q);
     }
     if (this.tracker !== "magnet" || !this.tracked || !this.pos.x || !this.rot.q) return null;
     const since = clamp((nowMs - this.lastNow) / 1000, 0, 0.08);
     return { position: this.pos.at(this.pos.o.lead + since), quaternion: this.rot.at(this.rot.o.lead + since) };
+  }
+
+  /** Jalankan perubahan pivot/skala pada stab dan geser keadaan penghalus keluaran sebesar pergeseran pivot (tanpa lompatan). */
+  shiftPost(fn) {
+    const before = this.post && this.stab.ready ? this.stab.px.map((c) => c.x) : null;
+    fn();
+    if (before) this.post.shift(this.stab.px.map((c, i) => c.x - before[i]));
   }
 
   /** Pose kepala dunia (titik asal kepala) dari pivot A dan quaternion q: T = A − k·R·a. */
@@ -205,6 +216,7 @@ export class PoseEngine {
 
   resetTracking() {
     this.stab?.reset();
+    this.post?.reset();
     this.pos.reset();
     this.rot.reset();
     this.tracked = false;
@@ -226,7 +238,7 @@ export class PoseEngine {
       // Pose dari PnP robust ±250 landmark kaku (stable.js); matriks MediaPipe hanya tebakan awal.
       const st = this.stab;
       st.fpx = fpx;
-      st.setScale(this.kSm);
+      this.shiftPost(() => st.setScale(this.kSm));
       let prior = null;
       if (mat) { const d = decomposeMatrix(mat.data); prior = { R: d.R, T: d.t }; }
       else if (!st.R) {
@@ -347,8 +359,9 @@ export class PoseEngine {
       }
     }
     if (this.tracker === "stable") {
-      this.stab.setScale(k);
+      this.shiftPost(() => this.stab.setScale(k));
       this.stab.filter(sm, t, -sm.A[2]);
+      this.post?.setNoise(sm.sigmaPx);
       const sp = this.stabPose(...(() => { const a = this.stab.at(this.stab.o.lead); return [a.A, a.q]; })());
       this.tracked = true;
       return this.snapshot({ p: sp.position, q: sp.quaternion, k, angles, quality, calibrated, frame });
@@ -371,7 +384,7 @@ export class PoseEngine {
     const dy = this.dyBuf.length >= MIN_CALIB ? clamp(median(this.dyBuf) * ANCHOR_W[1], -ANCHOR_CLAMP, ANCHOR_CLAMP) : 0;
     const dz = this.dzBuf.length >= MIN_CALIB ? clamp(median(this.dzBuf) * ANCHOR_W[2], -ANCHOR_CLAMP, ANCHOR_CLAMP) : 0;
     const pf = this.computeFit(s.k);
-    if (this.stab && pf?.fit) this.stab.setPivot(pf.fit.position, s.k);
+    if (this.stab && pf?.fit) this.shiftPost(() => this.stab.setPivot(pf.fit.position, s.k));
     return {
       tracked: true,
       fit: pf?.fit ?? null,
