@@ -34,3 +34,20 @@ Skrip memberi id berikutnya (f24, f25, …), menyalin berkas, memperbarui `front
 
 ## Prompt siap tempel untuk Hermes
 > Tugasmu memposting produk ke TryLens. Jangan pernah push ke `deploy`/`main`. Gunakan repo `msamifahmi/TryLens`: checkout `main`, pull, lalu di `frontend/` jalankan `npm run product:add -- --from <folder> --name "<nama>" --price <rupiah> --style <…> --color <…> --merchant <m1–m6> --cat <Pria|Wanita|Anak> --push`. Pastikan folder berisi main.jpg (wajib) dan model.glb bila ada. Laporkan URL PR. Jangan merge sendiri.
+
+## Banyak produk sekaligus (mis. f24–f29) — satu PR, bukan enam
+Jalankan skrip TANPA `--push` untuk tiap produk (hanya menulis berkas), lalu commit sekali:
+```
+cd TryLens && git fetch origin && git checkout -b produk/batch-f24-f29 origin/main
+cd frontend
+npm run product:add -- --id f24 --name "Aurora Round" --price 249000 --style round --color gold --merchant m1 --cat Wanita
+npm run product:add -- --id f25 --name "..." --price ... --style ... --color ... --merchant m2 --cat Pria
+# … ulangi sampai f29. Foto yang SUDAH ada di frontend/public/products/fNN/ otomatis dipakai (tanpa --from).
+cd .. && git add frontend/public && git commit -m "Produk baru f24-f29" && git push -u origin produk/batch-f24-f29
+gh api repos/msamifahmi/TryLens/pulls -f title="Produk baru f24-f29" -f head=produk/batch-f24-f29 -f base=main -f body="Produk baru"
+```
+
+## Jangan tulis catalog.json dengan tangan
+- JSON tidak boleh berisi komentar (`// …`) atau koma di akhir — satu karakter salah dan SELURUH katalog tambahan diabaikan. Skrip `product:add` menulisnya dengan benar.
+- Foto yang sudah terlanjur ada tidak perlu di-copy lagi: pakai `--id fNN` saja (tanpa `--from`).
+- Foto di cabang `deploy` tidak ikut: pastikan berkasnya ada di cabang fitur (`git status` harus menunjukkan `frontend/public/products/fNN/`).

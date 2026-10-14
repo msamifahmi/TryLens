@@ -26,8 +26,10 @@ const COLORS = ["brown", "black", "gold", "tort", "clear", "blue", "navy", "red"
 const CATS = ["Pria", "Wanita", "Anak"];
 const IMG = ["main.jpg", "side.jpg", "detail.jpg", "close.jpg"];
 
-const from = args.from && path.resolve(String(args.from).replace(/^~/, process.env.HOME || "~"));
-if (!from || !fs.existsSync(from)) die("--from <folder berkas lokal> wajib dan harus ada");
+// --from opsional: bila dihilangkan, dipakai foto yang SUDAH ada di frontend/public/products/<id>/ (mis. sudah terlanjur di-copy).
+const idArg = args.id ? String(args.id) : null;
+const from = args.from ? path.resolve(String(args.from).replace(/^~/, process.env.HOME || "~")) : idArg ? path.join(root, "public/products", idArg) : null;
+if (!from || !fs.existsSync(from)) die("Beri --from <folder berkas lokal>, atau --id fNN bila foto sudah ada di frontend/public/products/fNN/");
 if (!fs.existsSync(path.join(from, "main.jpg"))) die(`${from}/main.jpg tidak ada (foto utama wajib)`);
 const name = String(args.name || ""); if (name.length < 3) die("--name wajib (min 3 huruf)");
 const price = Number(args.price); if (!(price >= 10000 && price <= 50000000)) die("--price wajib, dalam rupiah (mis. 249000)");
@@ -47,16 +49,18 @@ const merchant = merchants.find((m) => m.id === (args.merchant || "m1")); if (!m
 const usedNums = [...src.matchAll(/"f"\s*\+\s*i/g)].length ? Array.from({ length: 24 }, (_, i) => i) : [];
 for (const p of cat0.products || []) usedNums.push(Number(String(p.id).slice(1)));
 const next = Math.max(23, ...usedNums.filter(Number.isFinite)) + 1;
-const id = args.id ? String(args.id) : "f" + next;
+const id = idArg || "f" + next;
 if (!/^f\d+$/.test(id)) die("--id harus berbentuk f<angka>");
 const replacing = (cat0.products || []).some((p) => p.id === id);
 if (!replacing && Number(id.slice(1)) <= 23) die(`${id} sudah dipakai produk bawaan (f0–f23)`);
 
 const dest = path.join(root, "public/products", id);
 fs.mkdirSync(dest, { recursive: true });
-for (const f of IMG) if (fs.existsSync(path.join(from, f))) fs.copyFileSync(path.join(from, f), path.join(dest, f));
+const same = path.resolve(from) === path.resolve(dest);
+const put = (f) => { if (!same) fs.copyFileSync(path.join(from, f), path.join(dest, f)); };
+for (const f of IMG) if (fs.existsSync(path.join(from, f))) put(f);
 const hasModel = fs.existsSync(path.join(from, "model.glb"));
-if (hasModel) fs.copyFileSync(path.join(from, "model.glb"), path.join(dest, "model.glb"));
+if (hasModel) put("model.glb");
 
 const prod = {
   id, name, style, colorKey, price, oldPrice, merchant: merchant.name, merchantId: merchant.id, city: merchant.city.split(",")[0], cat,
