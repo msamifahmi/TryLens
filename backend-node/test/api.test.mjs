@@ -11,7 +11,7 @@ import * as FE from "../../frontend/src/lib/ecommerce.js";
 import * as BE from "../src/ecommerce.js";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tl-"));
-const app = createApp({ dbPath: ":memory:", uploadsDir: path.join(dir, "up"), webhookSecret: "s3cret", paymentProvider: "sandbox" });
+const app = createApp({ dbPath: ":memory:", uploadsDir: path.join(dir, "up"), webhookSecret: "s3cret", paymentProvider: "sandbox", adminToken: "admin-token-untuk-uji-1234567890" });
 const server = app.listen(0);
 const base = `http://127.0.0.1:${server.address().port}`;
 
@@ -418,6 +418,84 @@ test("Ukuran frame: disimpan, divalidasi, tidak hilang saat ubah field lain; sal
   assert.equal(none.body.frame.size ?? null, null, "tanpa ukuran → null (fit otomatis ke wajah)");
   const keep = await c.req("PUT", "/api/partner/frames/u-1", { name: "Frame Ukuran 2" });
   assert.equal(keep.body.frame.size.lensWidthMm, 52, "ubah field lain tidak menghapus ukuran");
+});
+
+/* ---------------------------------------------------------------- katalog admin */
+const AH = { Authorization: "Bearer admin-token-untuk-uji-1234567890" };
+test("Admin: tanpa/dengan token salah → 401; tanpa header X-TryLens → 403", async () => {
+  const c = new Client();
+  assert.equal((await c.req("GET", "/api/admin/products")).status, 401);
+  assert.equal((await c.req("GET", "/api/admin/products", undefined, { headers: { Authorization: "Bearer salah" } })).status, 401);
+  const res = await fetch(base + "/api/admin/products", { method: "POST", headers: { ...AH, "Content-Type": "application/json" }, body: "{}" });
+  assert.equal(res.status, 403);
+});
+
+test("Admin: toko + produk dibuat, divalidasi, diubah; id otomatis mulai f24", async () => {
+  const c = new Client();
+  const m = await c.req("POST", "/api/admin/merchants", { id: "m1", name: "Optik Kusuma", city: "Surakarta, Jawa Tengah", whatsapp: "081234500001", links: { instagram: "https://instagram.com/optikkusuma", shopee: "https://evil.com/x" } }, { headers: AH });
+  assert.equal(m.status, 400, "tautan shopee di domain lain ditolak");
+  const m2 = await c.req("POST", "/api/admin/merchants", { id: "m1", name: "Optik Kusuma", city: "Surakarta, Jawa Tengah", whatsapp: "081234500001", links: { instagram: "https://instagram.com/optikkusuma" } }, { headers: AH });
+  assert.equal(m2.status, 201);
+  assert.equal(m2.body.merchant.whatsapp, "6281234500001");
+  const bad1 = await c.req("POST", "/api/admin/products", { name: "X", merchantId: "m1", style: "round", colorKey: "gold", category: "Wanita", price: 100 }, { headers: AH });
+  assert.equal(bad1.status, 400);
+  const bad2 = await c.req("POST", "/api/admin/products", { name: "Aurora Round", merchantId: "nope", style: "round", colorKey: "gold", category: "Wanita", price: 249000 }, { headers: AH });
+  assert.equal(bad2.status, 400);
+  const ok = await c.req("POST", "/api/admin/products", { name: "Aurora Round", merchantId: "m1", style: "round", colorKey: "gold", category: "Wanita", price: 249000, oldPrice: 329000, stock: 12, buy: { tokopedia: "https://tokopedia.com/optikkusuma/aurora" }, size: { lensWidthMm: 52, bridgeMm: 18, templeMm: 140 } }, { headers: AH });
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.product.id, "f24");
+  const two = await c.req("POST", "/api/admin/products", { name: "Boreal", merchantId: "m1", style: "square", colorKey: "black", category: "Pria", price: 199000 }, { headers: AH });
+  assert.equal(two.body.product.id, "f25");
+  const pat = await c.req("PATCH", "/api/admin/products/f24", { price: 259000, stock: 5 }, { headers: AH });
+  assert.equal(pat.body.product.price, 259000);
+  assert.equal(pat.body.product.size.lensWidthMm, 52, "PATCH sebagian tidak menghapus field lain");
+  assert.equal((await c.req("PATCH", "/api/admin/products/f24", { oldPrice: 100 }, { headers: AH })).status, 400, "harga coret ≤ harga jual ditolak");
+  assert.equal((await c.req("DELETE", "/api/admin/merchants/m1", undefined, { headers: AH })).status, 409, "toko berproduk tak bisa dihapus");
+});
+
+test("Admin: berkas — foto JPEG & GLB diterima, non-JPEG 415; model menyalakan vto", async () => {
+  const c = new Client();
+  assert.equal((await c.req("PUT", "/api/admin/products/f24/assets/photo-0", Buffer.from("GIF89a....."), { raw: true, headers: AH })).status, 415);
+  assert.equal((await c.req("PUT", "/api/admin/products/f24/assets/photo-1", jpeg, { raw: true, headers: AH })).status, 400, "foto utama dulu");
+  const p = await c.req("PUT", "/api/admin/products/f24/assets/photo-0", jpeg, { raw: true, headers: AH });
+  assert.equal(p.body.product.photos, 1);
+  const g = await c.req("PUT", "/api/admin/products/f24/assets/model", glb(), { raw: true, headers: AH });
+  assert.equal(g.body.product.hasModel, true);
+  assert.equal(g.body.product.vto, true);
+  assert.equal((await c.req("GET", "/media/f24/main.jpg")).status, 200);
+});
+
+test("Katalog publik memuat produk admin (assets /media), menyembunyikan yang published=false, dan menimpa id bawaan", async () => {
+  const c = new Client();
+  let cat = (await c.req("GET", "/api/catalog")).body;
+  const f24 = cat.products.find((x) => x.id === "f24");
+  assert.equal(f24.price, 259000);
+  assert.equal(f24.merchant, "Optik Kusuma");
+  assert.equal(f24.assets.base, "/media/f24");
+  assert.equal(f24.badge, "-21%");
+  assert.ok(cat.merchants.some((m) => m.id === "m1"));
+  await c.req("PATCH", "/api/admin/products/f25", { published: false }, { headers: AH });
+  cat = (await c.req("GET", "/api/catalog")).body;
+  assert.ok(!cat.products.some((x) => x.id === "f25"));
+  assert.ok(cat.hidden.includes("f25"));
+});
+
+test("Admin: hapus produk menghapus berkasnya; ekspor memuat semua baris", async () => {
+  const c = new Client();
+  assert.equal((await c.req("DELETE", "/api/admin/products/f24", undefined, { headers: AH })).status, 200);
+  assert.equal((await c.req("GET", "/media/f24/main.jpg")).status, 404);
+  const ex = await c.req("GET", "/api/admin/export", undefined, { headers: AH });
+  assert.equal(ex.body.products.length, 1);
+  assert.equal(ex.body.merchants.length, 1);
+});
+
+test("Admin nonaktif bila ADMIN_TOKEN kosong/pendek (503)", async () => {
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), "tl2-"));
+  const a2 = createApp({ dbPath: ":memory:", uploadsDir: dir2, adminToken: "pendek" });
+  const s2 = a2.listen(0);
+  const res = await fetch(`http://127.0.0.1:${s2.address().port}/api/admin/products`, { headers: { "X-TryLens": "1", Authorization: "Bearer pendek" } });
+  assert.equal(res.status, 503);
+  s2.close(); a2.close(); fs.rmSync(dir2, { recursive: true, force: true });
 });
 
 let fail = 0;

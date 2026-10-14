@@ -1,53 +1,38 @@
-# Panduan: Hermes memposting produk ke TryLens
+# Hermes: mengelola produk TryLens (basis data, tanpa git)
 
-Aturan emas: **Hermes tidak pernah push ke `deploy` atau langsung ke `main`.** Cabang `deploy` ditimpa otomatis oleh GitHub Actions setiap `main` berubah; apa pun yang didorong ke sana hilang.
-Jalurnya: berkas lokal → cabang fitur `produk/…` → Pull Request ke `main` → kamu merge → Actions membangun ulang `deploy` → hPanel Git "Deploy" → `try-lens.id`.
+Produk disimpan di **SQLite di server API** (tabel `products` & `merchants`), bukan JSON di repo. Hermes tidak perlu git, PR, atau deploy frontend: ia memanggil API admin, lalu produk tampil di situs dalam ±30 detik.
 
-## Siapkan folder produk (lokal)
+## Setup sekali
+1. Server API sudah berjalan (lihat `docs/DEPLOY-BACKEND.md`) dengan `ADMIN_TOKEN` terisi.
+2. Di mesin Hermes (Node ≥ 20): salin satu berkas `backend-node/scripts/tl.mjs` (tanpa dependensi).
+3. Set environment:
+   ```
+   export TRYLENS_API=https://api.try-lens.id
+   export TRYLENS_ADMIN_TOKEN=<ADMIN_TOKEN>
+   ```
+
+## Perintah
 ```
-kacamata-aurora/
-├── main.jpg      (wajib, rasio 1:1, ≥800px)
-├── side.jpg  detail.jpg  close.jpg   (opsional)
-└── model.glb     (opsional → Coba Virtual 3D)
+node tl.mjs merchants                      # daftar toko & id (m1…m6)
+node tl.mjs list [--merchant m1]
+node tl.mjs add --name "Aurora Round" --price 249000 --old-price 329000 \
+    --style round --color gold --merchant m1 --cat Wanita --stock 12 \
+    --desc "Frame round emas" --tokopedia https://tokopedia.com/toko/aurora \
+    --lens 52 --bridge 18 --temple 140 \
+    --photo main.jpg --photo side.jpg --model model.glb
+node tl.mjs set f24 --price 259000 --stock 5        # ubah apa saja; --hide / --publish
+node tl.mjs photo f24 0 ./main.jpg                  # ganti foto slot 0–3
+node tl.mjs model f24 ./model.glb                   # model 3D (Coba Virtual otomatis aktif)
+node tl.mjs rm f24
+node tl.mjs export > cadangan.json
 ```
+Pilihan: style = aviator|round|square|cateye|rect|browline · color = brown|black|gold|tort|clear|blue|navy|red · cat = Pria|Wanita|Anak.
+ID otomatis (f24, f25, …). Foto harus JPEG ≤ 5 MB; `.glb` ≤ 12 MB. Server menolak data yang tidak valid dengan pesan jelas.
 
-## Langkah (sekali setup)
-1. `git clone https://github.com/msamifahmi/TryLens.git && cd TryLens && git checkout main`
-2. `cd frontend && npm install`
-3. Pastikan `gh auth status` login (untuk membuka PR); tanpa `gh`, buka PR manual dari cabang yang dipush.
-
-## Tiap produk baru
-```
-cd TryLens && git checkout main && git pull
-cd frontend
-npm run product:add -- --from ~/kacamata-aurora --name "Aurora Round" --price 249000 \
-   --old-price 329000 --style round --color gold --merchant m1 --cat Wanita --push
-```
-Pilihan: style = aviator|round|square|cateye|rect|browline · color = brown|black|gold|tort|clear|blue|navy|red · cat = Pria|Wanita|Anak · merchant = m1–m6.
-Skrip memberi id berikutnya (f24, f25, …), menyalin berkas, memperbarui `frontend/public/catalog.json`, commit, push cabang `produk/<id>-…`, dan membuka PR.
-
-## Setelah itu (kamu)
-1. Buka PR → cek Preview/Files changed → **Merge** ke `main`.
-2. Tunggu workflow "Deploy" hijau (±2 menit).
-3. hPanel → Git → repo → cabang `deploy` → **Deploy**.
-4. Cek `https://try-lens.id/version.txt` (commit baru) lalu hard-refresh.
+## Kamu (pemilik): edit manual
+Buka `https://api.try-lens.id/admin`, masukkan ADMIN_TOKEN. Ubah nama/harga/stok langsung di tabel (tersimpan otomatis), klik **Detail** untuk tautan beli, ukuran, deskripsi, foto, model; **Unduh cadangan** untuk ekspor JSON.
 
 ## Prompt siap tempel untuk Hermes
-> Tugasmu memposting produk ke TryLens. Jangan pernah push ke `deploy`/`main`. Gunakan repo `msamifahmi/TryLens`: checkout `main`, pull, lalu di `frontend/` jalankan `npm run product:add -- --from <folder> --name "<nama>" --price <rupiah> --style <…> --color <…> --merchant <m1–m6> --cat <Pria|Wanita|Anak> --push`. Pastikan folder berisi main.jpg (wajib) dan model.glb bila ada. Laporkan URL PR. Jangan merge sendiri.
+> Kamu mengelola katalog TryLens lewat `node tl.mjs` (env TRYLENS_API dan TRYLENS_ADMIN_TOKEN sudah di-set). Jangan pakai git dan jangan menulis JSON katalog. Untuk produk baru jalankan `node tl.mjs add …` dengan foto JPEG (--photo, utama dulu) dan model (--model) bila ada; cek hasil dengan `node tl.mjs list`. Untuk perubahan harga/nama/stok pakai `node tl.mjs set <id> …`. Jika server menolak data, baca pesan galatnya, perbaiki, ulangi. Laporkan id dan ringkasan tiap produk yang dibuat/diubah. Jangan menghapus (`rm`) tanpa izin eksplisit.
 
-## Banyak produk sekaligus (mis. f24–f29) — satu PR, bukan enam
-Jalankan skrip TANPA `--push` untuk tiap produk (hanya menulis berkas), lalu commit sekali:
-```
-cd TryLens && git fetch origin && git checkout -b produk/batch-f24-f29 origin/main
-cd frontend
-npm run product:add -- --id f24 --name "Aurora Round" --price 249000 --style round --color gold --merchant m1 --cat Wanita
-npm run product:add -- --id f25 --name "..." --price ... --style ... --color ... --merchant m2 --cat Pria
-# … ulangi sampai f29. Foto yang SUDAH ada di frontend/public/products/fNN/ otomatis dipakai (tanpa --from).
-cd .. && git add frontend/public && git commit -m "Produk baru f24-f29" && git push -u origin produk/batch-f24-f29
-gh api repos/msamifahmi/TryLens/pulls -f title="Produk baru f24-f29" -f head=produk/batch-f24-f29 -f base=main -f body="Produk baru"
-```
-
-## Jangan tulis catalog.json dengan tangan
-- JSON tidak boleh berisi komentar (`// …`) atau koma di akhir — satu karakter salah dan SELURUH katalog tambahan diabaikan. Skrip `product:add` menulisnya dengan benar.
-- Foto yang sudah terlanjur ada tidak perlu di-copy lagi: pakai `--id fNN` saja (tanpa `--from`).
-- Foto di cabang `deploy` tidak ikut: pastikan berkasnya ada di cabang fitur (`git status` harus menunjukkan `frontend/public/products/fNN/`).
+Catatan: foto f2–f29 yang sebelumnya didorong ke cabang `deploy` tidak dipakai lagi; unggah ulang lewat `photo`.

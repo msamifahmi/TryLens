@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin Katalog TryLens</title>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--ink:#14202e;--mute:#64748b;--line:#e2e8f0;--brand:#427ab5;--bad:#c0392b;--ok:#1e8e5a}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1621;--card:#16212e;--ink:#e8eef5;--mute:#93a3b5;--line:#243142;--brand:#6aa3dd}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,sans-serif}
+header{display:flex;gap:12px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+h1{font-size:16px;margin:0;flex:1}main{padding:16px;max-width:1280px;margin:auto}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+button{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--brand);border:1px solid var(--line)}button.del{background:var(--bad)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}th{font-size:12px;color:var(--mute);font-weight:600}
+td input{padding:5px 7px}td.n input{width:110px}td.name input{min-width:180px}
+.wrap{overflow-x:auto}.row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}label{font-size:12px;color:var(--mute);display:block;margin-bottom:3px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;max-width:90vw;display:none}
+.thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--line)}.tag{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--line)}
+.off{opacity:.55}dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);max-width:720px;width:94vw;padding:18px}
+</style>
+</head>
+<body>
+<header><h1>Admin Katalog TryLens</h1><span id="who" class="tag"></span><button class="ghost" id="out" hidden>Keluar</button></header>
+<main>
+<div id="login" class="card" style="max-width:420px;margin:60px auto">
+  <p>Masukkan <b>ADMIN_TOKEN</b> server. Token hanya disimpan di tab ini (sessionStorage), tidak pernah dikirim ke pihak lain.</p>
+  <input id="tok" type="password" placeholder="ADMIN_TOKEN" autocomplete="off"><div style="height:10px"></div><button id="go">Masuk</button>
+</div>
+<div id="app" hidden>
+  <div class="row"><button id="add">+ Produk baru</button><button class="ghost" id="addM">+ Toko</button><button class="ghost" id="exp">Unduh cadangan</button>
+    <input id="q" placeholder="Cari nama / id…" style="max-width:240px"><select id="fm" style="max-width:200px"></select></div>
+  <div class="wrap"><table><thead><tr><th></th><th>ID</th><th>Nama</th><th>Toko</th><th>Harga</th><th>Harga coret</th><th>Stok</th><th>Tampil</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  <h2 style="font-size:15px;margin:22px 0 8px">Toko</h2>
+  <div class="wrap"><table><thead><tr><th>ID</th><th>Nama</th><th>Kota</th><th>WhatsApp</th><th>Tampil</th><th></th></tr></thead><tbody id="mrows"></tbody></table></div>
+</div>
+</main>
+<dialog id="dlg"><form method="dialog" id="form"></form></dialog>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STYLES=["aviator","round","square","cateye","rect","browline"],COLORS=["brown","black","gold","tort","clear","blue","navy","red"],CATS=["Pria","Wanita","Anak"];
+let T=sessionStorage.getItem("tl_admin")||"",P=[],M=[];
+const toast=(m,bad)=>{const t=$("#toast");t.textContent=m;t.style.background=bad?"var(--bad)":"";t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",3500)};
+async function api(method,path,body,raw){
+  const h={"X-TryLens":"1",Authorization:"Bearer "+T};let b;
+  if(raw){b=body}else if(body!==undefined){h["Content-Type"]="application/json";b=JSON.stringify(body)}
+  const r=await fetch("/api/admin"+path,{method,headers:h,body:b});const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||("Gagal ("+r.status+")"));return j}
+const rp=n=>"Rp"+Number(n).toLocaleString("id-ID");
+async function load(){const[a,b]=await Promise.all([api("GET","/products"),api("GET","/merchants")]);P=a.products;M=b.merchants;draw()}
+function draw(){
+  const f=$("#fm");if(!f.options.length||f.dataset.n!=M.length){f.innerHTML='<option value="">Semua toko</option>'+M.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");f.dataset.n=M.length}
+  const q=$("#q").value.toLowerCase(),fm=f.value;
+  $("#rows").innerHTML=P.filter(p=>(!fm||p.merchantId===fm)&&(!q||(p.name+p.id).toLowerCase().includes(q))).map(p=>`<tr class="${p.published?"":"off"}" data-id="${esc(p.id)}">
+   <td>${p.photos?`<img class="thumb" loading="lazy" src="/media/${esc(p.id)}/main.jpg?v=${p.mediaV}">`:'<div class="thumb"></div>'}</td>
+   <td>${esc(p.id)}${p.hasModel?' <span class="tag">3D</span>':""}</td>
+   <td class="name"><input data-k="name" value="${esc(p.name)}"></td>
+   <td>${esc((M.find(m=>m.id===p.merchantId)||{}).name||p.merchantId)}</td>
+   <td class="n"><input data-k="price" type="number" value="${p.price}"></td>
+   <td class="n"><input data-k="oldPrice" type="number" value="${p.oldPrice||""}"></td>
+   <td class="n"><input data-k="stock" type="number" value="${p.stock}" style="width:80px"></td>
+   <td><input data-k="published" type="checkbox" ${p.published?"checked":""} style="width:auto"></td>
+   <td><button class="ghost" data-act="edit">Detail</button></td></tr>`).join("");
+  $("#mrows").innerHTML=M.map(m=>`<tr class="${m.published?"":"off"}" data-id="${esc(m.id)}"><td>${esc(m.id)}</td><td>${esc(m.name)}</td><td>${esc(m.city)}</td><td>${esc(m.whatsapp)}</td><td>${m.published?"ya":"tidak"}</td><td><button class="ghost" data-act="editM">Ubah</button></td></tr>`).join("")}
+$("#rows").addEventListener("change",async e=>{const tr=e.target.closest("tr");if(!tr||!e.target.dataset.k)return;const k=e.target.dataset.k;
+  const v=e.target.type==="checkbox"?e.target.checked:e.target.value;
+  try{const r=await api("PATCH","/products/"+tr.dataset.id,{[k]:k==="oldPrice"&&!v?null:v});P=P.map(p=>p.id===r.product.id?r.product:p);toast("Tersimpan · "+r.product.name);draw()}catch(x){toast(x.message,1);load()}});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const id=b.closest("tr").dataset.id;
+  if(b.dataset.act==="edit")prodForm(P.find(p=>p.id===id));if(b.dataset.act==="editM")merForm(M.find(m=>m.id===id))});
+function field(l,k,v,t="text"){return `<div><label>${l}</label><input name="${k}" type="${t}" value="${esc(v??"")}"></div>`}
+function sel(l,k,opts,v){return `<div><label>${l}</label><select name="${k}">${opts.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`}
+function prodForm(p){const n=!p;p=p||{style:"round",colorKey:"black",category:"Pria",merchantId:M[0]?.id,buy:{},size:{},published:true,stock:10};
+  $("#form").innerHTML=`<h3>${n?"Produk baru":"Ubah "+esc(p.id)}</h3><div class="grid">
+   ${field("Nama","name",p.name)}<div><label>Toko</label><select name="merchantId">${M.map(m=>`<option value="${esc(m.id)}" ${m.id===p.merchantId?"selected":""}>${esc(m.name)}</option>`).join("")}</select></div>
+   ${sel("Gaya","style",STYLES,p.style)}${sel("Warna","colorKey",COLORS,p.colorKey)}${sel("Kategori","category",CATS,p.category)}
+   ${field("Harga","price",p.price,"number")}${field("Harga coret","oldPrice",p.oldPrice,"number")}${field("Stok","stock",p.stock,"number")}
+   ${field("Tokopedia","buy_tokopedia",p.buy?.tokopedia)}${field("Shopee","buy_shopee",p.buy?.shopee)}${field("Lazada","buy_lazada",p.buy?.lazada)}${field("TikTok Shop","buy_tiktokshop",p.buy?.tiktokshop)}${field("Website","buy_website",p.buy?.website)}
+   ${field("Lebar lensa mm","lensWidthMm",p.size?.lensWidthMm,"number")}${field("Jembatan mm","bridgeMm",p.size?.bridgeMm,"number")}${field("Gagang mm","templeMm",p.size?.templeMm,"number")}${field("Material","material",p.size?.material)}</div>
+   <div style="margin-top:10px"><label>Deskripsi</label><textarea name="description" rows="3">${esc(p.description)}</textarea></div>
+   <div class="row" style="margin-top:10px"><label><input type="checkbox" name="published" ${p.published?"checked":""} style="width:auto"> Tampil di situs</label><label><input type="checkbox" name="vto" ${p.vto?"checked":""} style="width:auto"> Coba Virtual aktif</label></div>
+   ${n?"":`<div class="card"><b>Berkas</b> · ${p.photos} foto${p.hasModel?" + model 3D":""}<div class="grid" style="margin-top:8px">${[0,1,2,3].map(i=>`<div><label>Foto ${i+1} (JPEG)</label><input type="file" accept="image/jpeg" data-up="photo-${i}"></div>`).join("")}<div><label>Model .glb</label><input type="file" accept=".glb" data-up="model"></div></div></div>`}
+   <div class="row"><button value="save" type="button" id="sv">Simpan</button>${n?"":'<button type="button" class="del" id="dp">Hapus produk</button>'}<button class="ghost" type="button" onclick="$('#dlg').close()">Tutup</button></div>`;
+  $("#dlg").showModal();
+  $("#sv").onclick=async()=>{const f=new FormData($("#form")),g=k=>f.get(k);const num=k=>g(k)===""||g(k)==null?null:Number(g(k));
+   const body={name:g("name"),merchantId:g("merchantId"),style:g("style"),colorKey:g("colorKey"),category:g("category"),price:num("price"),oldPrice:num("oldPrice"),stock:num("stock")??0,description:g("description"),published:f.has("published"),vto:f.has("vto"),
+    buy:{tokopedia:g("buy_tokopedia"),shopee:g("buy_shopee"),lazada:g("buy_lazada"),tiktokshop:g("buy_tiktokshop"),website:g("buy_website")},
+    size:{lensWidthMm:g("lensWidthMm"),bridgeMm:g("bridgeMm"),templeMm:g("templeMm"),material:g("material")}};
+   try{await (n?api("POST","/products",body):api("PATCH","/products/"+p.id,body));toast("Tersimpan");$("#dlg").close();load()}catch(x){toast(x.message,1)}};
+  if(!n){$("#dp").onclick=async()=>{if(!confirm("Hapus "+p.name+" beserta fotonya? Tidak bisa dibatalkan."))return;try{await api("DELETE","/products/"+p.id);$("#dlg").close();toast("Dihapus");load()}catch(x){toast(x.message,1)}};
+   $("#form").querySelectorAll("[data-up]").forEach(i=>i.onchange=async()=>{const file=i.files[0];if(!file)return;try{const r=await api("PUT",`/products/${p.id}/assets/${i.dataset.up}`,await file.arrayBuffer(),true);toast("Terunggah"+(r.warnings?.length?" · "+r.warnings[0]:""));P=P.map(x=>x.id===r.product.id?r.product:x);draw()}catch(x){toast(x.message,1)}})}}
+function merForm(m){const n=!m;m=m||{published:true,color:"#427AB5",links:{}};
+  $("#form").innerHTML=`<h3>${n?"Toko baru":"Ubah "+esc(m.id)}</h3><div class="grid">${field("Nama","name",m.name)}${field("Kota","city",m.city)}${field("Provinsi","province",m.province)}${field("WhatsApp (628…)","whatsapp",m.whatsapp)}${field("Telepon","phone",m.phone)}${field("Warna","color",m.color,"color")}${field("Instagram","l_instagram",m.links?.instagram)}${field("X","l_x",m.links?.x)}${field("Tokopedia","l_tokopedia",m.links?.tokopedia)}${field("Shopee","l_shopee",m.links?.shopee)}</div>
+  <div class="row" style="margin-top:10px"><label><input type="checkbox" name="published" ${m.published?"checked":""} style="width:auto"> Tampil di situs</label></div>
+  <div class="row"><button type="button" id="sv">Simpan</button><button class="ghost" type="button" onclick="$('#dlg').close()">Tutup</button></div>`;$("#dlg").showModal();
+  $("#sv").onclick=async()=>{const f=new FormData($("#form")),g=k=>f.get(k);const body={name:g("name"),city:g("city"),province:g("province"),whatsapp:g("whatsapp"),phone:g("phone"),color:g("color"),published:f.has("published"),links:{instagram:g("l_instagram"),x:g("l_x"),tokopedia:g("l_tokopedia"),shopee:g("l_shopee")}};
+   try{await (n?api("POST","/merchants",body):api("PATCH","/merchants/"+m.id,body));toast("Tersimpan");$("#dlg").close();load()}catch(x){toast(x.message,1)}}}
+$("#add").onclick=()=>prodForm();$("#addM").onclick=()=>merForm();$("#q").oninput=draw;$("#fm").onchange=draw;
+$("#exp").onclick=async()=>{const j=await api("GET","/export");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:"application/json"}));a.download="trylens-katalog-"+new Date().toISOString().slice(0,10)+".json";a.click()};
+async function enter(){try{await api("GET","/ping");sessionStorage.setItem("tl_admin",T);$("#login").hidden=true;$("#app").hidden=false;$("#out").hidden=false;$("#who").textContent="admin";await load()}catch(x){sessionStorage.removeItem("tl_admin");$("#login").hidden=false;$("#app").hidden=true;toast(x.message,1)}}
+$("#go").onclick=()=>{T=$("#tok").value.trim();enter()};$("#tok").onkeydown=e=>{if(e.key==="Enter")$("#go").click()};
+$("#out").onclick=()=>{sessionStorage.removeItem("tl_admin");location.reload()};if(T)enter();
+</script>
+</body>
+</html>

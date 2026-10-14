@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node scripts/seed.mjs",
-    "test": "node test/api.test.mjs"
+    "test": "node test/api.test.mjs",
+    "import-catalog": "node scripts/import-catalog.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

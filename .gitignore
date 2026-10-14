@@ -13,3 +13,8 @@ Thumbs.db
 backend-node/data/*.db
 backend-node/data/*.db-*
 backend-node/uploads/
+
+# Basis data & unggahan backend (jangan masuk git)
+backend-node/data/*.db
+backend-node/data/*.db-*
+backend-node/uploads/

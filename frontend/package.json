@@ -18,8 +18,7 @@
     "test:glb": "node scripts/test-glb.mjs",
     "test:notif": "node scripts/test-notif.mjs",
     "test:modelfit": "node scripts/test-modelfit.mjs",
-    "test:models": "node scripts/test-models.mjs",
-    "product:add": "node scripts/add-product.mjs"
+    "test:models": "node scripts/test-models.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { todayStr } from "../pricing.js";
+import { publicCatalog } from "../catalogStore.js";
 
 const DAY = 86400e3;
 
@@ -43,6 +44,11 @@ export function catalogRouter({ db, svc }) {
       });
     }
     for (const m of merchants.values()) m.count = `${products.filter((p) => p.merchantId === m.id).length} frame`;
+    // Katalog TryLens (tabel products/merchants) — dikelola lewat /admin. Id yang sama menimpa data bawaan klien; yang baru ditambahkan.
+    const own = publicCatalog(db);
+    for (const m of own.merchants) merchants.set(m.id, m);
+    products.unshift(...own.products);
+    hidden.push(...own.hidden);
     res.setHeader("Cache-Control", "public, max-age=30");
     res.json({ products, merchants: [...merchants.values()], hidden, highlighted: [...highlighted], generatedAt: new Date().toISOString() });
   });

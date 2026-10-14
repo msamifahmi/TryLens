@@ -56,25 +56,8 @@ export function mergeCatalog(data) {
   }
 }
 
-/** Mode demo (tanpa backend): produk tambahan dari public/catalog.json (ditulis `npm run product:add`, dipakai agen/Hermes). Hanya MENAMBAH produk baru. */
-async function loadStaticCatalog() {
-  try {
-    const r = await fetch(`/catalog.json?t=${Date.now()}`, { cache: "no-store" });
-    if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) return false;
-    const d = await r.json();
-    const products = (d.products || []).filter((p) => p?.id && !PRODUCTS.some((x) => x.id === p.id));
-    const merchants = (d.merchants || []).filter((m) => m?.id && !MERCHANTS.some((x) => x.id === m.id));
-    if (!products.length && !merchants.length && !(d.hidden || []).length) return false;
-    mergeCatalog({ products, merchants, hidden: d.hidden || [], highlighted: [] });
-    Object.assign(catalogInfo, { source: "static", loadedAt: Date.now() });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function loadCatalog() {
-  if (!backend.up) return loadStaticCatalog();
+  if (!backend.up) return false;
   try {
     mergeCatalog(await api("GET", "/api/catalog"));
     Object.assign(catalogInfo, { source: "server", loadedAt: Date.now() });

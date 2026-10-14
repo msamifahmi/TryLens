@@ -48,6 +48,44 @@ export function openDb(file) {
       created_at TEXT NOT NULL,
       paid_at TEXT
     );
+    -- Katalog milik TryLens (dikelola lewat /admin atau API admin). Frame buatan Mitra tetap di tabel frames.
+    CREATE TABLE IF NOT EXISTS merchants (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      city TEXT NOT NULL DEFAULT '',
+      province TEXT NOT NULL DEFAULT '',
+      initials TEXT NOT NULL DEFAULT '',
+      color TEXT NOT NULL DEFAULT '#427AB5',
+      whatsapp TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      link_instagram TEXT, link_x TEXT, link_tokopedia TEXT, link_shopee TEXT,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      merchant_id TEXT NOT NULL REFERENCES merchants(id),
+      name TEXT NOT NULL,
+      style TEXT NOT NULL,
+      color_key TEXT NOT NULL,
+      category TEXT NOT NULL,
+      price INTEGER NOT NULL CHECK (price > 0),
+      old_price INTEGER CHECK (old_price IS NULL OR old_price > price),
+      stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+      description TEXT NOT NULL DEFAULT '',
+      buy_tokopedia TEXT, buy_shopee TEXT, buy_lazada TEXT, buy_tiktokshop TEXT, buy_website TEXT,
+      lens_width_mm REAL, lens_height_mm REAL, bridge_mm REAL, temple_mm REAL, frame_width_mm REAL, weight_g REAL, material TEXT,
+      vto INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      photos INTEGER NOT NULL DEFAULT 0,
+      has_model INTEGER NOT NULL DEFAULT 0,
+      rig TEXT,                         -- JSON hasil inspeksi .glb
+      media_v INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_products_merchant ON products(merchant_id);
     CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER NOT NULL);
   `);
   return db;
