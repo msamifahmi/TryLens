@@ -33,7 +33,7 @@ export function createApp(overrides = {}) {
     if (origin && config.corsOrigins.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-TryLens, X-Signature, Authorization");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-TryLens, X-Signature, Authorization, X-Admin-Token");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
       res.setHeader("Vary", "Origin");
     }

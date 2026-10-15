@@ -48,7 +48,7 @@ const STYLES=["aviator","round","square","cateye","rect","browline"],COLORS=["br
 let T=sessionStorage.getItem("tl_admin")||"",P=[],M=[];
 const toast=(m,bad)=>{const t=$("#toast");t.textContent=m;t.style.background=bad?"var(--bad)":"";t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",3500)};
 async function api(method,path,body,raw){
-  const h={"X-TryLens":"1",Authorization:"Bearer "+T};let b;
+  const h={"X-TryLens":"1",Authorization:"Bearer "+T,"X-Admin-Token":T};let b;
   if(raw){b=body}else if(body!==undefined){h["Content-Type"]="application/json";b=JSON.stringify(body)}
   const r=await fetch("/api/admin"+path,{method,headers:h,body:b});const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.error||("Gagal ("+r.status+")"));return j}

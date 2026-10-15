@@ -1,13 +1,13 @@
 # Hermes: mengelola produk TryLens (basis data, tanpa git)
 
-Produk disimpan di **SQLite di server API** (tabel `products` & `merchants`), bukan JSON di repo. Hermes tidak perlu git, PR, atau deploy frontend: ia memanggil API admin, lalu produk tampil di situs dalam ±30 detik.
+Produk disimpan di **SQLite di server** (tabel `products` & `merchants`; di hosting Single lewat `public/api/index.php`), bukan JSON di repo. Hermes tidak perlu git, PR, atau deploy frontend: ia memanggil API admin, lalu produk tampil di situs dalam ±30 detik.
 
 ## Setup sekali
-1. Server API sudah berjalan (lihat `docs/DEPLOY-BACKEND.md`) dengan `ADMIN_TOKEN` terisi.
+1. API sudah berjalan (lihat `docs/DEPLOY-BACKEND.md`) dengan token admin terisi.
 2. Di mesin Hermes (Node ≥ 20): salin satu berkas `backend-node/scripts/tl.mjs` (tanpa dependensi).
 3. Set environment:
    ```
-   export TRYLENS_API=https://api.try-lens.id
+   export TRYLENS_API=https://try-lens.id
    export TRYLENS_ADMIN_TOKEN=<ADMIN_TOKEN>
    ```
 
@@ -30,7 +30,7 @@ Pilihan: style = aviator|round|square|cateye|rect|browline · color = brown|blac
 ID otomatis (f24, f25, …). Foto harus JPEG ≤ 5 MB; `.glb` ≤ 12 MB. Server menolak data yang tidak valid dengan pesan jelas.
 
 ## Kamu (pemilik): edit manual
-Buka `https://api.try-lens.id/admin`, masukkan ADMIN_TOKEN. Ubah nama/harga/stok langsung di tabel (tersimpan otomatis), klik **Detail** untuk tautan beli, ukuran, deskripsi, foto, model; **Unduh cadangan** untuk ekspor JSON.
+Buka `https://try-lens.id/admin`, masukkan ADMIN_TOKEN. Ubah nama/harga/stok langsung di tabel (tersimpan otomatis), klik **Detail** untuk tautan beli, ukuran, deskripsi, foto, model; **Unduh cadangan** untuk ekspor JSON.
 
 ## Prompt siap tempel untuk Hermes
 > Kamu mengelola katalog TryLens lewat `node tl.mjs` (env TRYLENS_API dan TRYLENS_ADMIN_TOKEN sudah di-set). Jangan pakai git dan jangan menulis JSON katalog. Untuk produk baru jalankan `node tl.mjs add …` dengan foto JPEG (--photo, utama dulu) dan model (--model) bila ada; cek hasil dengan `node tl.mjs list`. Untuk perubahan harga/nama/stok pakai `node tl.mjs set <id> …`. Jika server menolak data, baca pesan galatnya, perbaiki, ulangi. Laporkan id dan ringkasan tiap produk yang dibuat/diubah. Jangan menghapus (`rm`) tanpa izin eksplisit.

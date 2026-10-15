@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // CLI katalog TryLens untuk agen (Hermes) — tanpa dependensi, Node ≥ 20. Bicara ke API admin; TIDAK memakai git.
-//   export TRYLENS_API=https://api.try-lens.id   TRYLENS_ADMIN_TOKEN=...
+//   export TRYLENS_API=https://try-lens.id   TRYLENS_ADMIN_TOKEN=...
 //   node tl.mjs list [--merchant m1]
 //   node tl.mjs add --name "Aurora Round" --price 249000 --style round --color gold --merchant m1 --cat Wanita \
 //        [--old-price 329000] [--stock 12] [--desc "..."] [--tokopedia URL] [--shopee URL] [--lens 52 --bridge 18 --temple 140] \
@@ -13,10 +13,10 @@ import fs from "node:fs";
 const API = (process.env.TRYLENS_API || "").replace(/\/$/, "");
 const TOKEN = process.env.TRYLENS_ADMIN_TOKEN || "";
 const die = (m) => { console.error("✗ " + m); process.exit(1); };
-if (!API || !TOKEN) die("Set TRYLENS_API (mis. https://api.try-lens.id) dan TRYLENS_ADMIN_TOKEN.");
+if (!API || !TOKEN) die("Set TRYLENS_API (mis. https://try-lens.id) dan TRYLENS_ADMIN_TOKEN.");
 
 async function call(method, p, body, raw) {
-  const headers = { "X-TryLens": "1", Authorization: `Bearer ${TOKEN}` };
+  const headers = { "X-TryLens": "1", Authorization: `Bearer ${TOKEN}`, "X-Admin-Token": TOKEN }; // X-Admin-Token: cadangan bila hosting membuang Authorization
   if (!raw && body !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch(API + "/api/admin" + p, { method, headers, body: raw ? body : body === undefined ? undefined : JSON.stringify(body) });
   const j = await res.json().catch(() => ({}));

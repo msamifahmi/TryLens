@@ -1,29 +1,32 @@
-# Menjalankan backend (Node + SQLite) di produksi
+# Menjalankan katalog di produksi — hosting Single (PHP + SQLite), tanpa Node.js
 
-Frontend tetap statis di try-lens.id (cabang `deploy`). Backend berjalan terpisah di **api.try-lens.id** dan dibaca frontend lewat `VITE_API_ORIGIN`.
+Hosting **Single** Hostinger hanya PHP/HTML. Karena itu katalog berjalan lewat **`frontend/public/api/index.php`** (PHP + SQLite). Berkas ini ikut ter-deploy bersama situs (cabang `deploy` → `public_html/api/`), satu domain: tidak perlu subdomain, CORS, atau variabel `API_ORIGIN`.
+Kontraknya sama dengan backend Node, jadi halaman `/admin`, CLI `tl.mjs`, dan prompt Hermes persis sama. (Backend Node tetap ada untuk VPS/paket Node.js kelak.)
 
-## Syarat hosting
-Butuh Node.js ≥ 20 yang berjalan terus + disk yang persisten. Di Hostinger ini ada di paket yang menyediakan **Node.js Web App** (mis. Business/Cloud) atau **VPS**; paket shared dasar umumnya tidak. Cek hPanel dulu. `better-sqlite3` memakai modul native; di VPS pastikan `build-essential` + python3 terpasang.
+Yang ada di sisi PHP: katalog TryLens (produk + toko), admin, unggah foto/model. Yang **tidak** ada: akun/langganan/pembayaran Mitra — area Mitra tetap mode demo seperti sekarang.
 
-## Langkah (VPS / Node.js app)
-1. Subdomain `api.try-lens.id` → server, HTTPS aktif.
-2. `git clone` repo, `cd backend-node && npm ci --omit=dev`.
-3. Buat `.env` (lihat `.env.example`):
+## Langkah sekali (±10 menit, lewat hPanel → File Manager)
+1. **Cek PHP**: hPanel → Website → PHP Configuration → pastikan PHP ≥ 8.1 dan ekstensi **pdo_sqlite** / **sqlite3** tercentang. (Tidak ada? aktifkan; kalau tidak bisa, kabari aku — alternatifnya MySQL.)
+2. **Buat folder data DI LUAR public_html**: di File Manager, satu tingkat di atas `public_html` (folder domain try-lens.id), buat folder `trylens-data`.
+3. **Buat token admin** (acak, ≥ 24 karakter), mis. di terminal lokal: `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
+4. **Buat berkas `trylens-data/config.php`** isinya:
+   ```php
+   <?php return ['adminToken' => 'TOKEN-ACAK-ANDA'];
    ```
-   NODE_ENV=production
-   PORT=4000
-   DB_PATH=/var/trylens/trylens.db         # DI LUAR folder repo agar tidak hilang saat update
-   UPLOADS_DIR=/var/trylens/uploads
-   CORS_ORIGINS=https://try-lens.id,https://www.try-lens.id
-   ADMIN_TOKEN=<acak ≥24 karakter>
-   ```
-4. Isi katalog awal sekali: `npm run import-catalog` (6 toko + 24 produk bawaan; jangan `npm run seed`, itu akun demo).
-5. Jalankan: `node --env-file=.env server.js` (pakai pm2/systemd agar hidup terus).
-6. GitHub → Settings → Secrets and variables → Actions → **Variables** → `API_ORIGIN = https://api.try-lens.id`, lalu merge/ulang build agar frontend memakainya, lalu Deploy di hPanel.
-7. Cek: `https://api.try-lens.id/api/health` → `{"ok":true}`, `https://api.try-lens.id/admin` → halaman admin, `https://try-lens.id/version.txt`.
+5. Merge PR → tunggu workflow hijau → hPanel → Git → cabang `deploy` → **Deploy**.
+6. Cek: `https://try-lens.id/api/health` → `{"ok":true,…,"backend":"php-catalog"}`. Buka `https://try-lens.id/api/catalog` → 24 produk (katalog awal terisi otomatis saat pertama diakses).
+7. Buka `https://try-lens.id/admin`, masukkan token → edit harga/nama, unggah foto & model.
 
-## Cadangan
-Data = satu berkas SQLite + folder uploads. Salin berkala (`sqlite3 trylens.db ".backup cadangan.db"` + rsync `uploads/`), atau unduh ekspor JSON dari /admin.
+## Hermes
+`export TRYLENS_API=https://try-lens.id` dan `TRYLENS_ADMIN_TOKEN=<token>`, lalu `node tl.mjs …` (lihat `docs/HERMES.md`).
 
-## Keamanan
-`ADMIN_TOKEN` setara kunci penuh katalog: jangan masuk repo/chat; ganti bila bocor (ubah `.env`, restart). Percobaan salah dibatasi 10× per 10 menit per IP.
+## Cadangan & keamanan
+- Data = `trylens-data/trylens.db` + `trylens-data/uploads/` (di luar public_html, tidak ikut ter-deploy/terhapus saat Deploy). Unduh berkala lewat File Manager, atau tombol **Unduh cadangan** di /admin.
+- Token = kunci penuh katalog: jangan masuk repo/chat. Ganti dengan mengedit `config.php`. Percobaan salah dibatasi 10× / 10 menit per IP.
+- Jangan taruh `config.php`/`trylens.db` di dalam `public_html` (bisa diunduh orang).
+
+## Bila bermasalah
+- `/api/health` mengembalikan halaman biasa (HTML): aturan `.htaccess` belum aktif → pastikan `public_html/.htaccess` hasil deploy memuat baris `RewriteRule ^(api/…` dan `mod_rewrite` aktif.
+- Admin 401 padahal token benar: hosting membuang header Authorization. Sudah ada cadangan header `X-Admin-Token` (dipakai otomatis oleh /admin dan CLI); bila tetap gagal, kabari aku.
+- "Folder data tidak bisa dibuat": buat manual `trylens-data` (langkah 2) dan pastikan bisa ditulis.
+- Aku belum bisa menguji langsung di Hostinger — langkah 6 adalah uji pertamanya.
