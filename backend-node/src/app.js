@@ -1,6 +1,7 @@
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { config as defaultConfig } from "./config.js";
 import { openDb } from "./db.js";
 import { Service } from "./service.js";
@@ -8,6 +9,7 @@ import { authRouter } from "./routes/auth.js";
 import { partnerRouter } from "./routes/partner.js";
 import { billingRouter } from "./routes/billing.js";
 import { catalogRouter } from "./routes/catalog.js";
+import { adminRouter } from "./routes/admin.js";
 import legacyRouter from "../routes/api.js";
 
 const MEDIA_FILES = new Set(["main.jpg", "side.jpg", "detail.jpg", "close.jpg", "model.glb"]);
@@ -31,7 +33,7 @@ export function createApp(overrides = {}) {
     if (origin && config.corsOrigins.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-TryLens, X-Signature");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-TryLens, X-Signature, Authorization, X-Admin-Token");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
       res.setHeader("Vary", "Origin");
     }
@@ -54,7 +56,11 @@ export function createApp(overrides = {}) {
   app.use("/api/partner", partnerRouter(ctx));
   app.use("/api/billing", billingRouter(ctx));
   app.use("/api/catalog", catalogRouter(ctx));
+  app.use("/api/admin", adminRouter(ctx));
   app.use("/api", legacyRouter);
+
+  // Halaman admin katalog (statis; token dimasukkan di browser, tidak pernah ditanam di berkas).
+  app.get("/admin", (req, res) => { res.setHeader("Cache-Control", "no-store"); res.sendFile(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "admin.html")); });
 
   // Foto profil toko: /media/store/<idAkun>.jpg
   app.get("/media/store/:file", (req, res) => {

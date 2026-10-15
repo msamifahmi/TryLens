@@ -17,6 +17,10 @@ jobs:
         with: { node-version: 22 }
       - name: Build
         working-directory: src/frontend
+        # Alamat API produksi (Repo → Settings → Secrets and variables → Actions → Variables → API_ORIGIN, mis. https://api.try-lens.id).
+        # Kosong = situs berjalan mode demo tanpa backend, seperti sebelumnya.
+        env:
+          VITE_API_ORIGIN: ${{ vars.API_ORIGIN }}
         run: |
           npm ci
           npm test

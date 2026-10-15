@@ -6,7 +6,9 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node scripts/seed.mjs",
-    "test": "node test/api.test.mjs"
+    "test": "node test/api.test.mjs && node test/php-api.test.mjs",
+    "import-catalog": "node scripts/import-catalog.mjs",
+    "gen-seed": "node scripts/gen-seed.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

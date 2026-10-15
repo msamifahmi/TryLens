@@ -17,5 +17,7 @@ export const config = {
   webhookSecret: env.PAYMENT_WEBHOOK_SECRET || "",
   maxPhotoBytes: 5 * 1024 * 1024,
   maxGlbBytes: 12 * 1024 * 1024,
-  maxPhotos: 4
+  maxPhotos: 4,
+  // Token admin katalog (Hermes / halaman /admin). Kosong atau < 24 karakter = API admin nonaktif.
+  adminToken: env.ADMIN_TOKEN || ""
 };

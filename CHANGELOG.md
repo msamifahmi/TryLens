@@ -6,6 +6,18 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 28
+
+- **Katalog pindah ke basis data terstruktur** (SQLite di backend-node): tabel `merchants` dan `products` dengan kolom bertipe (harga, harga coret, stok, tautan beli per marketplace, ukuran lensa/jembatan/gagang, status tampil, jumlah foto, model 3D, hasil inspeksi rig) + `CHECK` (harga > 0, harga coret > harga jual, stok ≥ 0). `npm run import-catalog` memindahkan 6 toko + 24 produk bawaan (idempoten). `/api/catalog` menggabungkan produk basis data: id yang sama menimpa data bawaan klien, yang baru ditambahkan, `published=false` → id masuk `hidden`.
+- **Kontrol penuh**: API `/api/admin/*` (Bearer `ADMIN_TOKEN`, ≥ 24 karakter, dibatasi percobaan salah) untuk toko/produk/foto/model/ekspor; halaman `/admin` (edit nama/harga/stok langsung di tabel, formulir detail, unggah foto & .glb, unduh cadangan); CLI `backend-node/scripts/tl.mjs` tanpa dependensi untuk Hermes. Model .glb yang diunggah menyalakan Coba Virtual otomatis.
+- **Dihapus**: jalur JSON statis + git (`product:add`, `public/catalog.json`, fallback `loadStaticCatalog`). Panduan baru: `docs/HERMES.md`, `docs/DEPLOY-BACKEND.md`.
+- **Hosting Single (tanpa Node.js)**: port PHP + SQLite di `frontend/public/api/index.php` dengan kontrak API identik (katalog publik, admin, unggah foto/.glb, /media, /admin); aturan `.htaccess` mengarahkan `/api`, `/media`, `/admin` ke sana; data & token di luar public_html (`trylens-data/`); katalog awal terisi otomatis dari `seed.json` (`npm run gen-seed`). Area Mitra tetap mode demo (PHP membalas 404 JSON di `/api/auth/me`). 6 uji PHP (`php -S` + router peniru .htaccess) + paritas admin.html. Panduan: `docs/DEPLOY-BACKEND.md`.
+- **Frontend (untuk backend Node di domain lain)**: workflow Actions membaca variabel repo `API_ORIGIN` → `VITE_API_ORIGIN`; kosong = tetap mode demo.
+- **Tes**: 34 uji backend lolos (6 baru: otorisasi, validasi, id otomatis, unggah, katalog publik, hapus, admin nonaktif). Diuji end-to-end lokal (server + import + CLI + /admin 200).
+- **Batas**: belum diuji di Hostinger asli (aturan .htaccess, pdo_sqlite, header Authorization, izin tulis `trylens-data` perlu dicek langkah 6 panduan; tak ada Apache di sandbox); stok 10 dan deskripsi kosong untuk 24 produk bawaan hasil impor (placeholder, edit di /admin); foto bawaan f0–f23 tetap dari `frontend/public/products` sampai kamu mengunggah foto lewat admin; halaman /admin belum diuji di browser nyata dari sandbox.
+
+---
+
 ## Update 26
 
 - **Tulisan "Scan bentuk wajah" menabrak paragraf**: penyebab sebenarnya aturan CSS `.tl-ripple.sticky` di dalam `@layer utilities` yang ditulis ulang Tailwind menjadi `.lg\:sticky .tl-ripple { position:absolute }` — tautan di kartu checkout (anak dari aside sticky) jadi absolut dan menimpa paragraf. Aturan senyawa itu dihapus; dicek dengan bounding box Playwright di lebar 360–1100 px.

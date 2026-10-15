@@ -3,6 +3,9 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  # API katalog PHP (public/api/index.php): /api/*, /media/*, /admin → satu pintu. Authorization diteruskan ke PHP.
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+  RewriteRule ^(api/(?!index\.php$|admin\.html$)|media/|admin/?$) api/index.php [L]
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
