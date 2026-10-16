@@ -5,7 +5,7 @@ import { api, apiUrl, backend } from "../api/http.js";
 import { usePartner } from "../store/usePartner.js";
 import { activeHighlight } from "../data/partnerMock.js";
 
-export const catalogInfo = { source: "static", loadedAt: null, highlighted: [] };
+export const catalogInfo = { source: "static", loadedAt: null, highlighted: [], banners: null };
 
 /** Alamat aset frame: unggahan Mitra (/media/<id>) bila ada, jika tidak berkas bawaan /products/<id>. */
 export function assetBase(productId) {
@@ -34,6 +34,8 @@ export function highlightedMerchantIds() {
 
 export function mergeCatalog(data) {
   catalogInfo.highlighted = data.highlighted || [];
+  // Iklan dari admin ({ hero: [...], topbar: [...] }); null = server lama / tanpa fitur iklan → pakai bawaan.
+  catalogInfo.banners = data.banners && typeof data.banners === "object" ? data.banners : null;
   const hidden = new Set(data.hidden || []);
   for (let i = PRODUCTS.length - 1; i >= 0; i--) if (hidden.has(PRODUCTS[i].id)) PRODUCTS.splice(i, 1);
   for (const p of data.products) {

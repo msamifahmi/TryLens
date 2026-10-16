@@ -2,6 +2,32 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PRODUCTS } from "../data/mockData.js";
 import FrameIcon from "./icons/FrameIcon.jsx";
+import { catalogInfo } from "../lib/catalog.js";
+
+// Warna latar slide iklan dari admin (nama tema → gradien); sama dengan pratinjau di /admin.
+const THEME_BG = {
+  blue: "linear-gradient(120deg, #427AB5 0%, #406AAF 100%)",
+  navy: "linear-gradient(120deg, #406AAF 0%, #2F5586 100%)",
+  sky: "linear-gradient(120deg, #4C86BF 0%, #427AB5 100%)",
+  gold: "linear-gradient(120deg, #406AAF 0%, #C9A24B 130%)"
+};
+
+/** Slide dari admin bila ada; kalau kosong/tidak tersedia, pakai slide bawaan di bawah. */
+function activeSlides() {
+  const list = catalogInfo.banners?.hero;
+  if (!Array.isArray(list) || !list.length) return SLIDES;
+  return list.map((b) => ({
+    key: `b${b.id}`,
+    headline: b.headline,
+    sub: b.sub,
+    cta: b.cta,
+    action: b.action,
+    link: b.link,
+    cta2: null,
+    bg: THEME_BG[b.theme] || THEME_BG.blue,
+    illustration: ILLUSTRATIONS[b.illustration] ? b.illustration : "face"
+  }));
+}
 
 const SLIDES = [
   {
@@ -104,6 +130,7 @@ const AUTOPLAY_MS = 5500;
  */
 export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick }) {
   const navigate = useNavigate();
+  const [slides] = useState(activeSlides);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [cycle, setCycle] = useState(0); // naik tiap pindah slide → animasi progres titik mulai ulang
@@ -112,11 +139,11 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
 
   const goTo = useCallback((i) => {
     setIndex((cur) => {
-      const n = (i + SLIDES.length) % SLIDES.length;
+      const n = (i + slides.length) % slides.length;
       return n === cur ? cur : n;
     });
     setCycle((c) => c + 1);
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
     if (paused) return undefined;
@@ -131,9 +158,12 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
-  function runAction(action) {
+  function runAction(action, link) {
     const feed = onFeed || onCtaClick;
-    if (action === "try") navigate(`/try-on/${PRODUCTS[0]?.id || "f0"}`);
+    if (action === "link") {
+      if (typeof link === "string" && link.startsWith("/") && !link.startsWith("//")) navigate(link);
+      else if (typeof link === "string" && link.startsWith("https://")) window.open(link, "_blank", "noopener,noreferrer");
+    } else if (action === "try") navigate(`/try-on/${PRODUCTS[0]?.id || "f0"}`);
     else if (action === "merchant") (onMerchants || feed)?.();
     else if (action === "promo") (onPromo || feed)?.();
     else feed?.();
@@ -173,12 +203,12 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
         aria-roledescription="carousel"
         aria-label="Promosi TryLens"
       >
-        {SLIDES.map((slide, i) => {
+        {slides.map((slide, i) => {
           const Illustration = ILLUSTRATIONS[slide.illustration];
           const active = i === index;
           return (
             <div
-              key={slide.headline}
+              key={slide.key || slide.headline}
               aria-hidden={!active}
               data-active={active}
               inert={!active ? "" : undefined}
@@ -198,7 +228,7 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
                   </p>
                   <div className="tl-s-item flex gap-2.5 flex-wrap max-[700px]:justify-center">
                     <button
-                      onClick={() => runAction(slide.action)}
+                      onClick={() => runAction(slide.action, slide.link)}
                       className="tl-ripple min-h-11 px-6 rounded-xl text-sm font-bold bg-accent-yellow text-ink shadow-[0_8px_18px_-8px_rgb(0_0_0/.45)] hover:-translate-y-0.5 hover:shadow-lg"
                     >
                       {slide.cta}
@@ -240,8 +270,8 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
 
         {/* Titik: slide aktif memanjang dan terisi selama hitung mundur otomatis. */}
         <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex z-20">
-          {SLIDES.map((s, i) => (
-            <button key={s.headline} onClick={() => goTo(i)} aria-label={`Ke slide ${i + 1}`} aria-current={i === index} className="h-9 px-[5px] flex items-center">
+          {slides.map((s, i) => (
+            <button key={s.key || s.headline} onClick={() => goTo(i)} aria-label={`Ke slide ${i + 1}`} aria-current={i === index} className="h-9 px-[5px] flex items-center">
               <span className={`relative block h-[7px] rounded-full overflow-hidden transition-[width,background-color] duration-300 ${i === index ? "w-8 bg-white/40" : "w-[7px] bg-white/50"}`}>
                 {i === index && (
                   <span

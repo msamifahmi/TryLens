@@ -465,6 +465,29 @@ test("Admin: berkas — foto JPEG & GLB diterima, non-JPEG 415; model menyalakan
   assert.equal((await c.req("GET", "/media/f24/main.jpg")).status, 200);
 });
 
+test("Iklan: bawaan 4 slide + 1 teks atas, admin tambah/ubah/sembunyikan/hapus, tautan divalidasi, katalog publik memuat iklan", async () => {
+  const c = new Client();
+  const pub0 = (await c.req("GET", "/api/catalog")).body.banners;
+  assert.equal(pub0.hero.length, 4); assert.equal(pub0.topbar.length, 1);
+  assert.equal((await c.req("GET", "/api/admin/banners")).status, 401);
+  const bad = (b) => c.req("POST", "/api/admin/banners", b, { headers: AH });
+  assert.equal((await bad({ kind: "hero", headline: "Tes", action: "link", link: "javascript:alert(1)" })).status, 400);
+  assert.equal((await bad({ kind: "hero", headline: "Tes", action: "link", link: "//evil.com" })).status, 400);
+  assert.equal((await bad({ kind: "hero", headline: "Tes", action: "link" })).status, 400, "aksi link wajib bertautan");
+  assert.equal((await bad({ kind: "hero", headline: "Tes", theme: "pink" })).status, 400);
+  assert.equal((await bad({ kind: "hero", headline: "Hi" })).status, 400, "judul min 3 huruf");
+  const ok = await bad({ kind: "hero", headline: "Diskon Akhir Tahun", sub: "Hemat sampai 30%", cta: "Lihat", action: "link", link: "/merchant", theme: "gold" });
+  assert.equal(ok.status, 201, JSON.stringify(ok.body));
+  const id = ok.body.banner.id;
+  assert.equal((await c.req("GET", "/api/catalog")).body.banners.hero.at(-1).headline, "Diskon Akhir Tahun");
+  assert.equal((await c.req("PATCH", `/api/admin/banners/${id}`, { published: false }, { headers: AH })).status, 200);
+  assert.equal((await c.req("GET", "/api/catalog")).body.banners.hero.length, 4, "iklan tersembunyi tidak tayang");
+  assert.equal((await c.req("PATCH", `/api/admin/banners/${id}`, { link: "https://try-lens.id/promo", headline: "Diskon Baru" }, { headers: AH })).body.banner.headline, "Diskon Baru");
+  assert.equal((await c.req("DELETE", `/api/admin/banners/${id}`, undefined, { headers: AH })).status, 200);
+  assert.equal((await c.req("DELETE", `/api/admin/banners/${id}`, undefined, { headers: AH })).status, 404);
+  assert.equal((await c.req("GET", "/api/admin/export", undefined, { headers: AH })).body.banners.length, 5);
+});
+
 test("Katalog publik memuat produk admin (assets /media), menyembunyikan yang published=false, dan menimpa id bawaan", async () => {
   const c = new Client();
   let cat = (await c.req("GET", "/api/catalog")).body;

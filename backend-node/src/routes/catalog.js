@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { todayStr } from "../pricing.js";
-import { publicCatalog } from "../catalogStore.js";
+import { publicBanners, publicCatalog } from "../catalogStore.js";
 
 const DAY = 86400e3;
 
@@ -50,7 +50,7 @@ export function catalogRouter({ db, svc }) {
     products.unshift(...own.products);
     hidden.push(...own.hidden);
     res.setHeader("Cache-Control", "public, max-age=30");
-    res.json({ products, merchants: [...merchants.values()], hidden, highlighted: [...highlighted], generatedAt: new Date().toISOString() });
+    res.json({ products, merchants: [...merchants.values()], hidden, highlighted: [...highlighted], banners: publicBanners(db), generatedAt: new Date().toISOString() });
   });
   return r;
 }
