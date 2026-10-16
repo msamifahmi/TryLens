@@ -101,6 +101,21 @@ test("toko: validasi WhatsApp/tautan, buat, ubah; ekspor memuat semua; halaman /
   assert.match(page.body.toString(), /Admin Katalog TryLens/);
 });
 
+test("katalog-update.json (f0–f19) diterima validasi server dan mengubah katalog; tombol ada di /admin", async () => {
+  const upd = JSON.parse(fs.readFileSync(path.join(here, "../../frontend/public/katalog-update.json"), "utf8"));
+  assert.equal(upd.products.length, 20);
+  for (const { id, ...body } of upd.products) {
+    const r = await call("PATCH", `/api/admin/products/${id}`, body);
+    assert.equal(r.status, 200, `${id}: ${JSON.stringify(r.body)}`);
+  }
+  const c = (await call("GET", "/api/catalog", undefined, { headers: {} })).body;
+  const g = (id) => c.products.find((p) => p.id === id);
+  assert.equal(g("f10").price, 1620000); assert.equal(g("f15").cat ?? g("f15").category, "Anak");
+  assert.match(g("f12").name, /Kate Spade/); assert.equal(g("f14").size.templeMm, 140);
+  assert.ok(g("f12").buy.website && !g("f12").buy.shopee && g("f2").buy.shopee);
+  assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Terapkan katalog f0–f19/);
+});
+
 let fail = 0;
 for (const [n, f] of tests) { try { await f(); console.log("✓", n); } catch (e) { fail++; console.log("✗", n, "\n  ", e.message); } }
 srv.kill(); fs.rmSync(data, { recursive: true, force: true });
