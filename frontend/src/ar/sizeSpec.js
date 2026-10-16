@@ -23,8 +23,16 @@ export function applyRealSize(spec, size) {
   };
 }
 
-/** Tanpa ukuran dari Mitra: faktor skala agar lebar frame ≈ lebar wajah terukur (dibatasi ±12% dari ukuran model). */
-export function autoFitScale(spec, faceMm) {
+/**
+ * Tanpa ukuran dari Mitra: faktor skala agar frame cocok dengan wajah (dibatasi ±12% dari ukuran model).
+ * Dua patokan digabung (rata-rata geometrik) supaya frame tidak membesar hanya karena lebar wajah terukur besar:
+ *  - lebar frame ≈ lebar wajah terukur, dan
+ *  - jarak pusat lensa ≈ PD pengguna (bila PD terukur dan model punya jarak lensa).
+ * Tanpa PD → hanya patokan lebar wajah (perilaku lama).
+ */
+export function autoFitScale(spec, faceMm, pdMm) {
   if (!spec || !(faceMm > 0) || !(spec.frameWidthMm > 0)) return 1;
-  return Math.min(1.12, Math.max(0.88, (faceMm * 0.99) / spec.frameWidthMm));
+  let s = (faceMm * 0.99) / spec.frameWidthMm;
+  if (pdMm > 40 && pdMm < 85 && spec.lensSepMm > 40) s = Math.sqrt(s * (pdMm / spec.lensSepMm));
+  return Math.min(1.12, Math.max(0.88, s));
 }

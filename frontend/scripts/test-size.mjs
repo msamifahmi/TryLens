@@ -12,4 +12,8 @@ const r = applyRealSize(spec, { frameWidthMm: 126, lensWidthMm: 46 });
 ok(Math.abs(r.unit - 0.9) < 1e-9 && Math.abs(r.lensL[0] - 2.7) < 1e-9 && r.frameWidthMm === 126 && r.lensWidthMm === 46 && r.realSize, "Ukuran asli 126 mm pada model 140 mm → skala 0,9, nilai Mitra dipakai");
 ok(applyRealSize(spec, null) === spec, "Tanpa ukuran → spesifikasi tidak diubah");
 ok(Math.abs(autoFitScale(spec, 140) - 0.99) < 1e-9 && autoFitScale(spec, 200) === 1.12 && autoFitScale(spec, 90) === 0.88 && autoFitScale(spec, null) === 1, "Fit otomatis: ≈ lebar wajah, dibatasi ±12%");
+const wide = { ...spec, frameWidthMm: 141, lensSepMm: 70.8 };
+const a = autoFitScale(wide, 161, 63);
+ok(autoFitScale(wide, 161) === 1.12 && Math.abs(a - 1.0) < 0.01, "Wajah lebar tapi PD 63 mm: frame tidak membesar 12% (jarak lensa ikut dipertimbangkan)");
+ok(autoFitScale(wide, 161, 30) === autoFitScale(wide, 161) && autoFitScale({ ...wide, lensSepMm: 0 }, 161, 63) === 1.12, "PD tidak wajar / model tanpa jarak lensa → patokan lebar wajah saja");
 console.log(`\nSemua ${n} uji lolos`);

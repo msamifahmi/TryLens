@@ -243,7 +243,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       }
       // Tanpa ukuran dari Mitra: sesuaikan lebar frame dengan wajah (perubahan kecil diabaikan agar tidak bergetar).
       if (!live.current.realSize && live.current.spec && out.calibrated && out.faceMm) {
-        const want = autoFitScale(live.current.spec, out.faceMm);
+        const want = autoFitScale(live.current.spec, out.faceMm, out.pdMm);
         if (Math.abs(want / (live.current.auto || 1) - 1) > 0.015) {
           live.current.auto = want;
           engine.setUserScale(fitRef.current.adj.s * want);
