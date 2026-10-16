@@ -33,7 +33,7 @@ td input{padding:5px 7px}td.n input{width:110px}td.name input{min-width:180px}
   <input id="tok" type="password" placeholder="ADMIN_TOKEN" autocomplete="off"><div style="height:10px"></div><button id="go">Masuk</button>
 </div>
 <div id="app" hidden>
-  <div class="row"><button id="add">+ Produk baru</button><button class="ghost" id="addM">+ Toko</button><button class="ghost" id="exp">Unduh cadangan</button>
+  <div class="row"><button id="add">+ Produk baru</button><button class="ghost" id="addM">+ Toko</button><button class="ghost" id="exp">Unduh cadangan</button><button class="ghost" id="imp">Terapkan katalog f0–f19</button>
     <input id="q" placeholder="Cari nama / id…" style="max-width:240px"><select id="fm" style="max-width:200px"></select></div>
   <div class="wrap"><table><thead><tr><th></th><th>ID</th><th>Nama</th><th>Toko</th><th>Harga</th><th>Harga coret</th><th>Stok</th><th>Tampil</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
   <h2 style="font-size:15px;margin:22px 0 8px">Toko</h2>
@@ -101,6 +101,11 @@ function merForm(m){const n=!m;m=m||{published:true,color:"#427AB5",links:{}};
   $("#sv").onclick=async()=>{const f=new FormData($("#form")),g=k=>f.get(k);const body={name:g("name"),city:g("city"),province:g("province"),whatsapp:g("whatsapp"),phone:g("phone"),color:g("color"),published:f.has("published"),links:{instagram:g("l_instagram"),x:g("l_x"),tokopedia:g("l_tokopedia"),shopee:g("l_shopee")}};
    try{await (n?api("POST","/merchants",body):api("PATCH","/merchants/"+m.id,body));toast("Tersimpan");$("#dlg").close();load()}catch(x){toast(x.message,1)}}}
 $("#add").onclick=()=>prodForm();$("#addM").onclick=()=>merForm();$("#q").oninput=draw;$("#fm").onchange=draw;
+$("#imp").onclick=async()=>{
+  let d;try{const r=await fetch("/katalog-update.json",{cache:"no-store"});if(!r.ok)throw 0;d=await r.json()}catch{return toast("File katalog-update.json tidak ditemukan di server ini.",1)}
+  if(!confirm("Timpa nama, kategori, gaya, warna, tautan beli (dan harga/ukuran bila ada) untuk "+d.products.length+" produk? Harga & stok lain tidak diubah."))return;
+  let ok=0,bad=[];for(const p of d.products){const{id,...body}=p;try{await api("PATCH","/products/"+encodeURIComponent(id),body);ok++}catch(x){bad.push(id+": "+x.message)}}
+  await load();toast(ok+" produk diperbarui"+(bad.length?" · gagal: "+bad.join("; "):""),bad.length>0)};
 $("#exp").onclick=async()=>{const j=await api("GET","/export");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:"application/json"}));a.download="trylens-katalog-"+new Date().toISOString().slice(0,10)+".json";a.click()};
 async function enter(){try{await api("GET","/ping");sessionStorage.setItem("tl_admin",T);$("#login").hidden=true;$("#app").hidden=false;$("#out").hidden=false;$("#who").textContent="admin";await load()}catch(x){sessionStorage.removeItem("tl_admin");$("#login").hidden=false;$("#app").hidden=true;toast(x.message,1)}}
 $("#go").onclick=()=>{T=$("#tok").value.trim();enter()};$("#tok").onkeydown=e=>{if(e.key==="Enter")$("#go").click()};
