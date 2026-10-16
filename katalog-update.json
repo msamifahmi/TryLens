@@ -1,0 +1,245 @@
+{
+ "version": 1,
+ "products": [
+  {
+   "id": "f0",
+   "name": "Molsion MS3105 C21 55 Kacamata Hitam Wanita",
+   "style": "square",
+   "colorKey": "black",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/molsion-kacamata-hitam-wanita-s-mol-ms3105-c21-55/ps--OPM-60027-32537",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f1",
+   "name": "Molsion MS7171 A93 58 Kacamata Hitam",
+   "style": "browline",
+   "colorKey": "gold",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/molsion-kacamata-hitam-wanita-s-mol-ms7171-a93-58/ps--OPM-60027-32547",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f2",
+   "name": "Kacamata Baca Muslim Classic Retro XH 818",
+   "style": "round",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "shopee": "https://shopee.co.id/product/154866485/18393818791",
+    "website": null
+   }
+  },
+  {
+   "id": "f3",
+   "name": "Kacamata Hitam Oval P8852 Lensa Anti UV Sunglasses",
+   "style": "cateye",
+   "colorKey": "tort",
+   "category": "Wanita",
+   "buy": {
+    "shopee": "https://shopee.co.id/product/242983529/47465176458",
+    "website": null
+   },
+   "price": 130000,
+   "oldPrice": null
+  },
+  {
+   "id": "f4",
+   "name": "Kacamata Minus TR90 Fleksibel SEN-3017",
+   "style": "square",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "shopee": "https://shopee.co.id/Kacamata-MINUS-Pria-Wanita-TR90-Fleksible-Lensa-MINUS-Anti-Radiasi-0.50-s-d-6.00-Kacamata-Pria-Wanita-SEN-3017-Minus-Velocity.Optik-i.1594234470.40110406813",
+    "website": null
+   }
+  },
+  {
+   "id": "f5",
+   "name": "Frame Kacamata Kotak Tebal",
+   "style": "square",
+   "colorKey": "brown",
+   "category": "Pria",
+   "buy": {
+    "shopee": "https://shopee.co.id/TERLARIS!!Premium-Frame-Kacamata-Kotak-Tebal-Lensa-Antiradiasi-Blueray-Photocromic-Bluecromic-Photobrown-Eyewear-Glasses-i.1565679171.45262403690",
+    "website": null
+   },
+   "price": 189000,
+   "oldPrice": null
+  },
+  {
+   "id": "f6",
+   "name": "Kacamata Minus Fashion Korea Retro",
+   "style": "square",
+   "colorKey": "clear",
+   "category": "Wanita",
+   "buy": {
+    "shopee": "https://shopee.co.id/Kacamata-Minus-Fashion-Korea-Retro-Anti-Blue-Light-anti-Radiasi-Model-Cat-Eye-Kacamata-Baca-Minus-3308-Mata-Nusantara-i.475186667.56203759423",
+    "website": null
+   },
+   "price": 220795,
+   "oldPrice": null
+  },
+  {
+   "id": "f7",
+   "name": "Kacamata Kotak Pria Dan Wanita Model Skena Premium",
+   "style": "square",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "shopee": "https://shopee.co.id/Kacamata-Kotak-Pria-Dan-Wanita-Model-Skena-Premium-Bisa-Lensa-Anti-radiasi-Photocromic-Blueray-Bluecromic-i.847442357.25990938125",
+    "website": null
+   },
+   "price": 56900,
+   "oldPrice": null
+  },
+  {
+   "id": "f8",
+   "name": "Kacamata Harry Potter Bulat",
+   "style": "round",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "shopee": "https://shopee.co.id/kacamata-harry-potter-bulat-kaca-mata-oval-glasses-import-i.163810362.2503744053",
+    "website": null
+   }
+  },
+  {
+   "id": "f9",
+   "name": "Kacamata Photochromic Round Bingkai Logam",
+   "style": "round",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "shopee": "https://shopee.co.id/Kacamata-Photochromic-Anti-Radiasi-Round-Bingkai-Logam-Pria-Wanita-Rubber-Nose-Pad-i.1192821442.51410594999",
+    "website": null
+   }
+  },
+  {
+   "id": "f10",
+   "name": "Bolon Kacamata Wanita BJ5127 B21 52",
+   "style": "square",
+   "colorKey": "brown",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/bolon-kacamata-wanita-f-bn-bj5127-b21-52/ps--OPM-60027-20385",
+    "shopee": null
+   },
+   "price": 1620000,
+   "oldPrice": null
+  },
+  {
+   "id": "f11",
+   "name": "Kacamata Hitam Korean Style Fashion Sunglasses",
+   "style": "square",
+   "colorKey": "gold",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/oem-sk-c653-c661-kacamata-hitam-wanita-pria-korean-style-fashion-sunglasses-kaca-mata-aesthetic-retro-import-women/is--SAK-70040-01385-00004",
+    "shopee": null
+   },
+   "price": 35000,
+   "oldPrice": null
+  },
+  {
+   "id": "f12",
+   "name": "Kate Spade Myley Kacamata Wanita 49",
+   "style": "round",
+   "colorKey": "tort",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/kate-spade-kacamata-wanita-f-kp-ks-myley-fj-hkz-49/ps--OPM-60027-28461",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f13",
+   "name": "Marc Jacobs MJ 167 Kacamata Wanita 55",
+   "style": "cateye",
+   "colorKey": "brown",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/marc-jacobs-kacamata-wanita-f-mj-167-lhf-55/ps--OPM-60027-11692",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f14",
+   "name": "Kacamata Minus Zhijing 01 Fashion Korea Retro",
+   "style": "round",
+   "colorKey": "black",
+   "category": "Wanita",
+   "buy": {
+    "shopee": "https://shopee.co.id/Kacamata-Minus-1.00-s-d-6.00-Fashion-Korea-Retro-Anti-Blue-Light-Anti-Radiasi-Model-Kacamata-Lensa-Minus-Zhijing-01-Mata-Nusantara-i.475186667.51561927877",
+    "website": null
+   },
+   "size": {
+    "frameWidthMm": 140,
+    "lensWidthMm": 47,
+    "lensHeightMm": 39,
+    "bridgeMm": 20,
+    "templeMm": 140,
+    "weightG": 9.8
+   }
+  },
+  {
+   "id": "f15",
+   "name": "Nike Junior NJ 5006AF 970 48",
+   "style": "round",
+   "colorKey": "clear",
+   "category": "Anak",
+   "buy": {
+    "website": "https://www.blibli.com/p/nike-junior-kacamata-wanita-f-nj-5006af-970-48/ps--OPM-60027-10733",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f16",
+   "name": "Jimmy Choo Glint OTG J6 53 Kacamata Hitam",
+   "style": "square",
+   "colorKey": "brown",
+   "category": "Wanita",
+   "buy": {
+    "website": "https://www.blibli.com/p/jimmy-choo-kacamata-wanita-s-jo-glint-otg-j6-53/ps--OPM-60027-13662",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f17",
+   "name": "Guess GS 50051 053 56 Kacamata Pria",
+   "style": "square",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "website": "https://www.blibli.com/p/guess-m-kacamata-pria-f-gs-50051-053-56/ps--OPM-60027-16559",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f18",
+   "name": "Hang Ten HT 11629 C1 50",
+   "style": "round",
+   "colorKey": "black",
+   "category": "Pria",
+   "buy": {
+    "website": "https://www.blibli.com/p/hang-ten-kacamata-f-ht-11629-c1-50/ps--OPM-60027-32948",
+    "shopee": null
+   }
+  },
+  {
+   "id": "f19",
+   "name": "Kacamata Retro Oval Bingkai Kecil Y2K",
+   "style": "cateye",
+   "colorKey": "brown",
+   "category": "Wanita",
+   "buy": {
+    "shopee": "https://shopee.co.id/ALOY-RETAIL-PL-WW025-Kacamata-Retro-Oval-Bingkai-Kecil-Y2K-Style-Modis-Unisex-Anti-UV-Termurah-i.387295480.42007280269",
+    "website": null
+   }
+  }
+ ]
+}
