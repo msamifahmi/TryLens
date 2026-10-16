@@ -118,7 +118,7 @@ test("katalog-update.json (f0–f19) diterima validasi server dan mengubah katal
   assert.equal(g("f10").price, 1620000); assert.equal(g("f15").cat ?? g("f15").category, "Anak");
   assert.match(g("f12").name, /Kate Spade/); assert.equal(g("f14").size.templeMm, 140);
   assert.ok(g("f12").buy.website && !g("f12").buy.shopee && g("f2").buy.shopee);
-  assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Terapkan katalog f0–f19/);
+  assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Terapkan pembaruan katalog/);
 });
 
 let fail = 0;
