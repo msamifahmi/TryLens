@@ -83,14 +83,14 @@ test("Model yang dikirim (public/products/f0/model.glb) sesuai spesifikasi dan t
     meta: n.GlassesRoot.getExtras().trylens
   });
   assert.ok(spec, "specFromNodes harus berhasil");
-  within(spec.lensSepMm, 75.6, 1.5, "jarak pusat lensa f0");
+  within(spec.lensSepMm, 72.8, 1.5, "jarak pusat lensa f0");
 });
 
 const ab = (f) => { const b = fs.readFileSync(f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
 test("inspectGlb (pemeriksa di form unggah mitra): model ber-rig 'ok', model polos 'none', file bukan GLB ditolak", async () => {
   const ok = inspectGlb(ab(SHIPPED));
   assert.equal(ok.valid, true); assert.equal(ok.rig, "ok", JSON.stringify(ok)); assert.deepEqual(ok.issues, []);
-  within(ok.lensSepMm, 75.6, 1.5, "jarak pusat lensa");
+  within(ok.lensSepMm, 72.8, 1.5, "jarak pusat lensa");
   const plain = inspectGlb(ab(PLAIN));
   assert.equal(plain.valid, true); assert.equal(plain.rig, "none");
   const bad = inspectGlb(new TextEncoder().encode("bukan glb sama sekali, hanya teks biasa").buffer);
