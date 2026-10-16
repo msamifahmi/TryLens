@@ -72,6 +72,7 @@ function db(): PDO {
     CREATE TABLE IF NOT EXISTS admin_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
     ");
     seed_if_empty($pdo);
+    apply_catalog_update($pdo);
     return $pdo;
 }
 
@@ -90,6 +91,35 @@ function seed_if_empty(PDO $pdo): void {
     }
     $pdo->exec("INSERT OR IGNORE INTO counters(name,value) VALUES('seeded',1)");
     $pdo->commit();
+}
+
+/**
+ * Pembaruan katalog sekali-jalan: file `katalog-update.json` (di samping index.html) diterapkan otomatis SEKALI per nomor `version`
+ * (dicatat di tabel counters), lewat validasi yang sama dengan admin. Setelah itu perubahan di /admin tidak ditimpa lagi.
+ * Naikkan `version` di file itu bila ingin menerapkan ulang. Tombol "Terapkan katalog" di /admin tetap bisa dipakai manual.
+ */
+function apply_catalog_update(PDO $pdo): void {
+    $f = dirname(__DIR__) . '/katalog-update.json';
+    if (!is_file($f)) return;
+    $u = json_decode((string)file_get_contents($f), true);
+    if (!is_array($u) || !is_array($u['products'] ?? null)) return;
+    $v = (int)($u['version'] ?? 0);
+    $cur = $pdo->query("SELECT value FROM counters WHERE name='katalog_update'")->fetch();
+    if ($v < 1 || ($cur && (int)$cur['value'] >= $v)) return;
+    $pdo->beginTransaction();
+    try {
+        foreach ($u['products'] as $x) {
+            $id = (string)($x['id'] ?? '');
+            $q = $pdo->prepare('SELECT * FROM products WHERE id=?'); $q->execute([$id]); $prev = $q->fetch();
+            if (!$prev) continue;
+            unset($x['id']);
+            try { $o = clean_product($x, $prev); } catch (HttpErr $e) { continue; }
+            $pdo->prepare('UPDATE products SET ' . implode(',', array_map(fn($c) => "$c=?", PCOLS)) . ',updated_at=? WHERE id=?')
+                ->execute(array_merge(array_map(fn($c) => $o[$c] ?? null, PCOLS), [now(), $id]));
+        }
+        $pdo->prepare("INSERT INTO counters(name,value) VALUES('katalog_update',?) ON CONFLICT(name) DO UPDATE SET value=excluded.value")->execute([$v]);
+        $pdo->commit();
+    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); }
 }
 
 /* ------------------------------------------------------------------ validasi */
