@@ -104,6 +104,11 @@ test("toko: validasi WhatsApp/tautan, buat, ubah; ekspor memuat semua; halaman /
 test("katalog-update.json (f0–f19) diterima validasi server dan mengubah katalog; tombol ada di /admin", async () => {
   const upd = JSON.parse(fs.readFileSync(path.join(here, "../../frontend/public/katalog-update.json"), "utf8"));
   assert.equal(upd.products.length, 20);
+  const pre = (await call("GET", "/api/catalog", undefined, { headers: {} })).body.products;
+  assert.match(pre.find((p) => p.id === "f12").name, /Kate Spade/, "katalog-update.json diterapkan otomatis saat DB dibuat (tanpa klik)");
+  assert.equal(pre.find((p) => p.id === "f3").price, 130000);
+  assert.equal((await call("PATCH", "/api/admin/products/f12", { name: "Nama Edit Admin" })).status, 200);
+  assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.products.find((p) => p.id === "f12").name, "Nama Edit Admin", "edit admin tidak ditimpa lagi oleh pembaruan otomatis");
   for (const { id, ...body } of upd.products) {
     const r = await call("PATCH", `/api/admin/products/${id}`, body);
     assert.equal(r.status, 200, `${id}: ${JSON.stringify(r.body)}`);
