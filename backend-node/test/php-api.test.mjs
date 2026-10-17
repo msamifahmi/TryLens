@@ -107,6 +107,8 @@ test("katalog-update.json (f0–f19) diterima validasi server dan mengubah katal
   const pre = (await call("GET", "/api/catalog", undefined, { headers: {} })).body.products;
   assert.match(pre.find((p) => p.id === "f12").name, /Kate Spade/, "katalog-update.json diterapkan otomatis saat DB dibuat (tanpa klik)");
   assert.equal(pre.find((p) => p.id === "f3").price, 130000);
+  assert.equal(pre.length, 24); for (const x of pre) assert.ok(x.description && x.description.length >= 60 && x.description.length <= 800, `${x.id}: deskripsi terisi`);
+  assert.match(pre.find((x) => x.id === "f14").description, /140 mm/);
   assert.equal((await call("PATCH", "/api/admin/products/f12", { name: "Nama Edit Admin" })).status, 200);
   assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.products.find((p) => p.id === "f12").name, "Nama Edit Admin", "edit admin tidak ditimpa lagi oleh pembaruan otomatis");
   for (const { id, ...body } of upd.products) {
@@ -119,6 +121,29 @@ test("katalog-update.json (f0–f19) diterima validasi server dan mengubah katal
   assert.match(g("f12").name, /Kate Spade/); assert.equal(g("f14").size.templeMm, 140);
   assert.ok(g("f12").buy.website && !g("f12").buy.shopee && g("f2").buy.shopee);
   assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Terapkan pembaruan katalog/);
+});
+
+test("Iklan: bawaan, validasi tautan, tambah/ubah/hapus, tayang di /api/catalog, ada di ekspor, tab Iklan di /admin", async () => {
+  const pub0 = (await call("GET", "/api/catalog", undefined, { headers: {} })).body.banners;
+  assert.equal(pub0.hero.length, 4); assert.equal(pub0.topbar.length, 1);
+  assert.equal((await call("GET", "/api/admin/banners", undefined, { headers: {} })).status, 401);
+  const post = (b) => call("POST", "/api/admin/banners", b);
+  assert.equal((await post({ kind: "hero", headline: "Tes", action: "link", link: "javascript:alert(1)" })).status, 400);
+  assert.equal((await post({ kind: "hero", headline: "Tes", action: "link", link: "//evil.com" })).status, 400);
+  assert.equal((await post({ kind: "hero", headline: "Tes", action: "link" })).status, 400);
+  assert.equal((await post({ kind: "hero", headline: "Tes", theme: "pink" })).status, 400);
+  assert.equal((await post({ kind: "hero", headline: "Hi" })).status, 400);
+  const ok = await post({ kind: "hero", headline: "Diskon Akhir Tahun", sub: "Hemat sampai 30%", cta: "Lihat", action: "link", link: "/merchant", theme: "gold" });
+  assert.equal(ok.status, 201, JSON.stringify(ok.body));
+  const id = ok.body.banner.id;
+  assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.banners.hero.at(-1).headline, "Diskon Akhir Tahun");
+  assert.equal((await call("PATCH", `/api/admin/banners/${id}`, { published: false })).status, 200);
+  assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.banners.hero.length, 4);
+  assert.equal((await call("PATCH", `/api/admin/banners/${id}`, { link: "https://try-lens.id/promo", headline: "Diskon Baru" })).body.banner.headline, "Diskon Baru");
+  assert.equal((await call("DELETE", `/api/admin/banners/${id}`)).status, 200);
+  assert.equal((await call("DELETE", `/api/admin/banners/${id}`)).status, 404);
+  assert.equal((await call("GET", "/api/admin/export")).body.banners.length, 5);
+  assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Iklan/);
 });
 
 let fail = 0;

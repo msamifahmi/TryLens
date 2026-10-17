@@ -7,7 +7,7 @@ import { Router } from "express";
 import express from "express";
 import { inspectGlb, isJpeg } from "../glb.js";
 import { bad } from "./util.js";
-import { cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
+import { bannerOut, cleanBanner, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
 
 const VARIANTS = ["main", "side", "detail", "close"];
 const sha = (s) => crypto.createHash("sha256").update(s).digest();
@@ -155,11 +155,37 @@ export function adminRouter({ config, db }) {
     res.json({ product: productOut(getP(p.id)) });
   });
 
+  /* ---- iklan */
+  const getB = (id) => db.prepare("SELECT * FROM banners WHERE id=?").get(id);
+  const BCOLS = ["headline", "sub", "cta", "action", "link", "theme", "illustration", "sort", "published"];
+  r.get("/banners", (req, res) => res.json({ banners: db.prepare("SELECT * FROM banners ORDER BY kind, sort, id").all().map(bannerOut) }));
+  r.post("/banners", (req, res) => {
+    const b = req.body || {};
+    const o = cleanBanner(b, null);
+    if (!("sort" in b)) o.sort = db.prepare("SELECT COALESCE(MAX(sort),0) m FROM banners WHERE kind=?").get(o.kind).m + 1;
+    const t = now();
+    const info = db.prepare(`INSERT INTO banners(kind,${BCOLS.join(",")},created_at,updated_at) VALUES(@kind,${BCOLS.map((c) => "@" + c).join(",")},@t,@t)`).run({ ...o, t });
+    res.status(201).json({ banner: bannerOut(getB(info.lastInsertRowid)) });
+  });
+  r.patch("/banners/:id", (req, res) => {
+    const prev = getB(req.params.id);
+    if (!prev) return bad(res, "Iklan tidak ditemukan.", 404);
+    const o = cleanBanner(req.body || {}, prev);
+    db.prepare(`UPDATE banners SET ${BCOLS.map((c) => `${c}=@${c}`).join(",")},updated_at=@t WHERE id=@id`).run({ ...o, id: prev.id, t: now() });
+    res.json({ banner: bannerOut(getB(prev.id)) });
+  });
+  r.delete("/banners/:id", (req, res) => {
+    if (!getB(req.params.id)) return bad(res, "Iklan tidak ditemukan.", 404);
+    db.prepare("DELETE FROM banners WHERE id=?").run(req.params.id);
+    res.json({ ok: true });
+  });
+
   /* ---- cadangan */
   r.get("/export", (req, res) => res.json({
     exportedAt: now(),
     merchants: db.prepare("SELECT * FROM merchants ORDER BY rowid").all().map(merchantOut),
-    products: db.prepare("SELECT * FROM products ORDER BY rowid").all().map(productOut)
+    products: db.prepare("SELECT * FROM products ORDER BY rowid").all().map(productOut),
+    banners: db.prepare("SELECT * FROM banners ORDER BY kind, sort, id").all().map(bannerOut)
   }));
 
   // Galat validasi (cleanMerchant/cleanProduct) membawa `status` → balas JSON, bukan 500.

@@ -69,9 +69,13 @@ function db(): PDO {
       media_v INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS idx_products_merchant ON products(merchant_id);
     CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS banners (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('hero','topbar')), headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '',
+      cta TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face',
+      sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS admin_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
     ");
     seed_if_empty($pdo);
+    seed_banners($pdo);
     apply_catalog_update($pdo);
     return $pdo;
 }
@@ -102,24 +106,91 @@ function apply_catalog_update(PDO $pdo): void {
     $f = dirname(__DIR__) . '/katalog-update.json';
     if (!is_file($f)) return;
     $u = json_decode((string)file_get_contents($f), true);
-    if (!is_array($u) || !is_array($u['products'] ?? null)) return;
+    if (!is_array($u)) return;
+    $counter = function (string $name) use ($pdo): int { $r = $pdo->query("SELECT value FROM counters WHERE name=" . $pdo->quote($name))->fetch(); return $r ? (int)$r['value'] : 0; };
+    $mark = fn(string $name, int $v) => $pdo->prepare("INSERT INTO counters(name,value) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET value=excluded.value")->execute([$name, $v]);
+    // 1) Tambalan produk (nama, kategori, tautan, dst.): sekali per `version`.
     $v = (int)($u['version'] ?? 0);
-    $cur = $pdo->query("SELECT value FROM counters WHERE name='katalog_update'")->fetch();
-    if ($v < 1 || ($cur && (int)$cur['value'] >= $v)) return;
+    if (is_array($u['products'] ?? null) && $v >= 1 && $counter('katalog_update') < $v) {
+        $pdo->beginTransaction();
+        try {
+            foreach ($u['products'] as $x) {
+                $id = (string)($x['id'] ?? '');
+                $q = $pdo->prepare('SELECT * FROM products WHERE id=?'); $q->execute([$id]); $prev = $q->fetch();
+                if (!$prev) continue;
+                unset($x['id']);
+                try { $o = clean_product($x, $prev); } catch (HttpErr $e) { continue; }
+                $pdo->prepare('UPDATE products SET ' . implode(',', array_map(fn($c) => "$c=?", PCOLS)) . ',updated_at=? WHERE id=?')
+                    ->execute(array_merge(array_map(fn($c) => $o[$c] ?? null, PCOLS), [now(), $id]));
+            }
+            $mark('katalog_update', $v);
+            $pdo->commit();
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); }
+    }
+    // 2) Deskripsi: sekali per `descriptionsVersion`, hanya mengisi produk yang deskripsinya masih kosong (tulisan admin tidak ditimpa).
+    $dv = (int)($u['descriptionsVersion'] ?? 0);
+    if (is_array($u['descriptions'] ?? null) && $dv >= 1 && $counter('katalog_desc') < $dv) {
+        $pdo->beginTransaction();
+        try {
+            $st = $pdo->prepare("UPDATE products SET description=?, updated_at=? WHERE id=? AND (description IS NULL OR description='')");
+            foreach ($u['descriptions'] as $id => $t) { $t = str((string)$t, 800); if ($t !== '') $st->execute([$t, now(), (string)$id]); }
+            $mark('katalog_desc', $dv);
+            $pdo->commit();
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); }
+    }
+}
+
+const BANNER_ACTIONS = ['try', 'merchant', 'feed', 'promo', 'link'];
+const BANNER_THEMES = ['blue', 'navy', 'sky', 'gold'];
+const BANNER_ILLUS = ['face', 'collection', 'compare', 'promo'];
+/** Iklan bawaan (4 slide beranda + 1 teks atas) dimasukkan SEKALI; menghapus semuanya lewat admin tidak memunculkannya lagi. */
+function seed_banners(PDO $pdo): void {
+    if ($pdo->query("SELECT 1 FROM counters WHERE name='banners_seeded'")->fetch()) return;
+    $t = now();
+    $rows = [
+        ['hero', 'Coba Kacamata Sebelum Beli', 'Lihat langsung bagaimana frame terlihat di wajahmu dengan virtual try-on.', 'Coba Sekarang', 'try', null, 'blue', 'face'],
+        ['hero', 'Ribuan Frame dari Optik Lokal', 'Temukan pilihan frame dari toko optik dan UMKM di kotamu.', 'Jelajahi Toko', 'merchant', null, 'navy', 'collection'],
+        ['hero', 'Temukan Frame yang Cocok untukmu', 'Bandingkan gaya, bentuk, dan harga dalam satu tempat.', 'Mulai Eksplorasi', 'feed', null, 'sky', 'compare'],
+        ['hero', 'Promo Frame Pilihan', 'Temukan penawaran menarik dari merchant TryLens.', 'Lihat Promo', 'promo', null, 'gold', 'promo'],
+        ['topbar', 'Coba kacamata secara virtual — gratis, tanpa install aplikasi', '', '', 'feed', null, 'blue', 'face'],
+    ];
     $pdo->beginTransaction();
-    try {
-        foreach ($u['products'] as $x) {
-            $id = (string)($x['id'] ?? '');
-            $q = $pdo->prepare('SELECT * FROM products WHERE id=?'); $q->execute([$id]); $prev = $q->fetch();
-            if (!$prev) continue;
-            unset($x['id']);
-            try { $o = clean_product($x, $prev); } catch (HttpErr $e) { continue; }
-            $pdo->prepare('UPDATE products SET ' . implode(',', array_map(fn($c) => "$c=?", PCOLS)) . ',updated_at=? WHERE id=?')
-                ->execute(array_merge(array_map(fn($c) => $o[$c] ?? null, PCOLS), [now(), $id]));
-        }
-        $pdo->prepare("INSERT INTO counters(name,value) VALUES('katalog_update',?) ON CONFLICT(name) DO UPDATE SET value=excluded.value")->execute([$v]);
-        $pdo->commit();
-    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); }
+    $q = $pdo->prepare('INSERT INTO banners(kind,headline,sub,cta,action,link,theme,illustration,sort,published,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?)');
+    foreach ($rows as $i => $r) $q->execute([$r[0], $r[1], $r[2], $r[3], $r[4], $r[5], $r[6], $r[7], $i + 1, $t, $t]);
+    $pdo->exec("INSERT OR IGNORE INTO counters(name,value) VALUES('banners_seeded',1)");
+    $pdo->commit();
+}
+function banner_out(array $r): array {
+    return ['id' => (int)$r['id'], 'kind' => $r['kind'], 'headline' => $r['headline'], 'sub' => $r['sub'], 'cta' => $r['cta'], 'action' => $r['action'], 'link' => $r['link'],
+        'theme' => $r['theme'], 'illustration' => $r['illustration'], 'sort' => (int)$r['sort'], 'published' => (bool)$r['published'], 'updatedAt' => $r['updated_at']];
+}
+/** Tautan iklan: alamat dalam situs ("/…") atau https penuh. */
+function clean_banner_link($v): ?string {
+    $v = trim((string)$v); if ($v === '' || strlen($v) > 300) return null;
+    if ($v[0] === '/' && !str_starts_with($v, '//') && !preg_match('/[\s\\\\]/', $v)) return $v;
+    $u = parse_url($v);
+    return ($u && ($u['scheme'] ?? '') === 'https' && !empty($u['host']) && !preg_match('/\s/', $v)) ? $v : null;
+}
+function clean_banner(array $b, ?array $prev): array {
+    $o = $prev ?? ['kind' => 'hero', 'headline' => '', 'sub' => '', 'cta' => '', 'action' => 'feed', 'link' => null, 'theme' => 'blue', 'illustration' => 'face', 'sort' => 0, 'published' => 1];
+    $need = function (bool $c, string $m) { if (!$c) throw new HttpErr($m); };
+    if (!$prev && has($b, 'kind')) $o['kind'] = (string)$b['kind'];
+    $need(in_array($o['kind'], ['hero', 'topbar'], true), 'Jenis iklan tidak dikenal.');
+    if (has($b, 'headline')) $o['headline'] = str($b['headline'], $o['kind'] === 'topbar' ? 140 : 80);
+    $need(mb_strlen($o['headline']) >= 3, 'Judul iklan minimal 3 karakter.');
+    if (has($b, 'sub')) $o['sub'] = str($b['sub'], 160);
+    if (has($b, 'cta')) $o['cta'] = str($b['cta'], 24);
+    if (has($b, 'action')) $o['action'] = (string)$b['action'];
+    $need(in_array($o['action'], BANNER_ACTIONS, true), 'Aksi tombol tidak dikenal.');
+    if (has($b, 'link')) { $l = trim((string)$b['link']); $o['link'] = $l === '' ? null : clean_banner_link($l); $need($l === '' || $o['link'] !== null, 'Tautan harus berupa alamat dalam situs (mis. /merchant) atau https penuh.'); }
+    $need($o['action'] !== 'link' || $o['link'], 'Aksi "Buka tautan" memerlukan tautan.');
+    if (has($b, 'theme')) $o['theme'] = (string)$b['theme'];
+    $need(in_array($o['theme'], BANNER_THEMES, true), 'Warna latar tidak dikenal.');
+    if (has($b, 'illustration')) $o['illustration'] = (string)$b['illustration'];
+    $need(in_array($o['illustration'], BANNER_ILLUS, true), 'Gambar ilustrasi tidak dikenal.');
+    if (has($b, 'sort')) $o['sort'] = (int)$b['sort'];
+    if (has($b, 'published')) $o['published'] = b01($b['published']);
+    return $o;
 }
 
 /* ------------------------------------------------------------------ validasi */
@@ -275,6 +346,14 @@ function refresh_media(string $id, ?array $rig, bool $rigGiven): void {
 function rrmdir(string $d): void { if (!is_dir($d)) return; foreach (scandir($d) as $f) if ($f !== '.' && $f !== '..') { $p = "$d/$f"; is_dir($p) ? rrmdir($p) : @unlink($p); } @rmdir($d); }
 
 /* ------------------------------------------------------------------ katalog publik */
+function public_banners(): array {
+    $out = ['hero' => [], 'topbar' => []];
+    foreach (db()->query('SELECT * FROM banners WHERE published=1 ORDER BY sort, id')->fetchAll() as $r) {
+        $b = banner_out($r); unset($b['published'], $b['updatedAt'], $b['sort']);
+        $out[$r['kind']][] = $b;
+    }
+    return $out;
+}
 function public_catalog(): array {
     $merchants = db()->query('SELECT * FROM merchants ORDER BY rowid')->fetchAll();
     $mBy = []; foreach ($merchants as $m) $mBy[$m['id']] = $m;
@@ -299,7 +378,7 @@ function public_catalog(): array {
         $om[] = ['id' => $m['id'], 'name' => $o['name'], 'city' => $o['city'], 'province' => $o['province'], 'count' => ($count[$m['id']] ?? 0) . ' frame', 'rating' => '–', 'initials' => $o['initials'],
             'color' => $o['color'], 'whatsapp' => $o['whatsapp'], 'phone' => $o['phone'], 'links' => $o['links'], 'logo' => null];
     }
-    return ['products' => $products, 'merchants' => $om, 'hidden' => $hidden, 'highlighted' => [], 'generatedAt' => now()];
+    return ['products' => $products, 'merchants' => $om, 'hidden' => $hidden, 'highlighted' => [], 'banners' => public_banners(), 'generatedAt' => now()];
 }
 
 /* ------------------------------------------------------------------ auth admin */
@@ -451,7 +530,27 @@ try {
             out(['product' => product_out($getP($p['id']))]);
         }
     }
-    if ($a === '/export' && $method === 'GET') out(['exportedAt' => now(), 'merchants' => array_map('merchant_out', $pdo->query('SELECT * FROM merchants ORDER BY rowid')->fetchAll()), 'products' => array_map('product_out', $pdo->query('SELECT * FROM products ORDER BY rowid')->fetchAll())]);
+    if ($a === '/banners' && $method === 'GET') out(['banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll())]);
+    if ($a === '/banners' && $method === 'POST') {
+        $o = clean_banner($body, null); $t = now();
+        if (!has($body, 'sort')) { $mx = $pdo->prepare('SELECT COALESCE(MAX(sort),0) m FROM banners WHERE kind=?'); $mx->execute([$o['kind']]); $o['sort'] = (int)$mx->fetch()['m'] + 1; }
+        $pdo->prepare('INSERT INTO banners(kind,headline,sub,cta,action,link,theme,illustration,sort,published,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$o['kind'], $o['headline'], $o['sub'], $o['cta'], $o['action'], $o['link'], $o['theme'], $o['illustration'], $o['sort'], $o['published'], $t, $t]);
+        $q = $pdo->prepare('SELECT * FROM banners WHERE id=?'); $q->execute([(int)$pdo->lastInsertId()]);
+        out(['banner' => banner_out($q->fetch())], 201);
+    }
+    if (preg_match('~^/banners/(\d+)$~', $a, $m)) {
+        $q = $pdo->prepare('SELECT * FROM banners WHERE id=?'); $q->execute([(int)$m[1]]); $prev = $q->fetch();
+        if (!$prev) fail('Iklan tidak ditemukan.', 404);
+        if ($method === 'PATCH') {
+            $o = clean_banner($body, $prev);
+            $pdo->prepare('UPDATE banners SET headline=?,sub=?,cta=?,action=?,link=?,theme=?,illustration=?,sort=?,published=?,updated_at=? WHERE id=?')
+                ->execute([$o['headline'], $o['sub'], $o['cta'], $o['action'], $o['link'], $o['theme'], $o['illustration'], $o['sort'], $o['published'], now(), (int)$m[1]]);
+            $q->execute([(int)$m[1]]); out(['banner' => banner_out($q->fetch())]);
+        }
+        if ($method === 'DELETE') { $pdo->prepare('DELETE FROM banners WHERE id=?')->execute([(int)$m[1]]); out(['ok' => true]); }
+    }
+    if ($a === '/export' && $method === 'GET') out(['exportedAt' => now(), 'merchants' => array_map('merchant_out', $pdo->query('SELECT * FROM merchants ORDER BY rowid')->fetchAll()), 'products' => array_map('product_out', $pdo->query('SELECT * FROM products ORDER BY rowid')->fetchAll()), 'banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll())]);
 
     fail('Endpoint tidak ditemukan', 404);
 } catch (HttpErr $e) {

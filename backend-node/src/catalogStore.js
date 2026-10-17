@@ -147,3 +147,56 @@ export function publicCatalog(db) {
   }
   return { products, merchants: outMerchants, hidden };
 }
+
+/* ---------------------------------------------------------- iklan */
+
+export const BANNER_ACTIONS = ["try", "merchant", "feed", "promo", "link"];
+export const BANNER_THEMES = ["blue", "navy", "sky", "gold"];
+export const BANNER_ILLUS = ["face", "collection", "compare", "promo"];
+
+export function bannerOut(r) {
+  return { id: r.id, kind: r.kind, headline: r.headline, sub: r.sub, cta: r.cta, action: r.action, link: r.link, theme: r.theme, illustration: r.illustration, sort: r.sort, published: !!r.published, updatedAt: r.updated_at };
+}
+
+/** Tautan iklan: alamat dalam situs ("/…") atau https penuh. */
+function cleanBannerLink(v) {
+  const s = String(v ?? "").trim();
+  if (!s || s.length > 300 || /\s/.test(s)) return null;
+  if (s[0] === "/" && !s.startsWith("//") && !s.includes("\\")) return s;
+  try { const u = new URL(s); return u.protocol === "https:" && u.hostname ? s : null; } catch { return null; }
+}
+
+export function cleanBanner(b, prev) {
+  const o = prev ? { ...prev } : { kind: "hero", headline: "", sub: "", cta: "", action: "feed", link: null, theme: "blue", illustration: "face", sort: 0, published: 1 };
+  const need = (c, m) => { if (!c) throw err(m); };
+  if (!prev && "kind" in b) o.kind = String(b.kind);
+  need(["hero", "topbar"].includes(o.kind), "Jenis iklan tidak dikenal.");
+  if ("headline" in b) o.headline = str(b.headline, o.kind === "topbar" ? 140 : 80);
+  need(o.headline.length >= 3, "Judul iklan minimal 3 karakter.");
+  if ("sub" in b) o.sub = str(b.sub, 160);
+  if ("cta" in b) o.cta = str(b.cta, 24);
+  if ("action" in b) o.action = String(b.action);
+  need(BANNER_ACTIONS.includes(o.action), "Aksi tombol tidak dikenal.");
+  if ("link" in b) {
+    const l = String(b.link ?? "").trim();
+    o.link = l === "" ? null : cleanBannerLink(l);
+    need(l === "" || o.link !== null, "Tautan harus berupa alamat dalam situs (mis. /merchant) atau https penuh.");
+  }
+  need(o.action !== "link" || o.link, 'Aksi "Buka tautan" memerlukan tautan.');
+  if ("theme" in b) o.theme = String(b.theme);
+  need(BANNER_THEMES.includes(o.theme), "Warna latar tidak dikenal.");
+  if ("illustration" in b) o.illustration = String(b.illustration);
+  need(BANNER_ILLUS.includes(o.illustration), "Gambar ilustrasi tidak dikenal.");
+  if ("sort" in b) o.sort = Number.parseInt(b.sort, 10) || 0;
+  if ("published" in b) o.published = bool(b.published);
+  return o;
+}
+
+export function publicBanners(db) {
+  const out = { hero: [], topbar: [] };
+  for (const r of db.prepare("SELECT * FROM banners WHERE published=1 ORDER BY sort, id").all()) {
+    const { published, updatedAt, sort, ...b } = bannerOut(r);
+    out[r.kind].push(b);
+  }
+  return out;
+}
