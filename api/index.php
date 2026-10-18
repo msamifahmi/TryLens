@@ -69,12 +69,13 @@ function db(): PDO {
       media_v INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS idx_products_merchant ON products(merchant_id);
     CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS banners (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('hero','topbar')), headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '',
+    CREATE TABLE IF NOT EXISTS banners (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('hero','topbar','login')), image TEXT, image_v INTEGER NOT NULL DEFAULT 0, headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '',
       cta TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face',
       sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS admin_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
     ");
     seed_if_empty($pdo);
+    migrate_banners($pdo);
     seed_banners($pdo);
     apply_catalog_update($pdo);
     return $pdo;
@@ -140,7 +141,23 @@ function apply_catalog_update(PDO $pdo): void {
     }
 }
 
-const BANNER_ACTIONS = ['try', 'merchant', 'feed', 'promo', 'link'];
+const BANNER_ACTIONS = ['try', 'merchant', 'feed', 'promo', 'link', 'none'];
+const BANNER_KINDS = ['hero', 'topbar', 'login'];
+/** DB lama (PR #13) punya tabel banners tanpa jenis 'login' dan tanpa kolom gambar: bangun ulang sambil menyalin isinya. */
+function migrate_banners(PDO $pdo): void {
+    $sql = (string)$pdo->query("SELECT sql FROM sqlite_master WHERE type='table' AND name='banners'")->fetchColumn();
+    if ($sql === '' || str_contains($sql, "'login'")) return;
+    $pdo->beginTransaction();
+    try {
+        $pdo->exec('ALTER TABLE banners RENAME TO banners_old');
+        $pdo->exec("CREATE TABLE banners (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('hero','topbar','login')), image TEXT, image_v INTEGER NOT NULL DEFAULT 0, headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '',
+          cta TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face',
+          sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        $pdo->exec('INSERT INTO banners(id,kind,headline,sub,cta,action,link,theme,illustration,sort,published,created_at,updated_at) SELECT id,kind,headline,sub,cta,action,link,theme,illustration,sort,published,created_at,updated_at FROM banners_old');
+        $pdo->exec('DROP TABLE banners_old');
+        $pdo->commit();
+    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); error_log('trylens: migrasi banners gagal: ' . $e->getMessage()); }
+}
 const BANNER_THEMES = ['blue', 'navy', 'sky', 'gold'];
 const BANNER_ILLUS = ['face', 'collection', 'compare', 'promo'];
 /** Iklan bawaan (4 slide beranda + 1 teks atas) dimasukkan SEKALI; menghapus semuanya lewat admin tidak memunculkannya lagi. */
@@ -161,7 +178,7 @@ function seed_banners(PDO $pdo): void {
     $pdo->commit();
 }
 function banner_out(array $r): array {
-    return ['id' => (int)$r['id'], 'kind' => $r['kind'], 'headline' => $r['headline'], 'sub' => $r['sub'], 'cta' => $r['cta'], 'action' => $r['action'], 'link' => $r['link'],
+    return ['id' => (int)$r['id'], 'kind' => $r['kind'], 'image' => $r['image'] ? '/media/banner/' . (int)$r['id'] . '.' . $r['image'] . '?v=' . (int)$r['image_v'] : null, 'headline' => $r['headline'], 'sub' => $r['sub'], 'cta' => $r['cta'], 'action' => $r['action'], 'link' => $r['link'],
         'theme' => $r['theme'], 'illustration' => $r['illustration'], 'sort' => (int)$r['sort'], 'published' => (bool)$r['published'], 'updatedAt' => $r['updated_at']];
 }
 /** Tautan iklan: alamat dalam situs ("/…") atau https penuh. */
@@ -175,7 +192,7 @@ function clean_banner(array $b, ?array $prev): array {
     $o = $prev ?? ['kind' => 'hero', 'headline' => '', 'sub' => '', 'cta' => '', 'action' => 'feed', 'link' => null, 'theme' => 'blue', 'illustration' => 'face', 'sort' => 0, 'published' => 1];
     $need = function (bool $c, string $m) { if (!$c) throw new HttpErr($m); };
     if (!$prev && has($b, 'kind')) $o['kind'] = (string)$b['kind'];
-    $need(in_array($o['kind'], ['hero', 'topbar'], true), 'Jenis iklan tidak dikenal.');
+    $need(in_array($o['kind'], BANNER_KINDS, true), 'Jenis iklan tidak dikenal.');
     if (has($b, 'headline')) $o['headline'] = str($b['headline'], $o['kind'] === 'topbar' ? 140 : 80);
     $need(mb_strlen($o['headline']) >= 3, 'Judul iklan minimal 3 karakter.');
     if (has($b, 'sub')) $o['sub'] = str($b['sub'], 160);
@@ -333,6 +350,14 @@ function inspect_glb(string $buf): array {
         'meta' => $meta, 'nodeCount' => count($nodes), 'size' => $n, 'frameWidthMm' => $meta ? ((float)($meta['frameWidthMm'] ?? 0) ?: null) : null],
         'warnings' => $complete ? [] : ['Rig TryLens tidak lengkap: Coba Virtual memakai penempatan cadangan (kurang akurat).']];
 }
+function banner_file(int $id, string $ext): string { global $UPLOADS; return "$UPLOADS/_banner/$id.$ext"; }
+/** Jenis gambar dari byte awal berkas (bukan dari nama): jpg | png | webp | null. */
+function image_ext(string $b): ?string {
+    if (strlen($b) > 12 && str_starts_with($b, "\xFF\xD8\xFF")) return 'jpg';
+    if (str_starts_with($b, "\x89PNG\r\n\x1A\n")) return 'png';
+    if (strlen($b) > 12 && substr($b, 0, 4) === 'RIFF' && substr($b, 8, 4) === 'WEBP') return 'webp';
+    return null;
+}
 function pdir(string $id): string { global $UPLOADS; return "$UPLOADS/$id"; }
 function count_photos(string $id): int { $n = 0; while ($n < 4 && is_file(pdir($id) . '/' . VARIANTS[$n] . '.jpg')) $n++; return $n; }
 function refresh_media(string $id, ?array $rig, bool $rigGiven): void {
@@ -347,7 +372,7 @@ function rrmdir(string $d): void { if (!is_dir($d)) return; foreach (scandir($d)
 
 /* ------------------------------------------------------------------ katalog publik */
 function public_banners(): array {
-    $out = ['hero' => [], 'topbar' => []];
+    $out = ['hero' => [], 'topbar' => [], 'login' => []];
     foreach (db()->query('SELECT * FROM banners WHERE published=1 ORDER BY sort, id')->fetchAll() as $r) {
         $b = banner_out($r); unset($b['published'], $b['updatedAt'], $b['sort']);
         $out[$r['kind']][] = $b;
@@ -402,7 +427,7 @@ function require_admin(): void {
 $method = $_SERVER['REQUEST_METHOD'];
 $path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/') ?: '/';
 $body = [];
-if (in_array($method, ['POST', 'PATCH', 'PUT'], true) && !preg_match('~/assets/~', $path)) {
+if (in_array($method, ['POST', 'PATCH', 'PUT'], true) && !preg_match('~/assets/|/banners/\d+/image$~', $path)) {
     $raw = (string)file_get_contents('php://input');
     if ($raw !== '') { $body = json_decode($raw, true); if (!is_array($body)) fail('JSON tidak valid'); }
 }
@@ -415,6 +440,13 @@ try {
     if ($path === '/api/health') out(['ok' => true, 'time' => now(), 'backend' => 'php-catalog']);
     if ($path === '/api/catalog' && $method === 'GET') out(public_catalog(), 200, ['Cache-Control' => 'public, max-age=30']);
 
+    if (preg_match('~^/media/banner/(\d{1,9})\.(jpg|png|webp)$~', $path, $m)) {
+        $p = banner_file((int)$m[1], $m[2]);
+        if (!is_file($p)) { http_response_code(404); exit; }
+        header('Content-Type: ' . ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][$m[2]]);
+        header('Cache-Control: public, max-age=86400'); header('Content-Length: ' . filesize($p));
+        header('X-Content-Type-Options: nosniff'); readfile($p); exit;
+    }
     if (preg_match('~^/media/([A-Za-z0-9_-]{1,64})/(main|side|detail|close)\.jpg$|^/media/([A-Za-z0-9_-]{1,64})/(model)\.glb$~', $path, $m)) {
         $id = $m[1] !== '' ? $m[1] : $m[3];
         $file = $m[1] !== '' ? $m[2] . '.jpg' : 'model.glb';
@@ -539,6 +571,23 @@ try {
         $q = $pdo->prepare('SELECT * FROM banners WHERE id=?'); $q->execute([(int)$pdo->lastInsertId()]);
         out(['banner' => banner_out($q->fetch())], 201);
     }
+    if (preg_match('~^/banners/(\d+)/image$~', $a, $m)) {
+        $id = (int)$m[1]; $q = $pdo->prepare('SELECT * FROM banners WHERE id=?'); $q->execute([$id]); $prev = $q->fetch();
+        if (!$prev) fail('Iklan tidak ditemukan.', 404);
+        if ($method === 'PUT') {
+            $buf = (string)file_get_contents('php://input');
+            if (strlen($buf) > 1500 * 1024) fail('Gambar iklan melebihi 1,5 MB. Kecilkan dulu (mis. lewat squoosh.app).', 413);
+            $ext = image_ext($buf); if (!$ext) fail('Gambar harus JPG, PNG, atau WebP.', 415);
+            @mkdir(dirname(banner_file($id, 'jpg')), 0775, true);
+            foreach (['jpg', 'png', 'webp'] as $e) @unlink(banner_file($id, $e));
+            file_put_contents(banner_file($id, $ext), $buf);
+            $pdo->prepare('UPDATE banners SET image=?, image_v=image_v+1, updated_at=? WHERE id=?')->execute([$ext, now(), $id]);
+        } elseif ($method === 'DELETE') {
+            foreach (['jpg', 'png', 'webp'] as $e) @unlink(banner_file($id, $e));
+            $pdo->prepare('UPDATE banners SET image=NULL, image_v=image_v+1, updated_at=? WHERE id=?')->execute([now(), $id]);
+        } else fail('Metode tidak didukung', 405);
+        $q->execute([$id]); out(['banner' => banner_out($q->fetch())]);
+    }
     if (preg_match('~^/banners/(\d+)$~', $a, $m)) {
         $q = $pdo->prepare('SELECT * FROM banners WHERE id=?'); $q->execute([(int)$m[1]]); $prev = $q->fetch();
         if (!$prev) fail('Iklan tidak ditemukan.', 404);
@@ -548,7 +597,7 @@ try {
                 ->execute([$o['headline'], $o['sub'], $o['cta'], $o['action'], $o['link'], $o['theme'], $o['illustration'], $o['sort'], $o['published'], now(), (int)$m[1]]);
             $q->execute([(int)$m[1]]); out(['banner' => banner_out($q->fetch())]);
         }
-        if ($method === 'DELETE') { $pdo->prepare('DELETE FROM banners WHERE id=?')->execute([(int)$m[1]]); out(['ok' => true]); }
+        if ($method === 'DELETE') { foreach (['jpg', 'png', 'webp'] as $e) @unlink(banner_file((int)$m[1], $e)); $pdo->prepare('DELETE FROM banners WHERE id=?')->execute([(int)$m[1]]); out(['ok' => true]); }
     }
     if ($a === '/export' && $method === 'GET') out(['exportedAt' => now(), 'merchants' => array_map('merchant_out', $pdo->query('SELECT * FROM merchants ORDER BY rowid')->fetchAll()), 'products' => array_map('product_out', $pdo->query('SELECT * FROM products ORDER BY rowid')->fetchAll()), 'banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll())]);
 
