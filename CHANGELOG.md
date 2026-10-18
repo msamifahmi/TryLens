@@ -6,6 +6,15 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 29–35 (ringkas)
+
+- **29–31**: foto + model 3D f0–f19 dari katalog toko; ukuran Coba Virtual sadar jarak pupil (`autoFitScale`); nama, kategori, tautan beli, dan harga dari sheet diterapkan otomatis sekali lewat `katalog-update.json`.
+- **33**: halaman `/admin` dirancang ulang (ringkasan dan filter, daftar jelas, panel ubah per bagian, responsif, aksesibel).
+- **34**: tab **Iklan** di `/admin` (slide beranda + teks bar atas; tambah, ubah, urutkan, sembunyikan, hapus; pratinjau) dan deskripsi 24 produk (`descriptions`, hanya mengisi yang kosong).
+- **35**: banner **gambar** (JPG/PNG/WebP ≤ 1,5 MB, selalu utuh dengan latar buram, komponen `FitImage`), banner **halaman masuk Mitra** bisa diganti dari admin, migrasi otomatis tabel `banners`; halaman Kebijakan Privasi dan Syarat dan Ketentuan; header keamanan, kompresi, dan cache di `.htaccess`; label menu Mitra berbahasa Indonesia.
+
+---
+
 ## Update 28
 
 - **Katalog pindah ke basis data terstruktur** (SQLite di backend-node): tabel `merchants` dan `products` dengan kolom bertipe (harga, harga coret, stok, tautan beli per marketplace, ukuran lensa/jembatan/gagang, status tampil, jumlah foto, model 3D, hasil inspeksi rig) + `CHECK` (harga > 0, harga coret > harga jual, stok ≥ 0). `npm run import-catalog` memindahkan 6 toko + 24 produk bawaan (idempoten). `/api/catalog` menggabungkan produk basis data: id yang sama menimpa data bawaan klien, yang baru ditambahkan, `published=false` → id masuk `hidden`.
@@ -563,6 +572,8 @@ Koreksi atas Update 5 (sebelumnya salah dibaca sebagai 3 baris).
 ---
 
 ## Catatan terbuka
+
+- `CONTACT` di `frontend/src/data/siteInfo.js` (WhatsApp, alamat) dan akun `SOCIAL` masih kosong; isi sebelum demo ke mitra.
 
 - URL Instagram, X, Tokopedia, Shopee di `mockData.js` dan `merchants.json` masih **placeholder**; ganti dengan akun asli.
 - `backend-node/data/merchants.json` dan `backend-node/data/products.json` belum disamakan dengan versi PHP; salin isinya bila backend Node dipakai.

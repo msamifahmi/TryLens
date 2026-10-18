@@ -146,6 +146,26 @@ test("Iklan: bawaan, validasi tautan, tambah/ubah/hapus, tayang di /api/catalog,
   assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Iklan/);
 });
 
+test("Iklan gambar PHP: unggah PNG, tolak non-gambar/terlalu besar, tayang di katalog & /media/banner, banner login, hapus gambar", async () => {
+  const mk = async (b) => (await call("POST", "/api/admin/banners", b)).body.banner;
+  const login = await mk({ kind: "login", headline: "Banner login Mitra", action: "none" });
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(100, 7)]);
+  const put = (id, b) => call("PUT", `/api/admin/banners/${id}/image`, b, { raw: true });
+  assert.equal((await put(login.id, Buffer.from("<svg onload=alert(1)>......"))).status, 415);
+  assert.equal((await put(login.id, Buffer.alloc(1600 * 1024, 1))).status, 413);
+  assert.equal((await put(99999, png)).status, 404);
+  const up = await put(login.id, png);
+  assert.equal(up.status, 200, JSON.stringify(up.body)); assert.match(up.body.banner.image, new RegExp(`^/media/banner/${login.id}\\.png\\?v=1$`));
+  assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.banners.login[0].image, up.body.banner.image);
+  const m = await call("GET", up.body.banner.image.split("?")[0], undefined, { headers: {} }); assert.equal(m.status, 200); assert.equal(m.headers.get("content-type"), "image/png");
+  const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100, 1)]);
+  assert.match((await put(login.id, jpg)).body.banner.image, /\.jpg\?v=2$/);
+  assert.equal((await call("GET", `/media/banner/${login.id}.png`, undefined, { headers: {} })).status, 404);
+  assert.equal((await call("DELETE", `/api/admin/banners/${login.id}/image`)).body.banner.image, null);
+  assert.equal((await call("DELETE", `/api/admin/banners/${login.id}`)).status, 200);
+  assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.banners.login.length, 0);
+});
+
 let fail = 0;
 for (const [n, f] of tests) { try { await f(); console.log("✓", n); } catch (e) { fail++; console.log("✗", n, "\n  ", e.message); } }
 srv.kill(); fs.rmSync(data, { recursive: true, force: true });

@@ -127,6 +127,12 @@ h2.t{font-size:20px}
 .adsec{display:grid;gap:var(--space-2)}.adsec>h3{font-size:17px}
 .ad{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr) auto;gap:var(--space-3);align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3)}
 .ad.off .pv,.ad.off .nm{opacity:.55}
+.pv.img{position:relative;padding:0;min-height:96px;background:#0d1520;display:grid;place-items:center}
+.pv.img::before{content:"";position:absolute;inset:-12px;background:var(--bg) center/cover;filter:blur(14px) brightness(.8)}
+.pv.img img{position:relative;display:block;width:100%;max-height:130px;object-fit:contain}
+.pv.none{background:var(--surface-2);color:var(--text-mute);border:1px dashed var(--line);font-size:13px}
+.upl{display:grid;gap:var(--space-3)}.upl .btns{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.guide{background:var(--primary-soft);border-radius:var(--radius-sm);padding:var(--space-3);font-size:14px;display:grid;gap:4px}.guide b{font-size:14px}
 .pv{border-radius:var(--radius-sm);padding:var(--space-3);color:#fff;min-height:84px;display:grid;gap:4px;align-content:center;overflow:hidden}
 .pv b{font-size:15px;line-height:1.25;overflow-wrap:anywhere}.pv small{font-size:12px;opacity:.9;line-height:1.3;overflow-wrap:anywhere}
 .pv i{font-style:normal;justify-self:start;background:#F7DD7D;color:#111827;font-weight:700;font-size:12px;padding:3px 10px;border-radius:99px;margin-top:2px}
@@ -237,6 +243,8 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
         <span class="hint">Slide berganti otomatis sesuai urutan di sini. Sebaiknya 2–5 slide.</span><ul class="list" id="hrows"></ul></div>
       <div class="adsec"><div class="bar"><h3 style="margin-right:auto">Teks di bar paling atas</h3><button class="btn sec" id="addBar" type="button"><svg class="i"><use href="#i-plus"/></svg>Tambah teks</button></div>
         <span class="hint">Satu baris pendek di atas situs (hanya tampil di layar lebar). Jika ada beberapa, yang paling atas dipakai.</span><ul class="list" id="trows"></ul></div>
+      <div class="adsec"><div class="bar"><h3 style="margin-right:auto">Banner halaman masuk Mitra</h3><button class="btn sec" id="addLogin" type="button"><svg class="i"><use href="#i-plus"/></svg>Tambah banner</button></div>
+        <span class="hint">Gambar besar di sisi kiri halaman <b>Masuk/Daftar Mitra</b> (di HP tampil sebagai gambar di atas formulir). Kalau kosong, dipakai tampilan bawaan. Jika ada beberapa, yang paling atas dipakai.</span><ul class="list" id="lrows"></ul></div>
     </section>
   </main>
 </div>
@@ -254,7 +262,7 @@ const CATS=["Pria","Wanita","Anak"];
 const PHOTO_LABEL=["Foto utama","Foto samping","Foto detail","Foto dekat"];
 let T=sessionStorage.getItem("tl_admin")||"",P=[],M=[],B=[],FLT="all";
 const THEMES={blue:["#427AB5","#406AAF","Biru"],navy:["#406AAF","#2F5586","Biru tua"],sky:["#4C86BF","#427AB5","Biru muda"],gold:["#406AAF","#C9A24B","Biru–emas"]};
-const ACTIONS={try:"Buka Coba Virtual",merchant:"Ke daftar toko",feed:"Ke daftar frame",promo:"Ke bagian promo",link:"Buka tautan sendiri"};
+const ACTIONS={try:"Buka Coba Virtual",merchant:"Ke daftar toko",feed:"Ke daftar frame",promo:"Ke bagian promo",link:"Buka tautan sendiri",none:"Tidak bisa diklik (hanya tampil)"};
 const ILLUS={face:"Wajah berkacamata",collection:"Koleksi frame",compare:"Perbandingan frame",promo:"Promo diskon"};
 
 /* ---------- util ---------- */
@@ -399,10 +407,10 @@ $("#dlg").addEventListener("click",e=>{if(e.target.closest("[data-close]")||e.ta
 const grad=t=>{const c=THEMES[t]||THEMES.blue;return `linear-gradient(120deg,${c[0]} 0%,${c[1]} ${t==="gold"?130:100}%)`};
 function adRow(b,i,n){
   const bar=b.kind==="topbar",dest=b.action==="link"?(b.link||""):ACTIONS[b.action];
-  const pv=bar?`<div class="pv bar" style="background:${grad("navy")}"><b>✨ ${esc(b.headline)}</b></div>`
+  const pv=b.image?`<div class="pv img" style="--bg:url('${esc(b.image)}')"><img alt="" src="${esc(b.image)}"></div>`:b.kind==="login"?`<div class="pv none">Belum ada gambar — memakai tampilan bawaan</div>`:bar?`<div class="pv bar" style="background:${grad("navy")}"><b>✨ ${esc(b.headline)}</b></div>`
     :`<div class="pv" style="background:${grad(b.theme)}"><b>${esc(b.headline)}</b>${b.sub?`<small>${esc(b.sub)}</small>`:""}${b.cta?`<i>${esc(b.cta)}</i>`:""}</div>`;
   return `<li class="ad ${b.published?"":"off"}" data-id="${b.id}">${pv}
-   <div class="nm">${bar?`<b>Teks bar atas</b>`:`<b>Slide ${i+1}</b>`}<small>${bar?"Muncul di bar paling atas situs.":`Tombol: ${esc(b.cta||"(tanpa teks)")} → ${esc(dest)}`}</small>${b.published?"":'<span class="chip">Disembunyikan</span>'}</div>
+   <div class="nm">${bar?`<b>Teks bar atas</b>`:b.kind==="login"?`<b>${esc(b.headline)}</b>`:`<b>Slide ${i+1}${b.image?" · gambar":""}</b>`}<small>${bar?"Muncul di bar paling atas situs.":b.kind==="login"?"Tampil di halaman Masuk/Daftar Mitra.":b.image?`Gambar penuh → ${esc(dest)}`:`Tombol: ${esc(b.cta||"(tanpa teks)")} → ${esc(dest)}`}</small>${b.published?"":'<span class="chip">Disembunyikan</span>'}</div>
    <div class="act">
     <button class="btn sec sm ibtn" type="button" data-ad="up" ${i===0?"disabled":""} aria-label="Naikkan urutan">${ico("up")}</button>
     <button class="btn sec sm ibtn" type="button" data-ad="dn" ${i===n-1?"disabled":""} aria-label="Turunkan urutan">${ico("dn")}</button>
@@ -410,7 +418,7 @@ function adRow(b,i,n){
     <button class="btn sec sm" type="button" data-ad="edit" aria-label="Ubah iklan ${esc(b.headline)}">${ico("edit")}Ubah</button>
    </div></li>`}
 function drawAds(){
-  for(const[k,el,msg]of[["hero","#hrows","Belum ada slide. Beranda memakai tampilan bawaan sampai kamu menambah slide."],["topbar","#trows","Belum ada teks. Bar atas hanya menampilkan menu."]]){
+  for(const[k,el,msg]of[["hero","#hrows","Belum ada slide. Beranda memakai tampilan bawaan sampai kamu menambah slide."],["topbar","#trows","Belum ada teks. Bar atas hanya menampilkan menu."],["login","#lrows","Belum ada banner. Halaman masuk Mitra memakai tampilan bawaan."]]){
     const l=B.filter(b=>b.kind===k);$(el).innerHTML=l.length?l.map((b,i)=>adRow(b,i,l.length)).join(""):`<li class="empty"><b>Kosong</b>${msg}</li>`}}
 $("#p-ad").addEventListener("click",async e=>{const b=e.target.closest("[data-ad]");if(!b)return;const id=+b.closest("li").dataset.id,cur=B.find(x=>x.id===id),a=b.dataset.ad;
   if(a==="edit")return adForm(cur);
@@ -418,21 +426,27 @@ $("#p-ad").addEventListener("click",async e=>{const b=e.target.closest("[data-ad
     [l[i],l[j]]=[l[j],l[i]];try{await Promise.all(l.map((x,n)=>x.sort===n+1?0:api("PATCH","/banners/"+x.id,{sort:n+1})));await load()}catch(x){toast(x.message,1);load()}}});
 $("#p-ad").addEventListener("change",async e=>{const b=e.target.closest('[data-ad="pub"]');if(!b)return;const id=+b.closest("li").dataset.id;
   try{await api("PATCH","/banners/"+id,{published:b.checked});toast(b.checked?"Iklan ditampilkan":"Iklan disembunyikan");await load()}catch(x){toast(x.message,1);load()}});
+function uplHTML(b){return `<div class="guide"><b>Ukuran yang disarankan: 1600 × 800 px (rasio 2:1)</b>
+   <span>Taruh tulisan dan objek penting di bagian tengah. Gambar tidak pernah terpotong: kalau layar punya rasio lain, sisi yang kosong diisi latar buram dari gambar itu sendiri, jadi aman di desktop, tablet, dan HP.</span>
+   <span>Format JPG, PNG, atau WebP, maksimal 1,5 MB.${b.kind==="hero"?" Kalau ada gambar, slide hanya menampilkan gambar (tanpa teks dan tombol); klik gambar menuju tujuan yang kamu pilih di bawah.":""}</span></div>
+   ${b.image?`<div class="pv img" style="--bg:url('${esc(b.image)}')"><img alt="Gambar iklan saat ini" src="${esc(b.image)}"></div>`:""}
+   <div class="btns"><span class="btn sec sm file">${b.image?"Ganti gambar":"Pilih gambar"}<input type="file" accept="image/jpeg,image/png,image/webp" data-bup="1" aria-label="${b.image?"Ganti":"Unggah"} gambar iklan"></span>${b.image?`<button class="btn danger sm" type="button" id="rmimg">Hapus gambar</button>`:""}</div>`}
 function adForm(b,kind){
-  const n=!b,k=b?b.kind:kind;b=b||{kind:k,headline:"",sub:"",cta:"",action:"feed",link:"",theme:"blue",illustration:"face",published:true};const bar=k==="topbar";
+  const n=!b,k=b?b.kind:kind;b=b||{kind:k,image:null,headline:"",sub:"",cta:"",action:"feed",link:"",theme:"blue",illustration:"face",published:true};const bar=k==="topbar",lg=k==="login";
   $("#form").innerHTML=`
-  <div class="sh-h"><h3 id="dtitle">${n?(bar?"Tambah teks bar atas":"Tambah slide"):"Ubah iklan"}</h3><button class="btn sec sm" type="button" data-close aria-label="Tutup">${ico("x")}</button></div>
+  <div class="sh-h"><h3 id="dtitle">${n?(bar?"Tambah teks bar atas":lg?"Tambah banner masuk Mitra":"Tambah slide"):"Ubah iklan"}</h3><button class="btn sec sm" type="button" data-close aria-label="Tutup">${ico("x")}</button></div>
   <div class="sh-b"><div class="ferr" id="ferr" role="alert" hidden></div>
    <div id="pvw" aria-live="polite"></div>
    <fieldset><legend>Isi iklan</legend>
-    ${fld(bar?"Teks":"Judul besar","headline",b.headline,{req:1,max:bar?140:80,h:bar?"Satu kalimat pendek.":"Maksimal 80 karakter. Singkat lebih mudah dibaca."})}
-    ${bar?"":`${fld("Teks pendukung","sub",b.sub,{max:160})}${fld("Teks tombol","cta",b.cta,{max:24})}`}
+    ${fld(bar?"Teks":lg?"Nama banner":"Judul besar","headline",b.headline,{req:1,max:bar?140:80,h:bar?"Satu kalimat pendek.":lg?"Hanya untuk pengenal dan teks alternatif pembaca layar.":"Maksimal 80 karakter. Kalau slide memakai gambar, judul ini hanya jadi teks alternatif."})}
+    ${bar||lg?"":`${fld("Teks pendukung","sub",b.sub,{max:160})}${fld("Teks tombol","cta",b.cta,{max:24})}`}
    </fieldset>
-   ${bar?"":`<fieldset><legend>Tombol mengarah ke mana?</legend>
+   ${bar?"":`<fieldset><legend>Gambar sendiri (opsional)</legend>${n?`<p class="hint">Simpan dulu, lalu buka lagi lewat tombol Ubah untuk mengunggah gambar.</p>`:`<div class="upl" id="upl">${uplHTML(b)}</div>`}</fieldset>`}
+   ${bar||lg?"":`<fieldset><legend>Tombol mengarah ke mana?</legend>
     ${sel("Saat tombol ditekan","action",Object.entries(ACTIONS),b.action)}
     <div class="f" id="lk"><label for="f-link">Tautan tujuan</label><input id="f-link" name="link" type="text" inputmode="url" value="${esc(b.link)}" placeholder="/merchant atau https://…"><span class="hint">Alamat di situs ini (diawali /) atau alamat lengkap berawalan https://.</span></div>
    </fieldset>
-   <fieldset><legend>Tampilan</legend>
+   <fieldset><legend>Tampilan teks (dipakai bila tanpa gambar)</legend>
     <div class="f"><span class="lbl" id="tl">Warna latar</span><div class="swatches" role="radiogroup" aria-labelledby="tl">${Object.entries(THEMES).map(([v,c])=>`<label style="background:${grad(v)}"><input type="radio" name="theme" value="${v}" ${b.theme===v?"checked":""}>${c[2]}</label>`).join("")}</div></div>
     ${sel("Gambar ilustrasi","illustration",Object.entries(ILLUS),b.illustration)}
    </fieldset>`}
@@ -440,19 +454,22 @@ function adForm(b,kind){
   </div>
   <div class="sh-f">${n?"":`<button class="btn danger" type="button" id="dad">Hapus</button>`}<span class="sp"></span><button class="btn sec" type="button" data-close>Batal</button><button class="btn" type="submit" id="sv">Simpan</button></div>`;
   $("#dlg").showModal();
-  const val=()=>{const f=new FormData($("#form")),g=x=>f.get(x)||"";return bar?{headline:g("headline"),published:f.has("published")}:
+  const val=()=>{const f=new FormData($("#form")),g=x=>f.get(x)||"";return bar||lg?{headline:g("headline"),published:f.has("published")}:
     {headline:g("headline"),sub:g("sub"),cta:g("cta"),action:g("action"),link:g("action")==="link"?g("link"):"",theme:g("theme"),illustration:g("illustration"),published:f.has("published")}};
-  const pre=()=>{const v=val();$("#pvw").innerHTML=bar?`<div class="pv bar" style="background:${grad("navy")}"><b>✨ ${esc(v.headline||"Teks iklan")}</b></div>`
+  const pre=()=>{const v=val();$("#pvw").innerHTML=b.image?`<div class="pv img" style="--bg:url('${esc(b.image)}')"><img alt="" src="${esc(b.image)}"></div>`:lg?`<div class="pv none">Belum ada gambar — memakai tampilan bawaan</div>`:bar?`<div class="pv bar" style="background:${grad("navy")}"><b>✨ ${esc(v.headline||"Teks iklan")}</b></div>`
     :`<div class="pv" style="background:${grad(v.theme)}"><b>${esc(v.headline||"Judul iklan")}</b>${v.sub?`<small>${esc(v.sub)}</small>`:""}${v.cta?`<i>${esc(v.cta)}</i>`:""}</div>`;
-    if(!bar)$("#lk").hidden=v.action!=="link"};
-  pre();$("#form").oninput=pre;$("#form").onchange=pre;
+    if(!bar&&!lg)$("#lk").hidden=v.action!=="link"};
+  pre();$("#form").oninput=pre;
+  $("#form").onchange=async e=>{const i=e.target;if(!i.dataset||!i.dataset.bup)return pre();const file=i.files[0];if(!file)return;
+    try{toast("Mengunggah…");const r=await api("PUT",`/banners/${b.id}/image`,await file.arrayBuffer(),true);b=r.banner;B=B.map(x=>x.id===b.id?b:x);$("#upl").innerHTML=uplHTML(b);pre();drawAds();toast("Gambar terunggah")}catch(x){toast(x.message,1);i.value=""}};
+  $("#form").onclick=async e=>{if(!e.target.closest("#rmimg"))return;try{const r=await api("DELETE",`/banners/${b.id}/image`);b=r.banner;B=B.map(x=>x.id===b.id?b:x);$("#upl").innerHTML=uplHTML(b);pre();drawAds();toast("Gambar dihapus")}catch(x){toast(x.message,1)}};
   $("#form").onsubmit=async e=>{e.preventDefault();const body={...val()};if(n)body.kind=k;
    const bt=$("#sv");bt.disabled=true;bt.textContent="Menyimpan…";$("#ferr").hidden=true;
    try{await (n?api("POST","/banners",body):api("PATCH","/banners/"+b.id,body));toast("Tersimpan");$("#dlg").close();await load()}
    catch(x){const el=$("#ferr");el.textContent=x.message;el.hidden=false;el.scrollIntoView({block:"nearest"});bt.disabled=false;bt.textContent="Simpan"}};
   if(!n)$("#dad").onclick=async()=>{if(!confirm("Hapus iklan ini? Tidak bisa dibatalkan. Kalau hanya ingin menyembunyikan, matikan Tampil di situs."))return;
     try{await api("DELETE","/banners/"+b.id);$("#dlg").close();toast("Iklan dihapus");load()}catch(x){toast(x.message,1)}}}
-$("#addAd").onclick=()=>adForm(null,"hero");$("#addBar").onclick=()=>adForm(null,"topbar");
+$("#addAd").onclick=()=>adForm(null,"hero");$("#addBar").onclick=()=>adForm(null,"topbar");$("#addLogin").onclick=()=>adForm(null,"login");
 
 /* ---------- menu & tab ---------- */
 $("#add").onclick=()=>prodForm();$("#addM").onclick=()=>merForm();

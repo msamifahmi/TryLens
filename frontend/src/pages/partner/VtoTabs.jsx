@@ -7,7 +7,7 @@ import { Meter, UpgradeLink } from "../../components/partner/ui.jsx";
 import { STYLE_LABELS } from "../../data/mockData.js";
 import { PLANS, buildAnalytics, fmtNum, kpiFor } from "../../data/partnerMock.js";
 
-/* ------------------------------------------------------------ Frame Library */
+/* ------------------------------------------------------------ Pustaka Frame */
 export function VtoLibraryTab() {
   const acc = useAccount();
   const patch = usePartner((s) => s.patch);
@@ -27,7 +27,7 @@ export function VtoLibraryTab() {
   return (
     <Card>
       <CardHeader
-        title="Frame Library"
+        title="Pustaka Frame"
         subtitle={`${active} dari ${acc.frames.length} frame bisa dicoba secara virtual`}
         right={
           <div className="flex gap-2">

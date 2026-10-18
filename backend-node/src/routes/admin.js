@@ -7,7 +7,7 @@ import { Router } from "express";
 import express from "express";
 import { inspectGlb, isJpeg } from "../glb.js";
 import { bad } from "./util.js";
-import { bannerOut, cleanBanner, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
+import { BANNER_IMAGE_MAX, bannerOut, cleanBanner, imageExt, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
 
 const VARIANTS = ["main", "side", "detail", "close"];
 const sha = (s) => crypto.createHash("sha256").update(s).digest();
@@ -174,8 +174,31 @@ export function adminRouter({ config, db }) {
     db.prepare(`UPDATE banners SET ${BCOLS.map((c) => `${c}=@${c}`).join(",")},updated_at=@t WHERE id=@id`).run({ ...o, id: prev.id, t: now() });
     res.json({ banner: bannerOut(getB(prev.id)) });
   });
+  const bannerDir = () => path.join(config.uploadsDir, "_banner");
+  const rmBannerFiles = (id) => { for (const e of ["jpg", "png", "webp"]) fs.rmSync(path.join(bannerDir(), `${id}.${e}`), { force: true }); };
+  r.put("/banners/:id/image", raw, (req, res) => {
+    const prev = getB(req.params.id);
+    if (!prev) return bad(res, "Iklan tidak ditemukan.", 404);
+    const buf = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    if (buf.length > BANNER_IMAGE_MAX) return bad(res, "Gambar iklan melebihi 1,5 MB. Kecilkan dulu (mis. lewat squoosh.app).", 413);
+    const ext = imageExt(buf);
+    if (!ext) return bad(res, "Gambar harus JPG, PNG, atau WebP.", 415);
+    fs.mkdirSync(bannerDir(), { recursive: true });
+    rmBannerFiles(prev.id);
+    fs.writeFileSync(path.join(bannerDir(), `${prev.id}.${ext}`), buf);
+    db.prepare("UPDATE banners SET image=?, image_v=image_v+1, updated_at=? WHERE id=?").run(ext, now(), prev.id);
+    res.json({ banner: bannerOut(getB(prev.id)) });
+  });
+  r.delete("/banners/:id/image", (req, res) => {
+    const prev = getB(req.params.id);
+    if (!prev) return bad(res, "Iklan tidak ditemukan.", 404);
+    rmBannerFiles(prev.id);
+    db.prepare("UPDATE banners SET image=NULL, image_v=image_v+1, updated_at=? WHERE id=?").run(now(), prev.id);
+    res.json({ banner: bannerOut(getB(prev.id)) });
+  });
   r.delete("/banners/:id", (req, res) => {
     if (!getB(req.params.id)) return bad(res, "Iklan tidak ditemukan.", 404);
+    rmBannerFiles(req.params.id);
     db.prepare("DELETE FROM banners WHERE id=?").run(req.params.id);
     res.json({ ok: true });
   });

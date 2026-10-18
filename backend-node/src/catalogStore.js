@@ -150,12 +150,23 @@ export function publicCatalog(db) {
 
 /* ---------------------------------------------------------- iklan */
 
-export const BANNER_ACTIONS = ["try", "merchant", "feed", "promo", "link"];
+export const BANNER_ACTIONS = ["try", "merchant", "feed", "promo", "link", "none"];
+export const BANNER_KINDS = ["hero", "topbar", "login"];
+export const BANNER_IMAGE_MAX = 1500 * 1024;
+
+/** Jenis gambar dari byte awal berkas (bukan dari nama): jpg | png | webp | null. */
+export function imageExt(b) {
+  if (!Buffer.isBuffer(b) || b.length < 13) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "jpg";
+  if (b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
+  if (b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP") return "webp";
+  return null;
+}
 export const BANNER_THEMES = ["blue", "navy", "sky", "gold"];
 export const BANNER_ILLUS = ["face", "collection", "compare", "promo"];
 
 export function bannerOut(r) {
-  return { id: r.id, kind: r.kind, headline: r.headline, sub: r.sub, cta: r.cta, action: r.action, link: r.link, theme: r.theme, illustration: r.illustration, sort: r.sort, published: !!r.published, updatedAt: r.updated_at };
+  return { id: r.id, kind: r.kind, image: r.image ? `/media/banner/${r.id}.${r.image}?v=${r.image_v}` : null, headline: r.headline, sub: r.sub, cta: r.cta, action: r.action, link: r.link, theme: r.theme, illustration: r.illustration, sort: r.sort, published: !!r.published, updatedAt: r.updated_at };
 }
 
 /** Tautan iklan: alamat dalam situs ("/…") atau https penuh. */
@@ -170,7 +181,7 @@ export function cleanBanner(b, prev) {
   const o = prev ? { ...prev } : { kind: "hero", headline: "", sub: "", cta: "", action: "feed", link: null, theme: "blue", illustration: "face", sort: 0, published: 1 };
   const need = (c, m) => { if (!c) throw err(m); };
   if (!prev && "kind" in b) o.kind = String(b.kind);
-  need(["hero", "topbar"].includes(o.kind), "Jenis iklan tidak dikenal.");
+  need(BANNER_KINDS.includes(o.kind), "Jenis iklan tidak dikenal.");
   if ("headline" in b) o.headline = str(b.headline, o.kind === "topbar" ? 140 : 80);
   need(o.headline.length >= 3, "Judul iklan minimal 3 karakter.");
   if ("sub" in b) o.sub = str(b.sub, 160);
@@ -193,7 +204,7 @@ export function cleanBanner(b, prev) {
 }
 
 export function publicBanners(db) {
-  const out = { hero: [], topbar: [] };
+  const out = { hero: [], topbar: [], login: [] };
   for (const r of db.prepare("SELECT * FROM banners WHERE published=1 ORDER BY sort, id").all()) {
     const { published, updatedAt, sort, ...b } = bannerOut(r);
     out[r.kind].push(b);

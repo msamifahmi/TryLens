@@ -197,7 +197,7 @@ export function ProductsTab() {
           </Field>
           <div className="col-span-full">
             <p className="text-[12.5px] font-semibold text-ink m-0">Tautan beli di e-commerce <span className="font-normal text-ink-muted">(opsional)</span></p>
-            <p className="text-[12px] text-ink-muted m-0 mt-0.5 mb-2">Pembeli melihat tombolnya di halaman produk. Kosong = memakai tautan Tokopedia/Shopee toko (Store Profile).</p>
+            <p className="text-[12px] text-ink-muted m-0 mt-0.5 mb-2">Pembeli melihat tombolnya di halaman produk. Kosong = memakai tautan Tokopedia/Shopee toko (Profil Toko).</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {PLATFORMS.map((p) => (
                 <label key={p.key} className="flex items-center gap-2">

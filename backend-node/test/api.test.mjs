@@ -488,6 +488,44 @@ test("Iklan: bawaan 4 slide + 1 teks atas, admin tambah/ubah/sembunyikan/hapus, 
   assert.equal((await c.req("GET", "/api/admin/export", undefined, { headers: AH })).body.banners.length, 5);
 });
 
+test("Iklan gambar: unggah PNG/JPG/WebP (cek isi berkas), tayang di katalog & /media/banner, banner login, hapus gambar", async () => {
+  const c = new Client();
+  const mk = async (b) => (await c.req("POST", "/api/admin/banners", b, { headers: AH })).body.banner;
+  const login = await mk({ kind: "login", headline: "Banner login Mitra", action: "none" });
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(100, 7)]);
+  assert.equal((await c.req("PUT", `/api/admin/banners/${login.id}/image`, Buffer.from("<svg onload=alert(1)>......"), { raw: true, headers: AH })).status, 415, "SVG/HTML ditolak");
+  assert.equal((await c.req("PUT", `/api/admin/banners/${login.id}/image`, Buffer.alloc(1600 * 1024, 1), { raw: true, headers: AH })).status, 413);
+  assert.equal((await c.req("PUT", "/api/admin/banners/99999/image", png, { raw: true, headers: AH })).status, 404);
+  const up = await c.req("PUT", `/api/admin/banners/${login.id}/image`, png, { raw: true, headers: AH });
+  assert.equal(up.status, 200); assert.match(up.body.banner.image, new RegExp(`^/media/banner/${login.id}\\.png\\?v=1$`));
+  const pub = (await c.req("GET", "/api/catalog")).body.banners;
+  assert.equal(pub.login.length, 1); assert.equal(pub.login[0].image, up.body.banner.image);
+  const m = await fetch(base + up.body.banner.image); assert.equal(m.status, 200); assert.equal(m.headers.get("content-type"), "image/png");
+  const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100, 1)]);
+  const up2 = await c.req("PUT", `/api/admin/banners/${login.id}/image`, jpg, { raw: true, headers: AH });
+  assert.match(up2.body.banner.image, /\.jpg\?v=2$/); assert.equal((await fetch(base + `/media/banner/${login.id}.png`)).status, 404, "berkas lama terhapus");
+  assert.equal((await c.req("DELETE", `/api/admin/banners/${login.id}/image`, undefined, { headers: AH })).body.banner.image, null);
+  assert.equal((await fetch(base + `/media/banner/${login.id}.jpg`)).status, 404);
+  assert.equal((await c.req("DELETE", `/api/admin/banners/${login.id}`, undefined, { headers: AH })).status, 200);
+  assert.equal((await c.req("GET", "/api/catalog")).body.banners.login.length, 0);
+});
+
+test("Migrasi DB lama: tabel banners (tanpa jenis login/gambar) dibangun ulang tanpa kehilangan isi", async () => {
+  const { default: Database } = await import("better-sqlite3");
+  const { openDb } = await import("../src/db.js");
+  const f = path.join(dir, "old-banners.db");
+  const old = new Database(f);
+  old.exec(`CREATE TABLE banners (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('hero','topbar')), headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '', cta TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face', sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE TABLE counters (name TEXT PRIMARY KEY, value INTEGER NOT NULL); INSERT INTO counters VALUES('banners_seeded',1);
+    INSERT INTO banners(kind,headline,created_at,updated_at) VALUES('hero','Iklan lama saya','t','t');`);
+  old.close();
+  const db = openDb(f);
+  const rows = db.prepare("SELECT kind,headline,image,image_v FROM banners").all();
+  assert.deepEqual(rows, [{ kind: "hero", headline: "Iklan lama saya", image: null, image_v: 0 }]);
+  db.prepare("INSERT INTO banners(kind,headline,created_at,updated_at) VALUES('login','x','t','t')").run();
+  db.close();
+});
+
 test("Katalog publik memuat produk admin (assets /media), menyembunyikan yang published=false, dan menimpa id bawaan", async () => {
   const c = new Client();
   let cat = (await c.req("GET", "/api/catalog")).body;
