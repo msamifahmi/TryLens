@@ -89,12 +89,13 @@ export function openDb(file) {
     CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS banners (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      kind TEXT NOT NULL CHECK (kind IN ('hero','topbar')),
+      kind TEXT NOT NULL CHECK (kind IN ('hero','topbar','login')), image TEXT, image_v INTEGER NOT NULL DEFAULT 0,
       headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '', cta TEXT NOT NULL DEFAULT '',
       action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face',
       sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     );
   `);
+  migrateBanners(db);
   seedBanners(db);
   return db;
 }
@@ -120,5 +121,22 @@ function seedBanners(db) {
   db.transaction(() => {
     rows.forEach((r, i) => ins.run(...r, i + 1, t, t));
     db.prepare("INSERT OR IGNORE INTO counters(name,value) VALUES('banners_seeded',1)").run();
+  })();
+}
+
+/** DB lama (PR #13): tabel banners tanpa jenis 'login' & kolom gambar → bangun ulang sambil menyalin isinya. */
+function migrateBanners(db) {
+  const sql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='banners'").pluck().get() || "";
+  if (!sql || sql.includes("'login'")) return;
+  db.transaction(() => {
+    db.exec("ALTER TABLE banners RENAME TO banners_old");
+    db.exec(`CREATE TABLE banners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT NOT NULL CHECK (kind IN ('hero','topbar','login')), image TEXT, image_v INTEGER NOT NULL DEFAULT 0,
+      headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '', cta TEXT NOT NULL DEFAULT '',
+      action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face',
+      sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`);
+    db.exec("INSERT INTO banners(id,kind,headline,sub,cta,action,link,theme,illustration,sort,published,created_at,updated_at) SELECT id,kind,headline,sub,cta,action,link,theme,illustration,sort,published,created_at,updated_at FROM banners_old");
+    db.exec("DROP TABLE banners_old");
   })();
 }

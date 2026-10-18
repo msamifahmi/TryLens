@@ -73,6 +73,17 @@ export function createApp(overrides = {}) {
     res.sendFile(p);
   });
 
+  // Gambar iklan dari admin: /media/banner/<id>.(jpg|png|webp)
+  app.get("/media/banner/:file", (req, res) => {
+    const m = /^(\d{1,9})\.(jpg|png|webp)$/.exec(req.params.file);
+    if (!m) return res.sendStatus(404);
+    const p = path.join(config.uploadsDir, "_banner", `${m[1]}.${m[2]}`);
+    if (!fs.existsSync(p)) return res.sendStatus(404);
+    res.setHeader("Content-Type", { jpg: "image/jpeg", png: "image/png", webp: "image/webp" }[m[2]]);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.sendFile(p);
+  });
+
   // Berkas unggahan Mitra: /media/<idFrame>/{main,side,detail,close}.jpg | model.glb
   app.get("/media/:frameId/:file", (req, res) => {
     const { frameId, file } = req.params;

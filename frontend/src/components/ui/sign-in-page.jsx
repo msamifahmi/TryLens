@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import FrameIcon from "../icons/FrameIcon.jsx";
+import FitImage from "../FitImage.jsx";
+import { catalogInfo } from "../../lib/catalog.js";
 
 /**
  * Halaman masuk/daftar Mitra — dua panel (visual kiri, form kanan).
@@ -18,6 +20,8 @@ import FrameIcon from "../icons/FrameIcon.jsx";
  */
 export function LoginPage({ mode = "login", onSubmit, children, fill }) {
   const navigate = useNavigate();
+  // Banner dari admin (tab Iklan → Banner halaman masuk Mitra); tanpa gambar → tampilan bawaan.
+  const banner = (catalogInfo.banners?.login || []).find((b) => b.image) || null;
   const isRegister = mode === "register";
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -66,10 +70,11 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
           </button>
         </div>
 
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-32 -right-16 w-[28rem] h-[28rem] rounded-full bg-accent-yellow/25 blur-3xl" />
+        {banner && <FitImage src={banner.image} alt={banner.headline} eager className="absolute inset-0" />}
+        {!banner && <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/10 blur-3xl" />}
+        {!banner && <div className="absolute -bottom-32 -right-16 w-[28rem] h-[28rem] rounded-full bg-accent-yellow/25 blur-3xl" />}
 
-        <div className="relative z-[1] px-14 max-w-[560px] text-white">
+        {!banner && <div className="relative z-[1] px-14 max-w-[560px] text-white">
           <div className="w-full max-w-[380px] mb-10 relative h-[180px]">
             <motion.div className="absolute top-0 left-0 w-[70%]" initial={{ opacity: 0, x: -30, rotate: -12 }} animate={{ opacity: 1, x: 0, rotate: -6, y: [0, -8, 0] }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], y: { duration: 5, repeat: Infinity, ease: "easeInOut" } }}><FrameIcon style="aviator" colorKey="gold" className="w-full drop-shadow-2xl" /></motion.div>
             <motion.div className="absolute bottom-0 right-0 w-[70%]" initial={{ opacity: 0, x: 30, rotate: 9 }} animate={{ opacity: 1, x: 0, rotate: 3, y: [0, 8, 0] }} transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1], y: { duration: 6, repeat: Infinity, ease: "easeInOut" } }}><FrameIcon style="round" colorKey="clear" className="w-full drop-shadow-2xl" /></motion.div>
@@ -83,7 +88,7 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
             <li>• Virtual Try-On untuk setiap frame</li>
             <li>• Analitik pengunjung dan permintaan pelanggan</li>
           </ul>
-        </div>
+        </div>}
       </div>
 
       {/* Panel kanan — form */}
@@ -97,6 +102,7 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
         </button>
 
         <motion.div className="w-full max-w-md p-8" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
+          {banner && <FitImage src={banner.image} alt={banner.headline} eager className="lg:hidden aspect-[16/9] w-full rounded-2xl mb-6" />}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-ink mb-2">{isRegister ? "Daftar sebagai Mitra" : "Masuk Mitra"}</h1>
             <p className="text-ink-text">

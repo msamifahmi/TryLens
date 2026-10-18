@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PRODUCTS } from "../data/mockData.js";
 import FrameIcon from "./icons/FrameIcon.jsx";
 import { catalogInfo } from "../lib/catalog.js";
+import FitImage from "./FitImage.jsx";
 
 // Warna latar slide iklan dari admin (nama tema → gradien); sama dengan pratinjau di /admin.
 const THEME_BG = {
@@ -23,6 +24,7 @@ function activeSlides() {
     cta: b.cta,
     action: b.action,
     link: b.link,
+    image: b.image || null,
     cta2: null,
     bg: THEME_BG[b.theme] || THEME_BG.blue,
     illustration: ILLUSTRATIONS[b.illustration] ? b.illustration : "face"
@@ -191,7 +193,7 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
   return (
     <section className="max-w-[1280px] mx-auto px-4 sm:px-5 pt-4 pb-2">
       <div
-        className="relative rounded-2xl overflow-hidden aspect-[3/1] max-[700px]:aspect-auto max-[700px]:h-[460px] select-none shadow-[0_18px_40px_-24px_rgb(30_60_120/.55)]"
+        className={`relative rounded-2xl overflow-hidden aspect-[3/1] select-none ${slides.every((x) => x.image) ? "max-[700px]:aspect-[16/10]" : "max-[700px]:aspect-auto max-[700px]:h-[460px]"} shadow-[0_18px_40px_-24px_rgb(30_60_120/.55)]`} 
         style={{ touchAction: "pan-y" }}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(document.hidden)}
@@ -204,7 +206,7 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
         aria-label="Promosi TryLens"
       >
         {slides.map((slide, i) => {
-          const Illustration = ILLUSTRATIONS[slide.illustration];
+          const Illustration = ILLUSTRATIONS[slide.illustration] || ILLUSTRATIONS.face;
           const active = i === index;
           return (
             <div
@@ -215,8 +217,23 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
               className={`tl-slide absolute inset-0 flex items-center transition-[opacity,visibility] duration-500 ${
                 active ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"
               }`}
-              style={{ background: slide.bg }}
+              style={{ background: slide.image ? "#0d1520" : slide.bg }}
             >
+              {slide.image ? (
+                <>
+                  <FitImage src={slide.image} alt={slide.headline} eager={i === 0} className="absolute inset-0" />
+                  {slide.action !== "none" && (
+                    <div
+                      role="button"
+                      tabIndex={active ? 0 : -1}
+                      aria-label={slide.headline}
+                      onClick={() => { if (!swiped.current) runAction(slide.action, slide.link); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); runAction(slide.action, slide.link); } }}
+                      className="absolute inset-0 z-10 cursor-pointer"
+                    />
+                  )}
+                </>
+              ) : (<>
               <div className="pointer-events-none absolute -right-24 -top-24 w-80 h-80 rounded-full bg-white/10 blur-2xl" aria-hidden="true" />
               <div className="flex items-center w-full h-full px-8 md:px-14 max-[700px]:flex-col-reverse max-[700px]:justify-end max-[700px]:px-6 max-[700px]:pt-14 max-[700px]:pb-14 max-[700px]:text-center">
                 <div className="flex-1 max-w-[480px]">
@@ -247,6 +264,7 @@ export default function HeroCarousel({ onFeed, onMerchants, onPromo, onCtaClick 
                   <Illustration />
                 </div>
               </div>
+              </>)}
             </div>
           );
         })}

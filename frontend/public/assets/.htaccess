@@ -1,0 +1,4 @@
+# Berkas build Vite di folder ini bernama hash (berubah bila isinya berubah) → aman di-cache lama.
+<IfModule mod_headers.c>
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

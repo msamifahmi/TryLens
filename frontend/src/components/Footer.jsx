@@ -67,7 +67,11 @@ export default function Footer({ onOpenWishlist }) {
         ))}
       </div>
       <div className="max-w-[1280px] mx-auto px-5 border-t border-border py-4.5 flex items-center justify-between flex-wrap gap-2.5 text-[12.5px] text-ink-muted">
-        <span>© 2026 TryLens. Hak cipta dilindungi.</span>
+        <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span>© 2026 TryLens. Hak cipta dilindungi.</span>
+          <Link to="/kebijakan-privasi" className="hover:text-blue hover:underline">Kebijakan Privasi</Link>
+          <Link to="/syarat-ketentuan" className="hover:text-blue hover:underline">Syarat dan Ketentuan</Link>
+        </span>
         <div className="flex gap-2.5">
           {Object.keys(ICONS).map((label) => (
             <a

@@ -124,7 +124,7 @@ export const INFO_PAGES = {
         { t: "Tambah frame", d: "Isi nama, gaya, warna, kategori, harga, stok, deskripsi, dan tautan e-commerce (Tokopedia, Shopee, Lazada, TikTok Shop, atau website toko). Katalog tidak dibatasi jumlahnya." },
         { t: "Isi ukuran asli frame", d: "Isi lebar lensa, tinggi lensa, jembatan, panjang gagang, dan lebar total (mm). Dengan ukuran ini frame tampil 1:1 di coba virtual. Bila dikosongkan, ukuran disesuaikan otomatis dengan wajah pengguna." },
         { t: "Unggah foto dan model 3D", d: "Foto JPEG maksimal 5 MB. Untuk coba virtual yang presisi, unggah model .glb dengan node standar TryLens (lihat Spesifikasi aset). Frame tanpa model tetap tampil dengan ilustrasi 2D." },
-        { t: "Aktifkan Virtual Try-On", d: "Atur frame mana yang bisa dicoba di menu Frame Library. Ada batas jumlah frame ber-VTO per paket." }
+        { t: "Aktifkan Virtual Try-On", d: "Atur frame mana yang bisa dicoba di menu Pustaka Frame. Ada batas jumlah frame ber-VTO per paket." }
       ] },
       { type: "h", text: "Paket" },
       { type: "plans" },
@@ -137,6 +137,47 @@ export const INFO_PAGES = {
         "Metadata ukuran di GlassesRoot.extras.trylens. Form unggah memeriksa model dan memberi tahu bila ada yang kurang."
       ] },
       { type: "cta", label: "Daftar sebagai Mitra", to: "/partner/register" }
+    ]
+  },
+  "kebijakan-privasi": {
+    title: "Kebijakan Privasi",
+    lead: "Cara TryLens memperlakukan datamu. Terakhir diperbarui 18 Oktober 2026.",
+    blocks: [
+      { type: "h", text: "Kamera dan scan wajah" },
+      { type: "p", text: "Kamera hanya menyala selama kamu memakai Coba Virtual atau Scan Bentuk Wajah, dan hanya atas izinmu. Gambar diproses langsung di perangkatmu. Video tidak direkam, tidak diunggah, dan tidak disimpan di server TryLens." },
+      { type: "p", text: "Untuk memuat pemindai wajah, browser mengunduh komponen MediaPipe dari jsDelivr dan model dari Google Storage. Kedua layanan itu dapat mencatat alamat IP yang mengunduh, sesuai kebijakan masing-masing." },
+      { type: "h", text: "Data yang tersimpan" },
+      { type: "list", items: [
+        "Daftar wishlist dan pilihan tampilan disimpan di browser perangkatmu sendiri, bukan di server.",
+        "Konsultasi berjalan lewat WhatsApp toko pilihanmu. Hasil scan wajah (bentuk wajah dan perkiraan ukuran) hanya ikut terkirim bila kamu memilih menyertakannya, dan dikirim langsung ke toko itu lewat pesan WhatsApp.",
+        "Akun Mitra (pemilik toko) berisi nama, email, dan data toko yang diisi sendiri oleh Mitra.",
+        "Server menyimpan katalog produk, toko, dan iklan. Server tidak menyimpan foto wajah pengunjung."
+      ] },
+      { type: "h", text: "Layanan pihak ketiga" },
+      { type: "p", text: "Huruf situs dimuat dari Google Fonts. Tautan beli membawamu ke marketplace (Shopee, Tokopedia, dan lainnya) atau situs toko, yang punya kebijakan privasi sendiri." },
+      { type: "h", text: "Hak dan kontak" },
+      { type: "p", text: "Kamu dapat menghapus data wishlist dengan membersihkan data situs di browser. Untuk pertanyaan atau permintaan terkait data Mitra, hubungi kami lewat halaman Kontak." },
+      { type: "cta", label: "Hubungi kami", to: "/kontak" }
+    ]
+  },
+  "syarat-ketentuan": {
+    title: "Syarat dan Ketentuan",
+    lead: "Aturan dasar memakai TryLens. Terakhir diperbarui 18 Oktober 2026.",
+    blocks: [
+      { type: "h", text: "Peran TryLens" },
+      { type: "p", text: "TryLens adalah etalase dan alat coba virtual. TryLens tidak menjual frame secara langsung. Pembelian, pembayaran, pengiriman, dan garansi diselesaikan antara kamu dan toko atau marketplace yang kamu pilih." },
+      { type: "h", text: "Hasil coba virtual" },
+      { type: "p", text: "Coba Virtual dan perkiraan ukuran wajah adalah gambaran, bukan pengukuran medis. Ukuran dan tampilan asli dapat berbeda sedikit. Untuk lensa berresep, periksakan mata ke optik atau dokter." },
+      { type: "h", text: "Harga, stok, dan informasi produk" },
+      { type: "p", text: "Informasi produk dikelola TryLens dan toko mitra dan dapat berubah sewaktu-waktu. Harga dan ketersediaan final mengikuti halaman toko atau marketplace tujuan." },
+      { type: "h", text: "Untuk Mitra" },
+      { type: "list", items: [
+        "Mitra bertanggung jawab atas kebenaran data, foto, harga, dan klaim produk yang dipasang.",
+        "Mitra hanya boleh mengunggah foto dan model 3D yang dimiliki atau yang diizinkan penggunaannya.",
+        "Iklan ditinjau tim TryLens sebelum tayang dan dapat ditolak atau diturunkan bila melanggar aturan.",
+        "Biaya paket dan penempatan iklan mengikuti halaman Langganan dan Promosi."
+      ] },
+      { type: "cta", label: "Pertanyaan? Hubungi kami", to: "/kontak" }
     ]
   },
   kontak: {

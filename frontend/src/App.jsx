@@ -30,7 +30,7 @@ export default function App() {
           <Route path="/toko/:id" element={<MerchantPage />} />
           <Route path="/try-on/:id" element={<TryOnPage />} />
           <Route path="/konsultasi" element={<ConsultPage />} />
-          {["tentang", "cara-kerja", "virtual-try-on", "karier", "cara-belanja", "faq", "bantuan", "panduan-merchant", "kontak"].map((k) => (
+          {["tentang", "cara-kerja", "virtual-try-on", "karier", "cara-belanja", "faq", "bantuan", "panduan-merchant", "kontak", "kebijakan-privasi", "syarat-ketentuan"].map((k) => (
             <Route key={k} path={`/${k}`} element={<InfoPage page={k} />} />
           ))}
         </Route>

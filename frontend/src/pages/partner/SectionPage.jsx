@@ -18,64 +18,64 @@ const RouterAnchor = ({ href, ...rest }) => <Link to={href} {...rest} />;
 
 export const SECTIONS = {
   store: {
-    title: "Store Management",
+    title: "Manajemen Toko",
     subtitle: "Kelola profil, frame, koleksi, dan tampilan toko Anda.",
     feature: { title: "Tambah frame baru", text: "Unggah foto produk dan model 3D agar bisa dicoba pelanggan.", to: "/partner/store/products", cta: "Buka Produk / Frame" },
     tabs: [
-      { key: "profile", label: "Store Profile", icon: Store, desc: "Nama, alamat, kontak, dan tautan toko", C: StoreProfileTab },
-      { key: "products", label: "Products / Frames", icon: Boxes, desc: "Frame, harga, stok, foto, dan model 3D", C: ProductsTab },
-      { key: "collections", label: "Collections", icon: FolderOpen, desc: "Kelompokkan frame jadi koleksi", C: CollectionsTab },
-      { key: "preview", label: "Store Preview", icon: Eye, desc: "Lihat toko seperti dilihat pelanggan", C: PreviewTab }
+      { key: "profile", label: "Profil Toko", icon: Store, desc: "Nama, alamat, kontak, dan tautan toko", C: StoreProfileTab },
+      { key: "products", label: "Produk / Frame", icon: Boxes, desc: "Frame, harga, stok, foto, dan model 3D", C: ProductsTab },
+      { key: "collections", label: "Koleksi", icon: FolderOpen, desc: "Kelompokkan frame jadi koleksi", C: CollectionsTab },
+      { key: "preview", label: "Pratinjau Toko", icon: Eye, desc: "Lihat toko seperti dilihat pelanggan", C: PreviewTab }
     ]
   },
   vto: {
     title: "Virtual Try-On",
     subtitle: "Atur frame yang bisa dicoba dan pantau penggunaannya.",
-    feature: { title: "Model 3D siap pakai?", text: "Pastikan rig GLB sesuai spesifikasi agar lensa terkunci ke pupil.", to: "/partner/vto/library", cta: "Cek Frame Library" },
+    feature: { title: "Model 3D siap pakai?", text: "Pastikan rig GLB sesuai spesifikasi agar lensa terkunci ke pupil.", to: "/partner/vto/library", cta: "Cek Pustaka Frame" },
     tabs: [
-      { key: "library", label: "Frame Library", icon: Glasses, desc: "Frame mana yang bisa dicoba virtual", C: VtoLibraryTab },
-      { key: "analytics", label: "Try-On Analytics", icon: LineChart, desc: "Seberapa sering frame dicoba", C: VtoAnalyticsTab },
-      { key: "settings", label: "VTO Settings", icon: SlidersHorizontal, desc: "Tint lensa dan opsi berbagi", C: VtoSettingsTab }
+      { key: "library", label: "Pustaka Frame", icon: Glasses, desc: "Frame mana yang bisa dicoba virtual", C: VtoLibraryTab },
+      { key: "analytics", label: "Analitik Try-On", icon: LineChart, desc: "Seberapa sering frame dicoba", C: VtoAnalyticsTab },
+      { key: "settings", label: "Pengaturan VTO", icon: SlidersHorizontal, desc: "Tint lensa dan opsi berbagi", C: VtoSettingsTab }
     ]
   },
   analytics: {
-    title: "Analytics",
+    title: "Analitik",
     subtitle: "Pahami pengunjung, produk, dan performa try-on toko Anda.",
     feature: { title: "Ringkasan minggu ini", text: "Pengunjung, klik, dan percobaan try-on dalam satu layar.", to: "/partner/analytics/overview", cta: "Lihat Overview" },
     tabs: [
-      { key: "overview", label: "Overview", icon: Gauge, desc: "Angka utama toko Anda", C: AnalyticsOverviewTab },
-      { key: "visitors", label: "Store Visitors", icon: Users, desc: "Siapa yang mengunjungi toko", C: AnalyticsVisitorsTab, pro: true },
-      { key: "products", label: "Product Performance", icon: ShoppingBag, desc: "Frame terlaris dan paling dilihat", C: AnalyticsProductsTab, pro: true },
-      { key: "tryon", label: "Try-On Performance", icon: ScanFace, desc: "Percobaan virtual per frame", C: AnalyticsTryOnTab, pro: true }
+      { key: "overview", label: "Ikhtisar", icon: Gauge, desc: "Angka utama toko Anda", C: AnalyticsOverviewTab },
+      { key: "visitors", label: "Pengunjung Toko", icon: Users, desc: "Siapa yang mengunjungi toko", C: AnalyticsVisitorsTab, pro: true },
+      { key: "products", label: "Performa Produk", icon: ShoppingBag, desc: "Frame terlaris dan paling dilihat", C: AnalyticsProductsTab, pro: true },
+      { key: "tryon", label: "Performa Try-On", icon: ScanFace, desc: "Percobaan virtual per frame", C: AnalyticsTryOnTab, pro: true }
     ]
   },
   promotion: {
-    title: "Promotion",
+    title: "Promosi",
     subtitle: "Jangkau lebih banyak pelanggan lewat banner dan penempatan unggulan.",
     feature: { title: "Jangkau lebih banyak", text: "Pasang banner di beranda atau tonjolkan frame andalan.", to: "/partner/promotion/banners", cta: "Buat Banner" },
     tabs: [
-      { key: "banners", label: "Banner Ads", icon: Megaphone, desc: "Banner di beranda TryLens", C: BannersTab },
+      { key: "banners", label: "Iklan Banner", icon: Megaphone, desc: "Banner di beranda TryLens", C: BannersTab },
       { key: "highlighted", label: "Highlighted Brand", icon: Award, desc: "Toko tampil di slot unggulan", C: HighlightedTab, pro: true },
       { key: "sponsored", label: "Sponsored Frame", icon: Sparkles, desc: "Frame tampil di rekomendasi", C: SponsoredTab, pro: true }
     ]
   },
   subscription: {
-    title: "Subscription",
+    title: "Langganan",
     subtitle: "Paket, tagihan, dan upgrade — kapan saja, bukan hanya saat pertama berlangganan.",
     feature: { title: "Butuh lebih banyak?", text: "Pro: frame tanpa batas, analitik lengkap, dan promosi.", to: "/partner/subscription/upgrade", cta: "Lihat Paket" },
     tabs: [
-      { key: "current", label: "Current Plan", icon: CreditCard, desc: "Paket dan kuota yang aktif", C: CurrentPlanTab },
-      { key: "billing", label: "Billing", icon: Receipt, desc: "Riwayat tagihan dan invoice", C: BillingTab },
-      { key: "upgrade", label: "Upgrade Plan", icon: ArrowUpCircle, desc: "Bandingkan dan ganti paket", C: UpgradePlanTab }
+      { key: "current", label: "Paket Saat Ini", icon: CreditCard, desc: "Paket dan kuota yang aktif", C: CurrentPlanTab },
+      { key: "billing", label: "Tagihan", icon: Receipt, desc: "Riwayat tagihan dan invoice", C: BillingTab },
+      { key: "upgrade", label: "Ganti Paket", icon: ArrowUpCircle, desc: "Bandingkan dan ganti paket", C: UpgradePlanTab }
     ]
   },
   settings: {
-    title: "Settings",
+    title: "Pengaturan",
     subtitle: "Akun, pengaturan toko, dan notifikasi.",
     tabs: [
-      { key: "account", label: "Account", icon: User, desc: "Nama, email, dan kata sandi", C: AccountTab },
-      { key: "store", label: "Store Settings", icon: Settings2, desc: "Visibilitas dan jam operasional", C: StoreSettingsTab },
-      { key: "notifications", label: "Notifications", icon: Bell, desc: "Email, WhatsApp, dan aplikasi", C: NotificationsTab }
+      { key: "account", label: "Akun", icon: User, desc: "Nama, email, dan kata sandi", C: AccountTab },
+      { key: "store", label: "Pengaturan Toko", icon: Settings2, desc: "Visibilitas dan jam operasional", C: StoreSettingsTab },
+      { key: "notifications", label: "Notifikasi", icon: Bell, desc: "Email, WhatsApp, dan aplikasi", C: NotificationsTab }
     ]
   }
 };
