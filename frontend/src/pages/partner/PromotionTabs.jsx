@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Pause, Play, Trash2 } from "lucide-react";
+import { CheckCircle2, ImagePlus, Pause, Play, Trash2 } from "lucide-react";
+import { shrinkImage } from "../../lib/mediaDb.js";
 import FrameIcon from "../../components/icons/FrameIcon.jsx";
 import { ProLock } from "../../components/partner/PlanCard.jsx";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Tile, inputCls } from "../../components/partner/ui.jsx";
@@ -88,6 +89,29 @@ function OrderHistory({ type }) {
 }
 
 /* ------------------------------------------------------------- Banner Ads */
+const toDataUrl = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+
+/** Pratinjau banner persis seperti tampil di situs: gambar utuh (tidak terpotong) di atas latar blur, atau teks di atas gradien. */
+function BannerPreview({ f, storeName }) {
+  return (
+    <div className="relative rounded-xl overflow-hidden min-h-[96px] bg-[linear-gradient(120deg,#427AB5_0%,#2F5586_100%)]" aria-label="Pratinjau banner">
+      {f.image ? (
+        <>
+          <img src={f.image} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" />
+          <img src={f.image} alt={f.title || "Gambar banner"} className="relative w-full max-h-[180px] object-contain" />
+        </>
+      ) : (
+        <div className="relative px-4 py-3">
+          <span className="inline-block text-[9.5px] font-bold tracking-wide uppercase bg-white/20 text-white px-1.5 py-px rounded mb-1">Iklan · {storeName}</span>
+          <p className="text-[15px] font-extrabold text-white leading-tight m-0">{f.title || "Judul banner Anda"}</p>
+          <p className="text-[12px] text-white/90 m-0 mt-0.5">{f.subtitle || "Sub-judul tampil di sini"}</p>
+          <span className="inline-block mt-2 h-7 leading-7 px-3 rounded-lg bg-accent-yellow text-ink text-[12px] font-bold">{f.cta || "Lihat Koleksi"}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BannersTab() {
   const acc = useAccount();
   const patch = usePartner((s) => s.patch);
@@ -97,7 +121,17 @@ export function BannersTab() {
   const [placement, setPlacement] = useState(T.placements[0].key);
   const [weeks, setWeeks] = useState(1);
   const [startsOn, setStartsOn] = useState(dayStr());
-  const [f, setF] = useState({ title: "", subtitle: "", cta: "Lihat Koleksi" });
+  const [f, setF] = useState({ title: "", subtitle: "", cta: "Lihat Koleksi", image: null });
+  const [imgErr, setImgErr] = useState("");
+  const imgIn = useRef(null);
+  async function pickImage(file) {
+    setImgErr("");
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return setImgErr("Gunakan gambar JPG, PNG, atau WebP.");
+    if (file.size > 15 * 1048576) return setImgErr("Gambar lebih dari 15 MB.");
+    try { setF((p) => ({ ...p, image: null })); const url = await toDataUrl(await shrinkImage(file, 1400)); setF((p) => ({ ...p, image: url })); }
+    catch { setImgErr("Gambar tidak bisa dibaca."); }
+  }
   const pl = T.placements.find((p) => p.key === placement);
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const upd = (id, part) => patch((a) => ({ ...a, banners: a.banners.map((b) => (b.id === id ? { ...b, ...part } : b)) }));
@@ -116,6 +150,20 @@ export function BannersTab() {
           <Field label="Judul *" className="col-span-2 sm:col-span-1"><input className={inputCls} value={f.title} onChange={set("title")} maxLength={40} placeholder="mis. Diskon Frame Akhir Tahun" /></Field>
           <Field label="Teks tombol"><input className={inputCls} value={f.cta} onChange={set("cta")} maxLength={20} /></Field>
           <Field label="Sub-judul" className="col-span-2"><input className={inputCls} value={f.subtitle} onChange={set("subtitle")} maxLength={80} /></Field>
+          <div className="col-span-2">
+            <p className="text-[12.5px] font-medium text-ink-text m-0 mb-1">Gambar banner <span className="font-normal text-ink-muted">(opsional)</span></p>
+            <p className="text-[11.5px] text-ink-muted m-0 mb-2">Disarankan 1600 × 800 px (2:1), JPG/PNG/WebP. Gambar ditampilkan utuh tanpa terpotong di semua ukuran layar.</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Btn type="button" size="sm" variant="outline" onClick={() => imgIn.current?.click()}><ImagePlus size={14} /> {f.image ? "Ganti gambar" : "Pilih gambar"}</Btn>
+              {f.image && <Btn type="button" size="sm" variant="ghost" onClick={() => setF((p) => ({ ...p, image: null }))}>Hapus gambar</Btn>}
+            </div>
+            <input ref={imgIn} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { pickImage(e.target.files[0]); e.target.value = ""; }} />
+            {imgErr && <p role="status" className="text-[12.5px] text-red-600 m-0 mt-1.5">{imgErr}</p>}
+          </div>
+          <div className="col-span-2">
+            <p className="text-[12.5px] font-medium text-ink-text m-0 mb-1.5">Pratinjau</p>
+            <BannerPreview f={f} storeName={acc.store?.name || "Toko Anda"} />
+          </div>
         </div>
         <OrderFooter unit={pl.price} weeks={weeks} setWeeks={setWeeks} startsOn={startsOn} setStartsOn={setStartsOn} disabled={!f.title.trim()} onOrder={order} />
         <OrderHistory type="banner" />
@@ -128,7 +176,9 @@ export function BannersTab() {
         ) : (
           <div className="flex flex-col gap-3">
             {acc.banners.map((b) => {
-              const st = STATUS[b.status] || STATUS.paused;
+              // Masa tayang sudah lewat → tampil "Selesai", walau status tersimpan masih aktif.
+              const over = b.status === "active" && b.endsAt && b.endsAt < dayStr();
+              const st = STATUS[over ? "ended" : b.status] || STATUS.paused;
               return (
                 <Tile key={b.id} className="p-4">
                   <div className="flex items-start justify-between gap-3 mb-1">
@@ -138,10 +188,12 @@ export function BannersTab() {
                     </div>
                     <Badge tone={st.tone}>{st.label}</Badge>
                   </div>
+                  {b.image && <img src={b.image} alt={`Gambar banner ${b.title}`} className="w-full max-h-[120px] object-contain rounded-lg bg-surface-blue/60 mb-2" />}
                   <p className="text-[12px] text-ink-muted m-0 mb-3">
                     {AD_TYPES.banner.placements.find((p) => p.key === b.placement)?.label || "—"} · {fmtDate(b.startsAt, shortDate)} – {fmtDate(b.endsAt, shortDate)} · {fmtNum(b.impressions)} tayangan · {fmtNum(b.clicks)} klik
                   </p>
                   <div className="flex items-center gap-1.5">
+                    {b.status === "pending_review" && <Btn size="sm" onClick={() => upd(b.id, { status: "active" })} title="Hanya untuk demo: pada layanan sungguhan, tim TryLens yang menyetujui"><CheckCircle2 size={13} /> Setujui (simulasi admin)</Btn>}
                     {b.status === "active" && <Btn size="sm" variant="outline" onClick={() => upd(b.id, { status: "paused" })}><Pause size={13} /> Jeda</Btn>}
                     {b.status === "paused" && <Btn size="sm" variant="outline" onClick={() => upd(b.id, { status: "active" })}><Play size={13} /> Aktifkan</Btn>}
                     <button className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-error" aria-label={`Hapus banner ${b.title}`} onClick={() => patch((a) => ({ ...a, banners: a.banners.filter((x) => x.id !== b.id) }))}><Trash2 size={15} /></button>

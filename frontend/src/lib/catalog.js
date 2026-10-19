@@ -3,7 +3,7 @@
 import { MERCHANTS, PRODUCTS } from "../data/mockData.js";
 import { api, apiUrl, backend } from "../api/http.js";
 import { usePartner } from "../store/usePartner.js";
-import { activeHighlight } from "../data/partnerMock.js";
+import { activeHighlight, dayStr } from "../data/partnerMock.js";
 
 export const catalogInfo = { source: "static", loadedAt: null, highlighted: [], banners: null };
 
@@ -30,6 +30,27 @@ export function highlightedMerchantIds() {
     } catch { /* tanpa data Mitra → tidak ada Highlighted Brand */ }
   }
   return ids;
+}
+
+/**
+ * Banner yang dipesan Mitra dan sedang tayang untuk satu penempatan ("mitra" = halaman /mitra, "beranda" = slide beranda).
+ * Mode demo: dibaca dari akun Mitra di perangkat ini; hanya yang berstatus aktif dan dalam masa tayang.
+ */
+export function mitraBanners(placement) {
+  const out = [];
+  try {
+    const today = dayStr(); // tanggal lokal, sama dengan yang dipakai saat memesan
+    const { accounts = {} } = usePartner.getState();
+    for (const a of Object.values(accounts)) {
+      if (!a?.store?.merchantId) continue;
+      for (const b of a.banners || []) {
+        if (b.status !== "active" || b.placement !== placement) continue;
+        if ((b.startsAt && b.startsAt > today) || (b.endsAt && b.endsAt < today)) continue;
+        out.push({ ...b, merchantId: a.store.merchantId, storeName: a.store.name });
+      }
+    }
+  } catch { /* tanpa data Mitra → tidak ada banner Mitra */ }
+  return out;
 }
 
 export function mergeCatalog(data) {

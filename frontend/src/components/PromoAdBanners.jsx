@@ -35,6 +35,22 @@ export default function PromoAdBanners({ ads }) {
     <section className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-label="Iklan promo dan katalog terbaru">
       {ads.map((ad) => {
         const theme = THEMES[ad.theme] || THEMES.promo;
+        // Iklan bergambar (banner Mitra): gambar utuh di atas salinannya yang diburamkan — tidak pernah terpotong.
+        if (ad.image) {
+          return (
+            <button
+              key={ad.id}
+              type="button"
+              onClick={ad.onClick}
+              aria-label={`${ad.headline}. ${ad.tag}`}
+              className="relative rounded-xl overflow-hidden min-h-[80px] md:col-span-2 text-left bg-[#2F5586] hover:shadow-lg transition-shadow"
+            >
+              <img src={ad.image} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" />
+              <img src={ad.image} alt={ad.headline} className="relative w-full max-h-[200px] object-contain" />
+              <span className="absolute top-2 left-2 text-[9.5px] font-bold tracking-wide uppercase bg-black/45 text-white px-1.5 py-px rounded">{ad.tag}</span>
+            </button>
+          );
+        }
         return (
           <div
             key={ad.id}

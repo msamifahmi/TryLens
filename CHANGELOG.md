@@ -6,6 +6,16 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 36 — demo Mitra disempurnakan
+
+- **Tambah frame dari model 3D siap pakai**: tombol Tambah frame di Produk / Frame kini membuka pustaka 20 model 3D (f0–f19) dengan cari dan filter kategori; setelah dipilih, bentuk, gaya, dan ukuran terisi, Mitra tinggal mengisi harga, stok, dan foto produk. Pratinjau 360 derajat di form dan di Pratinjau Toko (tab Foto / Model 3D). Pilihan lain: unggah model sendiri atau tanpa model. Frame pustaka tidak lagi memicu notifikasi "tambahkan model 3D".
+- **Iklan banner bergambar**: pesanan banner bisa memakai gambar (ditampilkan utuh), ada pratinjau langsung, tombol "Setujui (simulasi admin)" untuk demo, status "Selesai" otomatis bila masa tayang lewat. Banner aktif tampil di halaman /mitra (slot Halaman Mitra) dan sebagai slide beranda (slot Beranda TryLens).
+- Perbaikan: pencocokan tanggal tayang memakai tanggal lokal (sebelumnya UTC, bisa meleset sehari dini hari WIB).
+- Uji baru: `npm run test:library`.
+- Sengaja tidak dibuat: kotak masuk permintaan pelanggan di dashboard Mitra, karena kebijakan privasi menyatakan TryLens tidak menyimpan atau meneruskan percakapan (konsultasi dan pembelian terjadi langsung lewat WhatsApp, telepon, Tokopedia, atau Shopee).
+
+---
+
 ## Update 29–35 (ringkas)
 
 - **29–31**: foto + model 3D f0–f19 dari katalog toko; ukuran Coba Virtual sadar jarak pupil (`autoFitScale`); nama, kategori, tautan beli, dan harga dari sheet diterapkan otomatis sekali lewat `katalog-update.json`.

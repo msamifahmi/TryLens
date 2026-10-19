@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Glasses, Pencil, Plus, Trash2 } from "lucide-react";
 import { FrameAssetFields, FrameThumb, assetsInitial, commitAssets } from "../../components/partner/FrameAssets.jsx";
+import ModelLibrary from "../../components/partner/ModelLibrary.jsx";
+import { formFromLibrary, libraryProduct } from "../../data/modelLibrary.js";
 import { delFrameMedia } from "../../lib/mediaDb.js";
 import { backend } from "../../api/http.js";
 import { PLATFORMS, cleanBuyUrl } from "../../lib/ecommerce.js";
@@ -49,7 +51,15 @@ export function ProductsTab() {
   const [form, setForm] = useState(null); // null = tertutup; {id?} = tambah/ubah
   const [assets, setAssets] = useState({ photos: [], glb: null });
   const [saving, setSaving] = useState(false);
+  const [picking, setPicking] = useState(false); // langkah 1 tambah frame: pilih model 3D siap pakai
+  const newBase = () => ({ ...EMPTY, id: `f-${Date.now().toString(36)}`, isNew: true });
+  const pickLibrary = (p) => {
+    setAssets({ photos: [], glb: null });
+    setForm(formFromLibrary(p, newBase()));
+    setPicking(false);
+  };
   const openForm = (f) => {
+    setPicking(false);
     const base = f ? { ...f, oldPrice: f.oldPrice ?? "", size: { ...(f.size || {}) } } : { ...EMPTY, id: `f-${Date.now().toString(36)}`, isNew: true };
     setAssets(f ? assetsInitial(f) : { photos: [], glb: null });
     setForm(base);
@@ -85,7 +95,8 @@ export function ProductsTab() {
       oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
       stock: Number(form.stock) || 0,
       published: form.published ?? true,
-      vto: form.vto ?? vtoUsed < vtoLimit // kuota VTO penuh → frame baru masuk katalog tanpa try-on
+      vto: form.vto ?? vtoUsed < vtoLimit, // kuota VTO penuh → frame baru masuk katalog tanpa try-on
+      ...(form.libraryModel ? { libraryModel: form.libraryModel } : {})
     };
     const prevMedia = acc.frames.find((f) => f.id === form.id)?.media;
     const put = (frame) => patch((a) => ({ ...a, frames: form.isNew ? [frame, ...a.frames] : a.frames.map((f) => (f.id === form.id ? frame : f)) }));
@@ -138,7 +149,7 @@ export function ProductsTab() {
         title="Produk / Frame"
         subtitle={`${acc.frames.length} frame terdaftar`}
         right={
-          <Btn size="sm" disabled={atLimit} onClick={() => openForm(null)}>
+          <Btn size="sm" disabled={atLimit} onClick={() => { setForm(null); setPicking(true); }}>
             <Plus size={15} /> Tambah frame
           </Btn>
         }
@@ -154,9 +165,18 @@ export function ProductsTab() {
         </div>
       )}
 
+      {picking && <ModelLibrary onPick={pickLibrary} onOwn={() => openForm(null)} onCancel={() => setPicking(false)} />}
+
       {form && (
         <form onSubmit={save} className="rounded-xl border border-[#C5D6EA] bg-white p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <p className="col-span-full text-[14px] font-semibold text-ink m-0">{form.isNew ? "Frame baru" : "Ubah frame"}</p>
+          <p className="col-span-full text-[14px] font-semibold text-ink m-0">
+            {form.isNew ? (form.libraryModel ? "Langkah 2 — Lengkapi frame baru" : "Frame baru") : "Ubah frame"}
+          </p>
+          {form.isNew && form.libraryModel && (
+            <p className="col-span-full text-[12.5px] text-ink-muted m-0 -mt-1">
+              Bentuk, gaya, dan ukuran sudah terisi dari model 3D. Isi harga dan stok, tambahkan foto produk Anda, lalu simpan.
+            </p>
+          )}
           <Field label="Nama frame *" className="col-span-2"><input className={inputCls} value={form.name} onChange={set("name")} required /></Field>
           <Field label="Gaya">
             <select className={inputCls} value={form.style} onChange={set("style")}>
@@ -207,7 +227,13 @@ export function ProductsTab() {
               ))}
             </div>
           </div>
-          <FrameAssetFields assets={assets} setAssets={setAssets} />
+          <FrameAssetFields
+            assets={assets}
+            setAssets={setAssets}
+            libraryModel={form.libraryModel}
+            libraryName={libraryProduct(form.libraryModel)?.name}
+            onClearLibrary={() => setForm((p) => ({ ...p, libraryModel: null }))}
+          />
           <div className="col-span-full flex gap-2">
             <Btn type="submit" size="sm" disabled={saving}>{saving ? "Menyimpan…" : "Simpan frame"}</Btn>
             <Btn type="button" variant="ghost" size="sm" onClick={() => setForm(null)}>Batal</Btn>
@@ -247,7 +273,7 @@ export function ProductsTab() {
                   <td className="px-4 py-2.5">{f.stock <= 5 ? <Badge tone="amber">{f.stock} tersisa</Badge> : f.stock}</td>
                   <td className="px-4 py-2.5">
                     <Badge tone={f.vto ? "green" : "gray"}>{f.vto ? "Aktif" : "Nonaktif"}</Badge>
-                    <span className="block text-[11.5px] text-ink-muted mt-0.5">{f.media?.glb ? (f.media.glb.rig === "ok" ? "3D · rig sesuai" : "3D · tanpa rig") : "Ilustrasi 2D"}</span>
+                    <span className="block text-[11.5px] text-ink-muted mt-0.5">{f.media?.glb ? (f.media.glb.rig === "ok" ? "3D · rig sesuai" : "3D · tanpa rig") : f.libraryModel ? "3D · model siap pakai" : "Ilustrasi 2D"}</span>
                   </td>
                   <td className="px-4 py-2.5"><Toggle checked={f.published} onChange={(v) => update(f.id, { published: v })} label={`Tayangkan ${f.name}`} /></td>
                   <td className="px-4 py-2.5">

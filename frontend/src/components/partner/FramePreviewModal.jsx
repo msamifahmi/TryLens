@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Glasses, X } from "lucide-react";
-import { FrameThumb } from "./FrameAssets.jsx";
+import { FrameThumb, LibraryModelView } from "./FrameAssets.jsx";
 import { Badge, Btn } from "./ui.jsx";
 import { mediaKey, useMediaUrl } from "../../lib/mediaDb.js";
 import { buyLinks } from "../../lib/ecommerce.js";
@@ -16,6 +16,7 @@ function Photo({ frame, index }) {
 /** Detail frame sebagaimana dilihat pelanggan — dibuka dari Pratinjau Toko. */
 export default function FramePreviewModal({ frame, store, onClose, sponsored }) {
   const [idx, setIdx] = useState(0);
+  const [view, setView] = useState("foto"); // foto | 3d (hanya bila frame memakai model pustaka)
   useEffect(() => {
     const k = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", k);
@@ -41,9 +42,21 @@ export default function FramePreviewModal({ frame, store, onClose, sponsored }) 
         </div>
         <div className="grid md:grid-cols-2 gap-5">
           <div>
-            <div className="bg-surface-blue/60 rounded-xl p-4 aspect-[4/3] flex items-center justify-center overflow-hidden">
-              {photos > 0 ? <Photo frame={frame} index={Math.min(idx, photos - 1)} /> : <FrameThumb frame={frame} />}
-            </div>
+            {frame.libraryModel && (
+              <div className="flex gap-1.5 mb-2" role="group" aria-label="Tampilan">
+                {[["foto", "Foto"], ["3d", "Model 3D"]].map(([k, l]) => (
+                  <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}
+                    className={`h-8 px-3.5 rounded-full text-[12.5px] font-medium border ${view === k ? "bg-blue-deep text-white border-blue-deep" : "bg-white text-ink-text border-[#DDE8F4]"}`}>{l}</button>
+                ))}
+              </div>
+            )}
+            {frame.libraryModel && view === "3d" ? (
+              <LibraryModelView modelId={frame.libraryModel} alt={`Model 3D ${frame.name}`} className="aspect-[4/3]" />
+            ) : (
+              <div className="bg-surface-blue/60 rounded-xl p-4 aspect-[4/3] flex items-center justify-center overflow-hidden">
+                {photos > 0 ? <Photo frame={frame} index={Math.min(idx, photos - 1)} /> : <FrameThumb frame={frame} />}
+              </div>
+            )}
             {photos > 1 && (
               <div className="flex gap-2 mt-2">
                 {Array.from({ length: photos }, (_, i) => (
