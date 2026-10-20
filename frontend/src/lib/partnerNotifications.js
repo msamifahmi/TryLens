@@ -37,7 +37,7 @@ export function buildNotifications(acc, today) {
     if (f.published && !f.media?.photos) out.push({ id: `photo:${f.id}`, kind: "media", tone: "info", title: `${f.name} belum punya foto`, text: "Frame dengan foto asli lebih sering diklik.", action: { label: "Unggah foto", to: "/partner/store/products" } });
   }
   for (const f of frames) {
-    if (f.vto && !f.media?.glb) out.push({ id: `model:${f.id}`, kind: "model", tone: "info", title: `Tambahkan model 3D untuk ${f.name}`, text: "Dengan .glb, pelanggan bisa mencoba virtual dan melihat 360°.", action: { label: "Unggah model", to: "/partner/store/products" } });
+    if (f.vto && !f.media?.glb && !f.libraryModel) out.push({ id: `model:${f.id}`, kind: "model", tone: "info", title: `Tambahkan model 3D untuk ${f.name}`, text: "Dengan .glb, pelanggan bisa mencoba virtual dan melihat 360°.", action: { label: "Unggah model", to: "/partner/store/products" } });
     else if (f.media?.glb && f.media.glb.rig !== "ok") out.push({ id: `rig:${f.id}`, kind: "model", tone: "warn", title: `Rig model ${f.name} belum sesuai`, text: "Lensa belum bisa dikunci ke pupil. Jalankan glb:rig lalu unggah ulang.", action: { label: "Cek model", to: "/partner/store/products" } });
   }
 

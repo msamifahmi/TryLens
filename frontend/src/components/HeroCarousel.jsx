@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PRODUCTS } from "../data/mockData.js";
 import FrameIcon from "./icons/FrameIcon.jsx";
-import { catalogInfo } from "../lib/catalog.js";
+import { catalogInfo, mitraBanners } from "../lib/catalog.js";
 import FitImage from "./FitImage.jsx";
 
 // Warna latar slide iklan dari admin (nama tema → gradien); sama dengan pratinjau di /admin.
@@ -15,9 +15,22 @@ const THEME_BG = {
 
 /** Slide dari admin bila ada; kalau kosong/tidak tersedia, pakai slide bawaan di bawah. */
 function activeSlides() {
+  // Slide berbayar dari Mitra (slot "Beranda TryLens") ikut berputar setelah slide utama.
+  const paid = mitraBanners("beranda").map((b) => ({
+    key: `mitra-${b.id}`,
+    headline: b.title,
+    sub: b.subtitle || `Iklan · ${b.storeName}`,
+    cta: b.cta || "Lihat Koleksi",
+    action: "link",
+    link: `/toko/${b.merchantId}`,
+    image: b.image || null,
+    cta2: null,
+    bg: THEME_BG.gold,
+    illustration: "collection"
+  }));
   const list = catalogInfo.banners?.hero;
-  if (!Array.isArray(list) || !list.length) return SLIDES;
-  return list.map((b) => ({
+  if (!Array.isArray(list) || !list.length) return [...SLIDES, ...paid];
+  return [...list.map((b) => ({
     key: `b${b.id}`,
     headline: b.headline,
     sub: b.sub,
@@ -28,7 +41,7 @@ function activeSlides() {
     cta2: null,
     bg: THEME_BG[b.theme] || THEME_BG.blue,
     illustration: ILLUSTRATIONS[b.illustration] ? b.illustration : "face"
-  }));
+  })), ...paid];
 }
 
 const SLIDES = [

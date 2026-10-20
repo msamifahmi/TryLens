@@ -1,9 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Box, CheckCircle2, ImagePlus, Star, Trash2, UploadCloud, XCircle } from "lucide-react";
 import FrameIcon from "../icons/FrameIcon.jsx";
 import { MAX_GLB_BYTES, inspectGlb } from "../../ar/inspectGlb.js";
 import { delMedia, getMedia, mediaKey, putMedia, shrinkImage, useMediaUrl } from "../../lib/mediaDb.js";
 import { Btn } from "./ui.jsx";
+
+// Model360 membawa three.js; dimuat hanya saat pratinjau 3D benar-benar dibuka.
+const Model360 = lazy(() => import("../Model360.jsx"));
+
+/** Pratinjau 360° model pustaka (frame bawaan TryLens) — dipakai di form frame dan pratinjau toko. */
+export function LibraryModelView({ modelId, alt, className = "h-[220px]" }) {
+  return (
+    <div className={`rounded-xl bg-surface-blue/60 overflow-hidden ${className}`}>
+      <Suspense fallback={<div className="h-full flex items-center justify-center text-[13px] text-ink-muted">Memuat model 3D…</div>}>
+        <Model360 productId={modelId} alt={alt || "Pratinjau 360 derajat"} />
+      </Suspense>
+    </div>
+  );
+}
 
 export const MAX_PHOTOS = 4;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -12,11 +26,13 @@ const kb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.rou
 /** Gambar frame: foto utama unggahan mitra bila ada, jika tidak ilustrasi. */
 export function FrameThumb({ frame, className = "w-full" }) {
   const url = useMediaUrl(frame.media?.photos ? mediaKey(frame.id, "photo-0") : null, frame.media?.v);
-  return url ? (
-    <img src={url} alt={frame.name} className={`${className} aspect-[3/2] object-contain bg-white`} loading="lazy" />
-  ) : (
-    <FrameIcon style={frame.style} colorKey={frame.colorKey} className={className} />
-  );
+  const [libBroken, setLibBroken] = useState(false);
+  if (url) return <img src={url} alt={frame.name} className={`${className} aspect-[3/2] object-contain bg-white`} loading="lazy" />;
+  // Belum ada foto Mitra: tampilkan foto contoh dari model pustaka agar daftar tidak kosong.
+  if (frame.libraryModel && !libBroken) {
+    return <img src={`/products/${frame.libraryModel}/main.jpg`} alt={frame.name} onError={() => setLibBroken(true)} className={`${className} aspect-[3/2] object-contain bg-white opacity-90`} loading="lazy" />;
+  }
+  return <FrameIcon style={frame.style} colorKey={frame.colorKey} className={className} />;
 }
 
 /** Keadaan awal bagian aset di form (ubah/tambah). */
@@ -108,7 +124,7 @@ function GlbStatus({ info }) {
 }
 
 /** Bagian "Foto & Model 3D" di form frame. assets/setAssets = state dari assetsInitial(). */
-export function FrameAssetFields({ assets, setAssets }) {
+export function FrameAssetFields({ assets, setAssets, libraryModel, libraryName, onClearLibrary }) {
   const photoIn = useRef(null);
   const glbIn = useRef(null);
   const [err, setErr] = useState("");
@@ -163,7 +179,18 @@ export function FrameAssetFields({ assets, setAssets }) {
       </div>
 
       <div>
-        <p className="text-[12.5px] font-semibold text-ink m-0">Model 3D untuk Virtual Try-On (.glb)</p>
+        <p className="text-[12.5px] font-semibold text-ink m-0">Model 3D untuk Virtual Try-On{libraryModel ? "" : " (.glb)"}</p>
+        {libraryModel ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-[11.5px] text-ink-muted m-0">
+              Memakai model siap pakai <strong className="text-ink-text">{libraryName || libraryModel}</strong> — sudah berrig, Coba Virtual langsung jalan. Putar untuk memeriksa; foto produk Anda yang ditambahkan di kiri menggantikan foto contoh.
+            </p>
+            <LibraryModelView modelId={libraryModel} alt={`Model 3D ${libraryName || libraryModel}`} />
+            <div>
+              <Btn type="button" variant="outline" size="sm" onClick={onClearLibrary}>Pakai model sendiri (.glb) sebagai gantinya</Btn>
+            </div>
+          </div>
+        ) : (<>
         <p className="text-[11.5px] text-ink-muted m-0 mb-2">Maks. {kb(MAX_GLB_BYTES)}. Satuan cm, menghadap +Z; idealnya dengan rig TryLens (GlassesRoot, Bridge, Left/RightLensCenter, Left/RightTemple).</p>
         {assets.glb ? (
           <div className="rounded-xl border border-[#DDE8F4] bg-white p-3 flex flex-col gap-2.5">
@@ -185,6 +212,7 @@ export function FrameAssetFields({ assets, setAssets }) {
           </button>
         )}
         <input ref={glbIn} type="file" accept=".glb,model/gltf-binary" hidden onChange={(e) => { pickGlb(e.target.files[0]); e.target.value = ""; }} />
+        </>)}
       </div>
       {(err || busy) && <p role="status" className={`col-span-full text-[12.5px] m-0 ${err ? "text-red-600" : "text-ink-muted"}`}>{err || "Memproses berkas…"}</p>}
     </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
+import { mitraBanners } from "../lib/catalog.js";
 import { MERCHANTS, PRODUCTS, OFFICIAL_LINKS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import PromoAdBanners from "../components/PromoAdBanners.jsx";
@@ -34,6 +35,7 @@ const NEW_COUNT = PRODUCTS.filter((p) => p.isNew).length;
 const FLASH_ITEMS = PRODUCTS.filter((p) => p.flash).sort((a, b) => b.flashSold - a.flashSold);
 
 export default function MitraPage() {
+  const navigate = useNavigate();
   const { jumpToFeed } = useOutletContext();
   const setCategory = useFilter((s) => s.setCategory);
 
@@ -74,7 +76,7 @@ export default function MitraPage() {
     if (key === "hasPromo") setHasPromo((v) => !v);
   }
 
-  const ads = [
+  const baseAds = [
     {
       id: "promo",
       theme: "promo",
@@ -100,6 +102,18 @@ export default function MitraPage() {
       }
     }
   ];
+  // Banner berbayar dari Mitra (slot "Halaman Mitra") tampil lebih dulu.
+  const paidAds = mitraBanners("mitra").map((b) => ({
+    id: `mitra-${b.id}`,
+    theme: "promo",
+    tag: `Iklan · ${b.storeName}`,
+    headline: b.title,
+    sub: b.subtitle,
+    cta: b.cta || "Lihat Koleksi",
+    image: b.image || null,
+    onClick: () => navigate(`/toko/${b.merchantId}`)
+  }));
+  const ads = [...paidAds, ...baseAds];
 
   return (
     <div className="max-w-[1280px] mx-auto px-5 py-8">
