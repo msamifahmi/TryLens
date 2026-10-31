@@ -334,7 +334,7 @@ export function buildAnalytics(key, frames = [], plan = "basic") {
     const buyClicks = Math.round(vto * (0.1 + r() * 0.07));
     const contacts = Math.round(vto * (0.12 + r() * 0.05));
     const trend = Math.round((r() * 70 - 22) * 10) / 10; // % vs 30 hari sebelumnya
-    return { id: f.id, name: f.name, style: f.style, colorKey: f.colorKey, price: f.price, stock: f.stock, views, vto, wishlist, captures, buyClicks, contacts, trend };
+    return { id: f.id, name: f.name, style: f.style, colorKey: f.colorKey, libraryModel: f.libraryModel, media: f.media, price: f.price, stock: f.stock, views, vto, wishlist, captures, buyClicks, contacts, trend };
   });
 
   const sources = [

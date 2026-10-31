@@ -6,7 +6,7 @@ export const CONTACT = {
   hours: "Senin–Jumat, 09.00–17.00 WIB"
 };
 export const SOCIAL = {
-  Instagram: "", // contoh: "https://instagram.com/akunmu"
+  Instagram: "https://www.instagram.com/trylens.id",
   TikTok: "",
   LinkedIn: ""
 };

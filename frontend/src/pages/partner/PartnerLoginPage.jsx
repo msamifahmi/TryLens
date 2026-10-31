@@ -7,19 +7,27 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "../../data/partnerMock.js";
 /** Halaman /partner/login — titik masuk Mitra dari ikon user di header beranda. */
 export default function PartnerLoginPage() {
   const login = usePartner((s) => s.login);
+  const ended = usePartner((s) => s.sessionEnded);
+  const clearEnded = usePartner((s) => s.clearSessionEnded);
   const account = useAccount();
   const [fill, setFill] = useState(null);
 
   // Sudah masuk → langsung ke tahap yang sesuai (onboarding / setup / dashboard).
   if (account) return <Navigate to={STAGE_PATH[stageOf(account)]} replace />;
 
-  const onSubmit = async ({ email, password }) => {
-    const res = await login(email, password);
+  const onSubmit = async ({ email, password, rememberMe }) => {
+    clearEnded();
+    const res = await login(email, password, rememberMe);
     return res.ok ? null : res.error;
   };
 
   return (
     <LoginPage mode="login" onSubmit={onSubmit} fill={fill}>
+      {ended && (
+        <p role="status" className="mt-6 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm px-3 py-2 m-0">
+          Sesi Anda berakhir demi keamanan. Silakan masuk kembali.
+        </p>
+      )}
       <div className="mt-8 rounded-xl border border-dashed border-[#C5D6EA] bg-surface-blue/60 p-4">
         <p className="text-xs font-semibold text-ink-text m-0 mb-1">Akun demo (mode uji)</p>
         <p className="text-xs text-ink-muted m-0 mb-3">

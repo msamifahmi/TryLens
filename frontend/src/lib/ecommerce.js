@@ -35,3 +35,15 @@ export function buyLinks(product, merchant) {
   }
   return out;
 }
+
+/** Tautan eksternal apa pun (profil sosial, dll.) hanya boleh https:// — menolak javascript:, data:, http:, dan alamat tanpa host. */
+export function safeHttpsUrl(raw) {
+  const v = String(raw || "").trim();
+  if (!v || v.length > 300) return null;
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`); } catch { return null; }
+  return u.protocol === "https:" && u.hostname.includes(".") ? u.toString() : null;
+}
+
+/** Salin objek tautan dengan hanya nilai yang aman. */
+export const safeLinks = (links) => Object.fromEntries(Object.entries(links || {}).map(([k, v]) => [k, safeHttpsUrl(v)]).filter(([, v]) => v));

@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Crown, Settings } from "lucide-react";
 import NotificationBell from "../components/NotificationBell.jsx";
 import LiquidMenu from "../components/ui/LiquidMenu.jsx";
+import SessionWatch from "../components/partner/SessionWatch.jsx";
 import PartnerNavMenu from "../components/partner/PartnerNavMenu.jsx";
 import { PartnerLogo } from "../components/partner/PartnerFlowShell.jsx";
 import { usePartner, useAccount, stageOf, STAGE_PATH } from "../store/usePartner.js";
@@ -104,6 +105,7 @@ export default function PartnerLayout() {
           <PageTransition><Outlet /></PageTransition>
         </motion.main>
       </div>
+      <SessionWatch />
     </div>
   );
 }

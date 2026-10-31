@@ -118,8 +118,23 @@ export function placeOnEyes({ spec, tg, k, c0, userScale = 1, limits = FIT_LIMIT
 // v = geseran pupil dari pusat lensa, positif = ke luar (menjauhi hidung).
 const side = (v) => (Math.abs(v) < 0.5 ? "tepat" : `${Math.abs(v).toFixed(1).replace(".", ",")} mm ${v > 0 ? "ke luar" : "ke dalam"}`);
 
-/** Laporan kecocokan (mm). Semua angka perkiraan kamera (±2–3 mm). */
-export function describeFit({ frameMm, faceMm, fit, estimated = false }) {
+/**
+ * Aturan optometri (Brooks & Borish, ISO 8624): jarak pusat geometris lensa GCD = A + DBL (lebar lensa + jembatan)
+ * idealnya 0–6 mm lebih besar dari PD, yakni geseran ≤ 3 mm per mata. Terlalu kecil → pupil terlalu ke luar;
+ * terlalu besar → pupil ke arah hidung dan tepi lensa menebal. Fungsi murni; PD dari kamera (±2–3 mm).
+ */
+export function gcdCheck({ lensWidthMm, bridgeMm, pdMm }) {
+  if (!(lensWidthMm > 0 && bridgeMm > 0 && pdMm > 40 && pdMm < 85)) return null;
+  const gcd = lensWidthMm + bridgeMm, over = gcd - pdMm, perEye = over / 2;
+  const status = over >= 0 && over <= 6 ? "ok" : over >= -2 && over <= 9 ? "warn" : "bad";
+  const note = status === "ok" ? "Jarak lensa sesuai PD-mu"
+    : over < 0 ? "Lensa terlalu rapat — pupil cenderung di sisi luar pusat lensa"
+    : "Lensa terlalu renggang — tepi lensa lebih tebal, minta optik menggeser titik optik";
+  return { gcd, over, perEye, status, note };
+}
+
+/** Laporan kecocokan (mm). Semua angka perkiraan kamera (±2–3 mm). `spec` = ukuran frame (hanya dipakai bila ukuran asli dari Mitra). */
+export function describeFit({ frameMm, faceMm, fit, estimated = false, spec = null }) {
   const out = [];
   if (frameMm && faceMm) {
     const r = frameMm / faceMm;
@@ -140,6 +155,11 @@ export function describeFit({ frameMm, faceMm, fit, estimated = false }) {
       status: worst <= 2.5 ? "ok" : worst <= 5 ? "warn" : "bad",
       note: worst <= 2.5 ? "Pupil tepat di pusat lensa" : `Pupil meleset hingga ${worst.toFixed(1).replace(".", ",")} mm — minta optik menggeser titik optik lensa`
     });
+    const g = spec?.realSize ? gcdCheck({ lensWidthMm: spec.lensWidthMm, bridgeMm: spec.bridgeWidthMm, pdMm: fit.pdMm }) : null;
+    if (g) {
+      const f1 = (v) => v.toFixed(1).replace(".", ",");
+      out.push({ key: "gcd", title: "Jarak lensa (A+DBL) vs PD", value: `${Math.round(g.gcd)} mm vs PD ±${Math.round(fit.pdMm)} mm`, status: g.status, note: `${g.note} (selisih ${g.over > 0 ? "+" : "−"}${f1(Math.abs(g.over))} mm)` });
+    }
     out.push({
       key: "vertex",
       title: "Jarak lensa ke mata",

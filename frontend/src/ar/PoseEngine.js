@@ -172,7 +172,7 @@ export class PoseEngine {
     const faceMm = this.mmBuf.length ? median(this.mmBuf) : null;
     return {
       fit: { position: f.p, roll: f.roll, contact: r.contact, rollClamped: r.rollClamped, noseBlocked: r.noseBlocked },
-      report: describeFit({ frameMm: spec.frameWidthMm * this.userScale, faceMm, fit: r, estimated: !!spec.estimated })
+      report: describeFit({ frameMm: spec.frameWidthMm * this.userScale, faceMm, fit: r, estimated: !!spec.estimated, spec })
     };
   }
 

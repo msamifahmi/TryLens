@@ -435,6 +435,8 @@ if (in_array($method, ['POST', 'PATCH', 'PUT'], true) && !preg_match('~/assets/|
 try {
     if ($path === '/admin') {
         header('Content-Type: text/html; charset=utf-8'); header('Cache-Control: no-store');
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+        header('X-Frame-Options: DENY'); header('Referrer-Policy: no-referrer'); header('X-Robots-Tag: noindex, nofollow');
         readfile(__DIR__ . '/admin.html'); exit;
     }
     if ($path === '/api/health') out(['ok' => true, 'time' => now(), 'backend' => 'php-catalog']);
