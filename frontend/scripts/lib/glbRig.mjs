@@ -70,7 +70,9 @@ export function measure(doc, opts = {}) {
   const lensParts = parts.filter((p) => lensRe.test(p.mat));
   if (!lensParts.length) throw new Error(`Tidak ada material lensa (cocok ${lensRe}). Beri nama material lensa 'glass'/'lens' atau pakai --lens=<regex>.`);
   const rest = parts.filter((p) => !lensRe.test(p.mat));
-  const temple = rest.filter((p) => bbox(p.v).max[2] < all.max[2] - gap); // seluruhnya jauh di belakang bidang depan
+  // Gagang: mesh yang node-nya bernama "temple…" (eksplisit), jika tidak ada → bagian yang seluruhnya jauh di belakang bidang depan.
+  const named = rest.filter((p) => /^temples?\b|^temple[_ .-]|temples?$/i.test(p.node.getName()));
+  const temple = named.length ? named : rest.filter((p) => bbox(p.v).max[2] < all.max[2] - gap);
   const front = rest.filter((p) => !temple.includes(p));
   const cat = (list) => { const o = []; for (const p of list) for (let i = 0; i < p.v.length; i++) o.push(p.v[i]); return Float64Array.from(o); };
   const lensV = cat(lensParts), frontV = cat(front), templeV = cat(temple);

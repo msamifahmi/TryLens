@@ -6,6 +6,16 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 38 — f20–f23 memakai model 3D & foto sendiri (tidak ada lagi ilustrasi SVG)
+
+- **4 model 3D baru** masuk katalog sebagai f20–f23 (`public/products/<id>/model.glb`, `main.jpg`, `detail.jpg`), semuanya ber-rig sesuai spesifikasi TryLens dan lolos `npm run glb:check` (24 dari 24 model): f20 Round Wire Gold, f21 Cat Eye Acetate Blue, f22 Half Rim Business Navy, f23 Cat Eye Slim Red. Tombol "Coba Sekarang" dan tab 360° aktif untuk keempatnya.
+- Hanya satu versi warna per model yang dipakai: kubus pilihan warna dibuang dari file half-rim, dan varian warna cat-eye (biru/merah/hitam/abu) tidak dimuat sebagai produk terpisah. f23 adalah cat-eye yang sama dengan f21, diwarnai merah.
+- **Alat baru** `scripts/prepare-glb.mjs`: merapikan model mentah (transformasi, skala cm, gagang, lensa otomatis bila tidak ada, rig) — dipakai untuk keempat model ini. `glbRig.mjs`: node bernama "temple…" dikenali eksplisit sebagai gagang.
+- Data katalog: nama/gaya/warna/kategori f20–f23 diperbarui (seed, mockData, backend). Server yang sudah berjalan menerimanya lewat `katalog-update.json` (`version2`, sekali jalan, hanya menyentuh f20–f23 sehingga ubahan admin pada f0–f19 aman).
+- Pustaka model Mitra kini 24 model (f0–f23).
+
+---
+
 ## Update 37 — logo baru, sesi Mitra, audit keamanan, pengukuran
 
 - **Logo baru** (`public/brand/*`): header, login Mitra, splash, favicon. Link Instagram resmi `instagram.com/trylens.id`; tautan X/Tokopedia/Shopee placeholder dihapus (isi yang asli di `data/mockData.js` & `siteInfo.js`).

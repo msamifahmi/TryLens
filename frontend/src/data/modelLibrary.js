@@ -1,10 +1,10 @@
-// Pustaka model 3D siap pakai: frame bawaan TryLens (f0–f19) yang sudah punya model 3D berrig di /products/<id>/model.glb.
+// Pustaka model 3D siap pakai: frame bawaan TryLens (f0–f23) yang sudah punya model 3D berrig di /products/<id>/model.glb.
 // Mitra memilih salah satu saat menambah frame, lalu cukup menambahkan foto, harga, dan stok sendiri.
 import { PRODUCTS } from "./mockData.js";
 
-export const LIBRARY_IDS = Array.from({ length: 20 }, (_, i) => `f${i}`);
+export const LIBRARY_IDS = Array.from({ length: 24 }, (_, i) => `f${i}`);
 
-/** Frame bawaan yang punya model 3D, urut f0…f19. */
+/** Frame bawaan yang punya model 3D, urut f0…f23. */
 export function libraryModels() {
   return LIBRARY_IDS.map((id) => PRODUCTS.find((p) => p.id === id)).filter(Boolean);
 }

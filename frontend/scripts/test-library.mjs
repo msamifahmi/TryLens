@@ -7,9 +7,9 @@ import { buildNotifications } from "../src/lib/partnerNotifications.js";
 const tests = [];
 const test = (n, f) => tests.push([n, f]);
 
-test("Pustaka berisi 20 model dan setiap model punya berkas model.glb", () => {
-  assert.equal(LIBRARY_IDS.length, 20);
-  assert.equal(libraryModels().length, 20);
+test("Pustaka berisi 24 model dan setiap model punya berkas model.glb", () => {
+  assert.equal(LIBRARY_IDS.length, 24);
+  assert.equal(libraryModels().length, 24);
   for (const id of LIBRARY_IDS) assert.ok(existsSync(new URL(`../public/products/${id}/model.glb`, import.meta.url)), `${id}/model.glb hilang`);
 });
 test("formFromLibrary mengisi bentuk tetapi mengosongkan harga (milik toko Mitra)", () => {

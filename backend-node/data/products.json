@@ -261,9 +261,9 @@
   },
   {
     "id": "f20",
-    "name": "Aviator Gold Line Clear",
-    "style": "square",
-    "colorKey": "clear",
+    "name": "Round Wire Gold",
+    "style": "round",
+    "colorKey": "gold",
     "price": 289000,
     "oldPrice": null,
     "merchant": "Vision Optic",
@@ -274,7 +274,7 @@
   },
   {
     "id": "f21",
-    "name": "Round Acetate Blue",
+    "name": "Cat Eye Acetate Blue",
     "style": "cateye",
     "colorKey": "blue",
     "price": 269000,
@@ -282,12 +282,12 @@
     "merchant": "Optik Maju",
     "merchantId": "m4",
     "city": "Semarang",
-    "cat": "Anak",
+    "cat": "Wanita",
     "badge": "-29%"
   },
   {
     "id": "f22",
-    "name": "Rect Business Navy",
+    "name": "Half Rim Business Navy",
     "style": "rect",
     "colorKey": "navy",
     "price": 329000,
@@ -300,8 +300,8 @@
   },
   {
     "id": "f23",
-    "name": "Oversized Cat Eye Red",
-    "style": "browline",
+    "name": "Cat Eye Slim Red",
+    "style": "cateye",
     "colorKey": "red",
     "price": 219000,
     "oldPrice": null,

@@ -109,7 +109,14 @@ function buildProducts() {
   return products;
 }
 
-export const PRODUCTS = buildProducts();
+// f20–f23 memakai model 3D & foto sendiri (bukan ilustrasi): nama/gaya/warna mengikuti modelnya.
+const REAL_MODELS = {
+  f20: { name: "Round Wire Gold", style: "round", colorKey: "gold", cat: "Wanita" },
+  f21: { name: "Cat Eye Acetate Blue", style: "cateye", colorKey: "blue", cat: "Wanita" },
+  f22: { name: "Half Rim Business Navy", style: "rect", colorKey: "navy", cat: "Pria" },
+  f23: { name: "Cat Eye Slim Red", style: "cateye", colorKey: "red", cat: "Wanita" }
+};
+export const PRODUCTS = buildProducts().map((p) => (REAL_MODELS[p.id] ? { ...p, ...REAL_MODELS[p.id] } : p));
 
 export function formatRp(n) {
   return "Rp" + n.toLocaleString("id-ID");
