@@ -1,6 +1,6 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ArrowLeft, MessageCircle } from "lucide-react";
-import FrameIcon from "../../components/icons/FrameIcon.jsx";
+import { CatalogPhoto } from "../../components/partner/FrameAssets.jsx";
 import FaceSummary from "../../components/consult/FaceSummary.jsx";
 import { Badge, Btn, Card, Tile } from "../../components/partner/ui.jsx";
 import { productsOf, replyLink, useRequests } from "../../components/partner/requests.jsx";
@@ -63,7 +63,7 @@ export default function RequestDetailPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {viewed.map((p) => (
               <Tile key={p.id} className="p-3">
-                <div className="bg-surface-blue/60 rounded-lg p-3 mb-2"><FrameIcon style={p.style} colorKey={p.colorKey} className="w-full" /></div>
+                <div className="bg-surface-blue/60 rounded-lg p-3 mb-2"><CatalogPhoto frame={p} className="w-full aspect-[3/2]" /></div>
                 <p className="text-[13px] font-medium text-ink m-0 truncate">{p.name}</p>
                 <p className="text-[12px] text-ink-muted m-0">{formatRp(p.price)}</p>
               </Tile>
@@ -82,7 +82,7 @@ export default function RequestDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {suggestions.map((f) => (
                 <Tile key={f.id} className="p-3">
-                  <div className="bg-surface-blue/60 rounded-lg p-3 mb-2"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
+                  <div className="bg-surface-blue/60 rounded-lg p-3 mb-2"><CatalogPhoto frame={f} className="w-full aspect-[3/2]" /></div>
                   <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
                   <p className="text-[12px] text-ink-muted m-0">{STYLE_LABELS[f.style]}</p>
                 </Tile>

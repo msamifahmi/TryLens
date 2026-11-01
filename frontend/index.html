@@ -9,12 +9,15 @@
       href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
       rel="stylesheet"
     />
+    <link rel="icon" type="image/png" href="/brand/favicon.png" />
+    <link rel="apple-touch-icon" href="/brand/icon-256.png" />
+    <meta name="theme-color" content="#427AB5" />
     <title>TryLens — Coba Kacamata Secara Virtual</title>
     <style>
       body{margin:0}
       .tl-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#F5F7FA;color:#0F172A;font-family:"Plus Jakarta Sans",system-ui,sans-serif;transition:opacity .5s ease,visibility .5s}
       .tl-splash.is-out{opacity:0;visibility:hidden;pointer-events:none}
-      .tl-splash__logo{width:min(78vw,360px);height:auto;overflow:visible;animation:tl-sp-in .8s cubic-bezier(.2,.8,.2,1) both}
+      .tl-splash__logo{width:min(60vw,260px);height:auto;animation:tl-sp-in .8s cubic-bezier(.2,.8,.2,1) both}
       .tl-splash__logo text{font-family:"Bebas Neue",Impact,system-ui,sans-serif;letter-spacing:.06em}
       .tl-sp-wave1{animation:tl-sp-slide 2.6s linear infinite}
       .tl-sp-wave2{animation:tl-sp-slide 4.2s linear infinite reverse}
@@ -36,22 +39,7 @@
     <div id="root"></div>
     <!-- Preloader: tampil sampai aplikasi siap, lalu dihilangkan oleh main.jsx -->
     <div class="tl-splash" id="tl-splash" role="status" aria-live="polite" aria-label="Memuat TryLens">
-      <svg class="tl-splash__logo" viewBox="0 0 400 110" aria-hidden="true">
-        <defs>
-          <clipPath id="tl-sp-clip">
-            <text x="200" y="92" text-anchor="middle" font-size="104">TRYLENS</text>
-          </clipPath>
-        </defs>
-        <text x="200" y="92" text-anchor="middle" font-size="104" fill="#DCE3EC">TRYLENS</text>
-        <g clip-path="url(#tl-sp-clip)">
-          <g class="tl-sp-rise">
-            <g transform="translate(0,62)">
-              <path class="tl-sp-wave2" fill="#93C5FD" d="M0 10 Q50 -8 100 10 T200 10 T300 10 T400 10 T500 10 T600 10 V120 H0Z"/>
-              <path class="tl-sp-wave1" fill="#2563EB" d="M0 14 Q50 -4 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 V120 H0Z"/>
-            </g>
-          </g>
-        </g>
-      </svg>
+      <img class="tl-splash__logo" src="/brand/logo-full.png" alt="" width="420" height="300" />
       <div class="tl-splash__tag">Coba kacamata secara virtual</div>
       <div class="tl-splash__bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>

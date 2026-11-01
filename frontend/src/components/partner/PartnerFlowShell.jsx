@@ -7,10 +7,7 @@ export const FLOW_STEPS = ["Pilih Paket", "Pembayaran", "Konfirmasi", "Setup Tok
 export function PartnerLogo({ to = "/partner" }) {
   return (
     <Link to={to} className="flex items-center gap-2 text-ink" aria-label="TryLens Partner">
-      <span className="w-8 h-8 rounded-[10px] bg-blue-deep text-white flex items-center justify-center">
-        <Glasses size={18} strokeWidth={2} />
-      </span>
-      <span className="text-[19px] font-bold tracking-tight">trylens</span>
+      <img src="/brand/logo-horizontal.png" alt="TryLens" width="136" height="32" className="h-8 w-auto" />
       <span className="text-[10px] font-semibold tracking-wider uppercase bg-[#DDE8F4] text-ink-text rounded px-1.5 py-0.5">Partner</span>
     </Link>
   );

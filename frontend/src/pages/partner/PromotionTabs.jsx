@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ImagePlus, Pause, Play, Trash2 } from "lucide-react";
 import { shrinkImage } from "../../lib/mediaDb.js";
-import FrameIcon from "../../components/icons/FrameIcon.jsx";
+import { CatalogPhoto } from "../../components/partner/FrameAssets.jsx";
 import { ProLock } from "../../components/partner/PlanCard.jsx";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Tile, inputCls } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount } from "../../store/usePartner.js";
@@ -287,7 +287,7 @@ export function SponsoredTab() {
               return (
                 <button key={f.id} type="button" disabled={full} onClick={() => toggle(f.id)} aria-pressed={on}
                   className={`text-left rounded-xl border bg-white p-3 transition-colors disabled:opacity-40 ${on ? "border-blue-deep ring-1 ring-blue-deep" : "border-[#DDE8F4] hover:border-blue"}`}>
-                  <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></div>
+                  <div className="bg-surface-blue/60 rounded-lg p-3 mb-2.5"><CatalogPhoto frame={f} className="w-full aspect-[3/2]" /></div>
                   <p className="text-[13px] font-medium text-ink m-0 truncate">{f.name}</p>
                   <p className="text-[12px] text-ink-muted m-0 mb-1.5">{fmtRp(f.price)}</p>
                   {on ? <Badge tone="dark">Dipilih</Badge> : <span className="text-[11.5px] text-ink-muted">Klik untuk memilih</span>}

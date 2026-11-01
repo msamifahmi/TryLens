@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import SessionWatch from "./SessionWatch.jsx";
 import { useAccount, stageOf, STAGE_PATH } from "../../store/usePartner.js";
 
 /**
@@ -9,5 +10,10 @@ import { useAccount, stageOf, STAGE_PATH } from "../../store/usePartner.js";
 export default function Gate({ allow, children }) {
   const stage = stageOf(useAccount());
   if (!allow.includes(stage)) return <Navigate to={STAGE_PATH[stage]} replace />;
-  return children;
+  return (
+    <>
+      {children}
+      <SessionWatch />
+    </>
+  );
 }

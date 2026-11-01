@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Download, Lightbulb, TrendingDown, TrendingUp, AlertTriangle } from "lucide-react";
-import FrameIcon from "../../components/icons/FrameIcon.jsx";
+import { FrameThumb } from "../../components/partner/FrameAssets.jsx";
 import LineChart from "../../components/partner/LineChart.jsx";
 import { ProLock } from "../../components/partner/PlanCard.jsx";
 import { Btn, Card, CardHeader, Tile } from "../../components/partner/ui.jsx";
@@ -248,7 +248,7 @@ export function AnalyticsProductsTab() {
             <tbody>
               {rows.map((f) => (
                 <tr key={f.id} className="border-b border-[#E8F0F8] last:border-0">
-                  <td className="px-4 py-2.5"><div className="flex items-center gap-3"><span className="w-12 h-6"><FrameIcon style={f.style} colorKey={f.colorKey} className="w-full" /></span>{f.name}</div></td>
+                  <td className="px-4 py-2.5"><div className="flex items-center gap-3"><span className="w-14 h-9 flex-shrink-0"><FrameThumb frame={f} className="w-full h-full" /></span>{f.name}</div></td>
                   <td className="px-4 py-2.5">{fmtNum(f.views)}</td>
                   <td className="px-4 py-2.5">{fmtNum(f.vto)}</td>
                   <td className="px-4 py-2.5">{fmtNum(f.wishlist)}</td>

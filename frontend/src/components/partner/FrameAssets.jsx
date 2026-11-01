@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Box, CheckCircle2, ImagePlus, Star, Trash2, UploadCloud, XCircle } from "lucide-react";
-import FrameIcon from "../icons/FrameIcon.jsx";
+import ProductImage from "../ProductImage.jsx";
 import { MAX_GLB_BYTES, inspectGlb } from "../../ar/inspectGlb.js";
 import { delMedia, getMedia, mediaKey, putMedia, shrinkImage, useMediaUrl } from "../../lib/mediaDb.js";
 import { Btn } from "./ui.jsx";
@@ -23,16 +23,21 @@ export const MAX_PHOTOS = 4;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const kb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`);
 
-/** Gambar frame: foto utama unggahan mitra bila ada, jika tidak ilustrasi. */
+/**
+ * Gambar frame: foto utama unggahan Mitra bila ada; jika tidak, foto katalog TryLens (frame bawaan / model pustaka);
+ * ilustrasi SVG hanya jadi cadangan terakhir bila foto katalog pun tidak ada.
+ */
 export function FrameThumb({ frame, className = "w-full" }) {
   const url = useMediaUrl(frame.media?.photos ? mediaKey(frame.id, "photo-0") : null, frame.media?.v);
-  const [libBroken, setLibBroken] = useState(false);
   if (url) return <img src={url} alt={frame.name} className={`${className} aspect-[3/2] object-contain bg-white`} loading="lazy" />;
-  // Belum ada foto Mitra: tampilkan foto contoh dari model pustaka agar daftar tidak kosong.
-  if (frame.libraryModel && !libBroken) {
-    return <img src={`/products/${frame.libraryModel}/main.jpg`} alt={frame.name} onError={() => setLibBroken(true)} className={`${className} aspect-[3/2] object-contain bg-white opacity-90`} loading="lazy" />;
-  }
-  return <FrameIcon style={frame.style} colorKey={frame.colorKey} className={className} />;
+  return <CatalogPhoto frame={frame} className={`${className} aspect-[3/2]`} />;
+}
+
+/** Foto katalog TryLens untuk frame Mitra (id katalog atau model pustaka); cadangan: ilustrasi. */
+export function CatalogPhoto({ frame, className = "w-full aspect-[3/2]" }) {
+  return (
+    <ProductImage productId={frame.libraryModel || frame.id} variant="main" style={frame.style} colorKey={frame.colorKey} className={className} alt={frame.name} />
+  );
 }
 
 /** Keadaan awal bagian aset di form (ubah/tambah). */

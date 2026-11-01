@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { ApiError, api, apiUrl, backend, probe } from "../api/http.js";
 import { AD_TYPES, INTERVALS, PLANS, addMonths, endsOn, planLabel, planPrice, seedAccounts } from "../data/partnerMock.js";
 import { vtoToDisable } from "../data/quota.js";
+import { isExpired, newSession, touched } from "../lib/partnerSession.js";
 
 /** Mode demo: terapkan turun paket yang jatuh tempo + jaga kuota VTO (cermin svc.settle di server). */
 export function settleAcc(acc) {
@@ -69,6 +70,7 @@ export const usePartner = create(
       server: false, // tidak disimpan
       ready: false, // tidak disimpan
       syncError: null, // tidak disimpan
+      sessionEnded: false, // tidak disimpan: sesi baru saja habis → tampilkan pesan di halaman masuk
 
       /** Dipanggil sekali saat aplikasi mulai: pilih mode server bila backend hidup, jika tidak mode demo (localStorage). */
       init: async () => {
@@ -86,6 +88,8 @@ export const usePartner = create(
         // Mode demo. Sisa data mode server (tanpa kata sandi) tidak boleh dianggap login.
         if (get().lastMode === "server") set({ accounts: seedAccounts(), session: null, checkout: null });
         else if (!Object.keys(get().accounts).length) set({ accounts: seedAccounts() });
+        // Sesi demo yang sudah lewat batas waktu (atau tanpa stempel waktu) tidak boleh menjadi login otomatis.
+        if (get().session && isExpired(get().session)) set({ session: null, checkout: null });
         set({ server: false, ready: true, lastMode: "demo" });
       },
 
@@ -157,11 +161,11 @@ export const usePartner = create(
             promo: { email: false, whatsapp: false, app: true }
           }
         };
-        set((s) => ({ accounts: { ...s.accounts, [key]: account }, session: { email: key } }));
+        set((s) => ({ accounts: { ...s.accounts, [key]: account }, session: newSession(key, false) }));
         return { ok: true };
       },
 
-      login: async (email, password) => {
+      login: async (email, password, remember = false) => {
         if (get().server) {
           try {
             const { account } = await api("POST", "/api/auth/login", { email, password });
@@ -173,8 +177,23 @@ export const usePartner = create(
         }
         const acc = get().accounts[email.trim().toLowerCase()];
         if (!acc || acc.password !== password) return { ok: false, error: "Email atau password salah." };
-        set({ session: { email: acc.email }, accounts: { ...get().accounts, [acc.email]: settleAcc(acc) } });
+        set({ session: newSession(acc.email, remember), accounts: { ...get().accounts, [acc.email]: settleAcc(acc) } });
         return { ok: true };
+      },
+
+      /** Catat aktivitas pengguna (memperpanjang batas diam). Hanya mode demo; di mode server cookie dikelola server. */
+      touch: () => {
+        const { session, server } = get();
+        if (server || !session) return;
+        const next = touched(session);
+        if (next !== session) set({ session: next });
+      },
+      /** Keluar otomatis bila sesi demo sudah habis. Mengembalikan true bila baru saja dikeluarkan. */
+      enforceSession: () => {
+        const { session, server } = get();
+        if (server || !session || !isExpired(session)) return false;
+        set({ session: null, checkout: null, sessionEnded: true });
+        return true;
       },
 
       logout: async () => {
@@ -217,6 +236,7 @@ export const usePartner = create(
             });
         }
       },
+      clearSessionEnded: () => set({ sessionEnded: false }),
       clearSyncError: () => set({ syncError: null }),
 
       /**

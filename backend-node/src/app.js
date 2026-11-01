@@ -60,7 +60,7 @@ export function createApp(overrides = {}) {
   app.use("/api", legacyRouter);
 
   // Halaman admin katalog (statis; token dimasukkan di browser, tidak pernah ditanam di berkas).
-  app.get("/admin", (req, res) => { res.setHeader("Cache-Control", "no-store"); res.sendFile(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "admin.html")); });
+  app.get("/admin", (req, res) => { res.setHeader("Cache-Control", "no-store"); res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"); res.setHeader("X-Frame-Options", "DENY"); res.setHeader("Referrer-Policy", "no-referrer"); res.sendFile(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "admin.html")); });
 
   // Foto profil toko: /media/store/<idAkun>.jpg
   app.get("/media/store/:file", (req, res) => {

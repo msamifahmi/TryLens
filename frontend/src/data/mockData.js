@@ -31,11 +31,9 @@ export const MERCHANTS = [
 ];
 
 // Kanal resmi TryLens — dipakai di halaman Mitra. Ganti dengan akun asli.
+// Tautan resmi TryLens. Hanya akun yang sudah dipastikan milik TryLens; tambahkan X/Tokopedia/Shopee bila sudah ada.
 export const OFFICIAL_LINKS = {
-  instagram: "https://instagram.com/trylens.id",
-  x: "https://x.com/trylens_id",
-  tokopedia: "https://tokopedia.com/trylens",
-  shopee: "https://shopee.co.id/trylens"
+  instagram: "https://www.instagram.com/trylens.id"
 };
 
 export const QUICK_CATEGORIES = [

@@ -1,3 +1,4 @@
+import { safeLinks } from "../lib/ecommerce.js";
 import { InstagramIcon, XIcon, ShopBagIcon, ExternalIcon } from "./icons/SocialIcons.jsx";
 
 const SOCIAL = [
@@ -101,7 +102,8 @@ function InlineGroup({ heading, items, links }) {
  * variant="card"   : kartu putih besar + subtitle (default; halaman Mitra)
  * variant="inline" : tanpa kartu, ringkas; ditaruh di dalam kartu lain (header profil toko)
  */
-export default function SocialCommerceSection({ title, subtitle, links, variant = "card" }) {
+export default function SocialCommerceSection({ title, subtitle, links: rawLinks, variant = "card" }) {
+  const links = safeLinks(rawLinks); // tolak javascript:/data:/http: dari data toko
   const hasAny = [...SOCIAL, ...COMMERCE].some((it) => links?.[it.key]);
   if (!hasAny) return null;
 

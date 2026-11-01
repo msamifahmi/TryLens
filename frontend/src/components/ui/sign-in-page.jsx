@@ -104,6 +104,7 @@ export function LoginPage({ mode = "login", onSubmit, children, fill }) {
         <motion.div className="w-full max-w-md p-8" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
           {banner && <FitImage src={banner.image} alt={banner.headline} eager className="lg:hidden aspect-[16/9] w-full rounded-2xl mb-6" />}
           <div className="mb-8">
+            <img src="/brand/logo-horizontal.png" alt="TryLens" width="150" height="35" className="h-9 w-auto mb-6" />
             <h1 className="text-3xl font-bold text-ink mb-2">{isRegister ? "Daftar sebagai Mitra" : "Masuk Mitra"}</h1>
             <p className="text-ink-text">
               {isRegister ? "Sudah punya akun?" : "Belum punya akun?"}{" "}

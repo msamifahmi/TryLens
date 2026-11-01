@@ -6,6 +6,16 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 37 — logo baru, sesi Mitra, audit keamanan, pengukuran
+
+- **Logo baru** (`public/brand/*`): header, login Mitra, splash, favicon. Link Instagram resmi `instagram.com/trylens.id`; tautan X/Tokopedia/Shopee placeholder dihapus (isi yang asli di `data/mockData.js` & `siteInfo.js`).
+- **Dashboard Mitra memakai foto katalog** (bukan SVG): Pratinjau Toko, daftar frame, picker Sponsored, tabel analitik.
+- **Sesi Mitra kedaluwarsa** (`lib/partnerSession.js`, `SessionWatch.jsx`): keluar otomatis setelah 20 menit tanpa aktivitas / maks 8 jam; "Ingat saya" = 2 jam diam / maks 24 jam. Peringatan 1 menit sebelum habis ("Tetap masuk"), pesan di halaman login, sesi lama tanpa stempel waktu ditolak. Uji: `npm run test:session`.
+- **Keamanan**: tautan sosial toko hanya https (`safeHttpsUrl`, menutup `javascript:`); CSP produksi via meta (`vite.config.js`); CSP + anti-frame untuk `/admin` (PHP & Node); HSTS di `.htaccess`; `npm audit fix` backend-node (qs). Sisa: react-router 6 (moderat, butuh upgrade ke v7).
+- **Pengukuran**: cek baru "Jarak lensa (A+DBL) vs PD" (ideal 0–6 mm lebih besar dari PD, ≤3 mm per mata; Brooks & Borish/ISO 8624) di laporan kecocokan bila ukuran asli dari Mitra tersedia.
+
+---
+
 ## Update 36 — demo Mitra disempurnakan
 
 - **Tambah frame dari model 3D siap pakai**: tombol Tambah frame di Produk / Frame kini membuka pustaka 20 model 3D (f0–f19) dengan cari dan filter kategori; setelah dipilih, bentuk, gaya, dan ukuran terisi, Mitra tinggal mengisi harga, stok, dan foto produk. Pratinjau 360 derajat di form dan di Pratinjau Toko (tab Foto / Model 3D). Pilihan lain: unggah model sendiri atau tanpa model. Frame pustaka tidak lagi memicu notifikasi "tambahkan model 3D".
