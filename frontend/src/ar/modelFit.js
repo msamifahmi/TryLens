@@ -131,5 +131,11 @@ export function analyzePoints(pts, lens = null) {
 export function templeFactor(hingeHeadZ, tipHeadZ, target = EAR_TIP_Z) {
   const have = hingeHeadZ - tipHeadZ, want = hingeHeadZ - target;
   if (!(have > 0.5) || !(want > 0.5)) return 1;
-  return clamp(want / have, 0.7, 1.6);
+  return clamp(want / have, 0.6, 2.2);
+}
+
+/** Radius-x tempurung kepala (cm, ruang kepala): tidak boleh menelan engsel — frame sempit tetap tampak bertumpu di luar kepala. */
+export function craniumRadiusX(hingeXHead, max = CRANIUM.radii[0]) {
+  if (!(hingeXHead > 0)) return max;
+  return clamp(hingeXHead - 0.3, 4.8, max);
 }

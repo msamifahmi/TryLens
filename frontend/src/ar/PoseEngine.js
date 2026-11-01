@@ -7,6 +7,7 @@ import { MagnetQuat, MagnetVec, MAGNET_POS, MAGNET_ROT } from "./magnet.js";
 import { NODE_LEN, centroidWorld, nodeLocals, nodeOrigin } from "./faceNodes.js";
 import { featuresOf, makeCorrector } from "./nodeCorrector.js";
 import { StableTracker, matToQuat } from "./stable.js";
+import { fuseFace } from "./anthropometry.js";
 import { OutputFilter } from "./outputFilter.js";
 import { quatToMat } from "./rigid.js";
 import { EYE_LEN, describeFit, eyeTargets, packEyeTargets, placeOnEyes, unpackEyeTargets } from "./eyeFit.js";
@@ -262,7 +263,9 @@ export class PoseEngine {
     const cats = res.faceBlendshapes?.[0]?.categories;
     const bs = (name) => cats?.find((c) => c.categoryName === name)?.score ?? 0;
     const blinkL = bs("eyeBlinkLeft"), blinkR = bs("eyeBlinkRight"); // kiri/kanan subjek = pupil 473 / 468
-    const blink = Math.max(blinkL, blinkR) > 0.3; // kedipan ATAU satu mata dipejamkan → bukan frame kalibrasi
+    const blink = Math.max(blinkL, blinkR) > 0.3;
+    // Melirik ke bawah/atas (menatap layar HP sambil menunduk) menutup sebagian iris → PD & skala meleset: jangan dipakai mengukur.
+    const lookAway = Math.max(bs("eyeLookDownLeft"), bs("eyeLookDownRight"), bs("eyeLookUpLeft"), bs("eyeLookUpRight"), bs("eyeSquintLeft"), bs("eyeSquintRight")) > 0.4; // kedipan ATAU satu mata dipejamkan → bukan frame kalibrasi
     this.since++;
 
     const px = (a, b) => Math.hypot((lm[a].x - lm[b].x) * W, (lm[a].y - lm[b].y) * H);
@@ -295,7 +298,7 @@ export class PoseEngine {
           eye: packEyeTargets(eyeTargets(F, est.m)),
           nodes: nodeLocals(F, est.m),
           cu: [0, 1, 2].map((a) => R[0][a] * dv[0] + R[1][a] * dv[1] + R[2][a] * dv[2]), // offset centroid dari titik asal, ruang kepala
-          ms: measureFrontal(F, est.m)
+          ms: !lookAway && Math.abs(angles.pitch) < 15 && Math.abs(angles.yaw) < 25 ? measureFrontal(F, est.m) : null // ukuran wajah/PD hanya dari pose menghadap lurus
         };
         // Frame yang pupilnya menyimpang dari median kalibrasi (kelopak menutup, lirikan, mata terhalang) tidak ikut kalibrasi.
         let skipCal = false;
@@ -377,8 +380,10 @@ export class PoseEngine {
     const common = {
       calibrated: n >= MIN_CALIB,
       calibProgress: Math.min(1, n / MIN_CALIB),
-      pdMm: this.pdBuf.length ? median(this.pdBuf) : null,
-      faceMm: this.mmBuf.length ? median(this.mmBuf) : null
+      ...(() => {
+        const f = fuseFace(this.mmBuf.length ? median(this.mmBuf) : null, this.pdBuf.length ? median(this.pdBuf) : null);
+        return { pdMm: f.pd, faceMm: this.mmBuf.length || f.pd ? f.face : null };
+      })()
     };
     if (!s) return { tracked: false, ...common, quality: null, scale: this.kSm, anchorDelta: [0, 0, 0] };
     const dy = this.dyBuf.length >= MIN_CALIB ? clamp(median(this.dyBuf) * ANCHOR_W[1], -ANCHOR_CLAMP, ANCHOR_CLAMP) : 0;

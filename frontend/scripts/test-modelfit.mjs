@@ -26,6 +26,6 @@ ok(analyzePoints(Float32Array.from([0, 0, 0, 1, 1, 1])) === null, "Titik terlalu
 // Gagang: engsel di head z=4,5; ujung asli di −7,5 → target −6,4.
 const fac = templeFactor(4.5, -7.5);
 ok(Math.abs(4.5 - fac * 12 - EAR_TIP_Z) < 0.01 && fac < 1, "Gagang terlalu panjang dipendekkan agar ujung di belakang telinga");
-ok(templeFactor(4.5, -3) > 1 && templeFactor(4.5, -3) <= 1.6, "Gagang terlalu pendek dipanjangkan (maks 1,6×)");
-ok(templeFactor(4.5, -100) === 0.7 && templeFactor(4.5, 4.4) === 1, "Batas faktor 0,7–1,6 dan data tak wajar diabaikan");
+ok(templeFactor(4.5, -3) > 1 && templeFactor(4.5, -3) <= 2.2, "Gagang terlalu pendek dipanjangkan (maks 2,2×)");
+ok(templeFactor(4.5, -100) === 0.6 && templeFactor(4.5, 4.4) === 1, "Batas faktor 0,6–2,2 dan data tak wajar diabaikan");
 console.log(`\nSemua ${n} uji lolos`);

@@ -1,7 +1,7 @@
 // Penilaian kualitas frame: apakah layak dipakai untuk mengukur / mengkalibrasi?
 export const LIMITS = {
   // iris = diameter iris minimum (piksel). Iris hanya ~12–25 px di 720p, jadi inilah penentu presisi skala.
-  tryon: { yaw: 35, pitch: 25, roll: 25, still: Infinity, iris: 8 },
+  tryon: { yaw: 35, pitch: 16, roll: 25, still: Infinity, iris: 8 },
   scan: { yaw: 8, pitch: 10, roll: 8, still: 1.2, iris: 11 } // still = laju sudut maks (rad/s) agar tidak blur
 };
 
