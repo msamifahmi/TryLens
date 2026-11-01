@@ -268,5 +268,40 @@
   "f21": "Frame kacamata berbahan asetat berwarna biru dengan tampilan manis dan berkarakter. Cocok untuk menambah warna pada gaya harian. Bisa dipasangi lensa minus, plus, atau anti radiasi sesuai kebutuhan.",
   "f22": "Frame kacamata berwarna biru tua dengan bentuk persegi panjang yang rapi dan minimalis. Cocok untuk suasana kerja maupun pertemuan formal. Bisa dipasangi lensa minus, plus, atau anti radiasi sesuai kebutuhan.",
   "f23": "Frame kacamata berukuran besar berwarna merah dengan tampilan berani dan bergaya. Cocok untuk yang ingin kacamata sebagai pusat perhatian. Bisa dipasangi lensa minus, plus, atau anti radiasi sesuai kebutuhan."
- }
+ },
+ "version2": 1,
+ "products2": [
+  {
+   "id": "f20",
+   "name": "Round Wire Gold",
+   "style": "round",
+   "colorKey": "gold",
+   "category": "Wanita",
+   "vto": true
+  },
+  {
+   "id": "f21",
+   "name": "Cat Eye Acetate Blue",
+   "style": "cateye",
+   "colorKey": "blue",
+   "category": "Wanita",
+   "vto": true
+  },
+  {
+   "id": "f22",
+   "name": "Half Rim Business Navy",
+   "style": "rect",
+   "colorKey": "navy",
+   "category": "Pria",
+   "vto": true
+  },
+  {
+   "id": "f23",
+   "name": "Cat Eye Slim Red",
+   "style": "cateye",
+   "colorKey": "red",
+   "category": "Wanita",
+   "vto": true
+  }
+ ]
 }
