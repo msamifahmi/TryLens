@@ -5,6 +5,7 @@ import { MERCHANTS, PRODUCTS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import ProductCard from "../components/ProductCard.jsx";
 import PromoAdBanners from "../components/PromoAdBanners.jsx";
+import { flashItems as allFlash } from "../lib/flashSale.js";
 import FlashSaleSection from "../components/FlashSaleSection.jsx";
 import FilterSortBar from "../components/FilterSortBar.jsx";
 import SocialCommerceSection from "../components/SocialCommerceSection.jsx";
@@ -100,7 +101,7 @@ export default function MerchantPage() {
 
   const hasLinks = Object.values(merchant?.links || {}).some(Boolean);
 
-  const flashItems = products.filter((p) => p.flash);
+  const flashItems = allFlash().filter((p) => p.merchantId === id);
   const promoItems = products.filter((p) => !!p.oldPrice);
   const newItems = products.filter((p) => p.isNew);
   const maxDiscount = promoItems.reduce((max, p) => Math.max(max, Math.round(discountOf(p) * 100)), 0);

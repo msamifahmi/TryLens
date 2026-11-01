@@ -171,3 +171,20 @@ for (const [n, f] of tests) { try { await f(); console.log("✓", n); } catch (e
 srv.kill(); fs.rmSync(data, { recursive: true, force: true });
 console.log(fail ? `\n${fail} gagal` : `\nSemua ${tests.length} uji PHP lolos`);
 process.exit(fail ? 1 : 0);
+
+test("Flash Sale: pengaturan acara dari admin (validasi, simpan, tayang di /api/catalog, tab di /admin)", async () => {
+  assert.equal((await call("GET", "/api/admin/flash-sale", undefined, { headers: {} })).status, 401);
+  const d = (await call("GET", "/api/catalog", undefined, { headers: {} })).body.flashSale;
+  assert.equal(d.enabled, true); assert.equal(d.theme, "sunset"); assert.equal(d.endsAt, null);
+  assert.equal((await call("PUT", "/api/admin/flash-sale", { theme: "pelangi" })).status, 400);
+  assert.equal((await call("PUT", "/api/admin/flash-sale", { title: "ab" })).status, 400);
+  assert.equal((await call("PUT", "/api/admin/flash-sale", { minDiscount: 95 })).status, 400);
+  assert.equal((await call("PUT", "/api/admin/flash-sale", { maxPerMerchant: 0 })).status, 400);
+  assert.equal((await call("PUT", "/api/admin/flash-sale", { endsAt: "bukan tanggal" })).status, 400);
+  const ok = await call("PUT", "/api/admin/flash-sale", { title: "Kilat 11.11", theme: "berry", endsAt: "2026-11-11T23:59:00Z", minDiscount: 20, maxPerMerchant: 3, enabled: false });
+  assert.equal(ok.status, 200); assert.equal(ok.body.flashSale.title, "Kilat 11.11");
+  const pub = (await call("GET", "/api/catalog", undefined, { headers: {} })).body.flashSale;
+  assert.equal(pub.theme, "berry"); assert.equal(pub.enabled, false); assert.equal(pub.minDiscount, 20); assert.equal(pub.maxPerMerchant, 3); assert.match(pub.endsAt, /^2026-11-11T23:59:00/);
+  assert.equal((await call("PUT", "/api/admin/flash-sale", { endsAt: null, enabled: true })).body.flashSale.endsAt, null);
+  assert.match((await call("GET", "/admin", undefined, { headers: {} })).body.toString(), /Simpan pengaturan/);
+});

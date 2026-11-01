@@ -72,6 +72,7 @@ function db(): PDO {
     CREATE TABLE IF NOT EXISTS banners (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK (kind IN ('hero','topbar','login')), image TEXT, image_v INTEGER NOT NULL DEFAULT 0, headline TEXT NOT NULL, sub TEXT NOT NULL DEFAULT '',
       cta TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'feed', link TEXT, theme TEXT NOT NULL DEFAULT 'blue', illustration TEXT NOT NULL DEFAULT 'face',
       sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS admin_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
     ");
     seed_if_empty($pdo);
@@ -372,6 +373,32 @@ function refresh_media(string $id, ?array $rig, bool $rigGiven): void {
 }
 function rrmdir(string $d): void { if (!is_dir($d)) return; foreach (scandir($d) as $f) if ($f !== '.' && $f !== '..') { $p = "$d/$f"; is_dir($p) ? rrmdir($p) : @unlink($p); } @rmdir($d); }
 
+/* ------------------------------------------------------------------ flash sale (pengaturan acara dari admin; frame didaftarkan Mitra) */
+const FLASH_THEMES = ['sunset', 'ocean', 'berry', 'midnight'];
+function flash_defaults(): array { return ['enabled' => true, 'title' => 'Flash Sale', 'subtitle' => 'Diskon kilat frame pilihan dari optik lokal', 'theme' => 'sunset', 'endsAt' => null, 'minDiscount' => 10, 'maxPerMerchant' => 4]; }
+function flash_get(): array {
+    $r = db()->query("SELECT v FROM settings WHERE k='flash_sale'")->fetchColumn();
+    $j = $r ? json_decode((string)$r, true) : null;
+    return array_merge(flash_defaults(), is_array($j) ? $j : []);
+}
+function flash_clean(array $b, array $prev): array {
+    $o = $prev; $need = function (bool $c, string $m) { if (!$c) throw new HttpErr($m); };
+    if (has($b, 'enabled')) $o['enabled'] = $b['enabled'] === true || $b['enabled'] === 1 || $b['enabled'] === '1' || $b['enabled'] === 'true';
+    if (has($b, 'title')) $o['title'] = str($b['title'], 40);
+    $need(mb_strlen($o['title']) >= 3, 'Judul flash sale minimal 3 karakter.');
+    if (has($b, 'subtitle')) $o['subtitle'] = str($b['subtitle'], 100);
+    if (has($b, 'theme')) $o['theme'] = (string)$b['theme'];
+    $need(in_array($o['theme'], FLASH_THEMES, true), 'Tema warna tidak dikenal.');
+    if (has($b, 'endsAt')) {
+        $e = $b['endsAt'];
+        if ($e === null || $e === '') $o['endsAt'] = null;
+        else { $t = is_string($e) ? strtotime($e) : false; $need($t !== false, 'Waktu berakhir tidak valid.'); $o['endsAt'] = gmdate('c', $t); }
+    }
+    if (has($b, 'minDiscount')) { $v = $b['minDiscount']; $need(is_numeric($v) && $v >= 0 && $v <= 90, 'Diskon minimum 0–90%.'); $o['minDiscount'] = (int)$v; }
+    if (has($b, 'maxPerMerchant')) { $v = $b['maxPerMerchant']; $need(is_numeric($v) && $v >= 1 && $v <= 20, 'Batas frame per toko 1–20.'); $o['maxPerMerchant'] = (int)$v; }
+    return $o;
+}
+
 /* ------------------------------------------------------------------ katalog publik */
 function public_banners(): array {
     $out = ['hero' => [], 'topbar' => [], 'login' => []];
@@ -405,7 +432,7 @@ function public_catalog(): array {
         $om[] = ['id' => $m['id'], 'name' => $o['name'], 'city' => $o['city'], 'province' => $o['province'], 'count' => ($count[$m['id']] ?? 0) . ' frame', 'rating' => '–', 'initials' => $o['initials'],
             'color' => $o['color'], 'whatsapp' => $o['whatsapp'], 'phone' => $o['phone'], 'links' => $o['links'], 'logo' => null];
     }
-    return ['products' => $products, 'merchants' => $om, 'hidden' => $hidden, 'highlighted' => [], 'banners' => public_banners(), 'generatedAt' => now()];
+    return ['products' => $products, 'merchants' => $om, 'hidden' => $hidden, 'highlighted' => [], 'banners' => public_banners(), 'flashSale' => flash_get(), 'generatedAt' => now()];
 }
 
 /* ------------------------------------------------------------------ auth admin */
@@ -565,6 +592,12 @@ try {
             refresh_media($p['id'], null, true);
             out(['product' => product_out($getP($p['id']))]);
         }
+    }
+    if ($a === '/flash-sale' && $method === 'GET') out(['flashSale' => flash_get()]);
+    if ($a === '/flash-sale' && $method === 'PUT') {
+        $o = flash_clean($body, flash_get());
+        $pdo->prepare("INSERT INTO settings(k,v) VALUES('flash_sale',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([json_encode($o)]);
+        out(['flashSale' => $o]);
     }
     if ($a === '/banners' && $method === 'GET') out(['banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll())]);
     if ($a === '/banners' && $method === 'POST') {

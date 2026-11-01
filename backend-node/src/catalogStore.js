@@ -211,3 +211,29 @@ export function publicBanners(db) {
   }
   return out;
 }
+
+/* ---- flash sale: pengaturan acara dari admin (frame didaftarkan Mitra) */
+export const FLASH_THEMES = ["sunset", "ocean", "berry", "midnight"];
+const FLASH_DEFAULTS = { enabled: true, title: "Flash Sale", subtitle: "Diskon kilat frame pilihan dari optik lokal", theme: "sunset", endsAt: null, minDiscount: 10, maxPerMerchant: 4 };
+export function flashGet(db) {
+  let j = null;
+  try { const r = db.prepare("SELECT v FROM settings WHERE k='flash_sale'").pluck().get(); j = r ? JSON.parse(r) : null; } catch { j = null; }
+  return { ...FLASH_DEFAULTS, ...(j && typeof j === "object" ? j : {}) };
+}
+export function flashClean(b, prev) {
+  const o = { ...prev };
+  const need = (c, m) => { if (!c) throw err(m); };
+  if ("enabled" in b) o.enabled = bool(b.enabled) === 1;
+  if ("title" in b) o.title = typeof b.title === "string" ? b.title.trim().slice(0, 40) : "";
+  need(o.title.length >= 3, "Judul flash sale minimal 3 karakter.");
+  if ("subtitle" in b) o.subtitle = typeof b.subtitle === "string" ? b.subtitle.trim().slice(0, 100) : "";
+  if ("theme" in b) o.theme = String(b.theme);
+  need(FLASH_THEMES.includes(o.theme), "Tema warna tidak dikenal.");
+  if ("endsAt" in b) {
+    if (b.endsAt === null || b.endsAt === "") o.endsAt = null;
+    else { const t = typeof b.endsAt === "string" ? Date.parse(b.endsAt) : NaN; need(Number.isFinite(t), "Waktu berakhir tidak valid."); o.endsAt = new Date(t).toISOString(); }
+  }
+  if ("minDiscount" in b) { const v = Number(b.minDiscount); need(Number.isFinite(v) && v >= 0 && v <= 90, "Diskon minimum 0–90%."); o.minDiscount = Math.trunc(v); }
+  if ("maxPerMerchant" in b) { const v = Number(b.maxPerMerchant); need(Number.isFinite(v) && v >= 1 && v <= 20, "Batas frame per toko 1–20."); o.maxPerMerchant = Math.trunc(v); }
+  return o;
+}

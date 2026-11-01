@@ -22,43 +22,39 @@ export default function MerchantSection({ id }) {
   const navigate = useNavigate();
 
   return (
-    <section id={id} className="max-w-[1280px] mx-auto px-5 py-7">
-      <div className="flex items-end justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-[21px] font-bold text-ink tracking-tight mb-1">Toko Optik Pilihan</h2>
-          <p className="text-[13.5px] text-ink-muted m-0">Belanja dari merchant optik lokal yang tersedia di TryLens.</p>
+    <div id={id} className="scroll-mt-24">
+      <div className="flex items-center justify-between gap-3 mb-2.5">
+        <div className="flex items-baseline gap-x-3 gap-y-0.5 flex-wrap min-w-0">
+          <h2 className="text-[20px] md:text-[22px] font-extrabold text-ink tracking-tight m-0 flex items-center gap-2">
+            <span aria-hidden="true" className="w-1.5 h-5 rounded-full bg-blue" />Toko Optik Pilihan
+          </h2>
+          <p className="text-[12.5px] text-ink-muted m-0 hidden sm:block">Belanja dari merchant optik lokal yang tersedia di TryLens.</p>
         </div>
-        <Link to="/mitra" className="min-h-10 text-[13.5px] font-semibold text-blue hover:underline flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
-          Lihat semua toko
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <Link to="/mitra" className="min-h-11 text-[13px] font-bold text-blue hover:underline flex items-center gap-0.5 flex-shrink-0 whitespace-nowrap">
+          Lihat semua
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </Link>
       </div>
 
-      <div className="flex gap-3.5 overflow-x-auto scrollbar-none pb-1">
+      <div data-stagger className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
         {MERCHANTS.map((m) => (
           <button
             key={m.id}
             onClick={() => navigate(`/toko/${m.id}`)}
-            className="flex-shrink-0 w-60 bg-white border border-border rounded-2xl p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 cursor-pointer"
+            className="tl-lift group flex-shrink-0 w-[220px] bg-[#F5F9FE] border border-[#DDE8F4] rounded-xl p-2.5 text-left cursor-pointer flex items-center gap-2.5 min-h-[56px]"
             aria-label={`Lihat katalog ${m.name}`}
           >
-            <div className="flex gap-3 items-center mb-2.5">
-              <MerchantAvatar merchant={m} className="w-[46px] h-[46px] rounded-xl text-base font-extrabold" />
-              <div>
-                <p className="text-[14.5px] font-bold text-ink-text mb-0.5">{m.name}</p>
-                <p className="text-xs text-ink-muted m-0 flex items-center gap-1"><PinIcon /> {m.city}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 text-xs text-ink-muted mb-3.5">
-              <span>{m.count}</span>
-              <span className="flex items-center gap-1 text-ink-text font-semibold"><span className="text-accent-yellow"><StarIcon /></span> {m.rating}</span>
-            </div>
-            <span className="block w-full h-9 rounded-lg border-[1.5px] border-blue text-blue text-sm font-bold hover:bg-surface-blue flex items-center justify-center">
-              Lihat Katalog
+            <MerchantAvatar merchant={m} className="w-10 h-10 rounded-lg text-[14px] font-extrabold tl-zoom group-hover:rotate-3" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-bold text-ink-text truncate">{m.name}</span>
+              <span className="flex items-center gap-1.5 text-[11.5px] text-ink-muted truncate">
+                <PinIcon /> {m.city.split(",")[0]} · {m.count}
+              </span>
             </span>
+            <span className="flex items-center gap-0.5 text-[12px] font-bold text-ink-text flex-shrink-0"><span className="text-accent-yellow"><StarIcon /></span>{m.rating}</span>
           </button>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

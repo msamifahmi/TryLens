@@ -329,7 +329,7 @@ export const usePartner = create(
     }),
     {
       name: "trylens-partner",
-      version: 2, // v2: harga tahunan, pesanan iklan mingguan, konsultasi pindah ke store terpisah
+      version: 3, // v3: akun semua toko dummy + frame ikut Flash Sale (data demo di-seed ulang); v2: harga tahunan, iklan mingguan
       partialize: (s) => ({ accounts: s.accounts, session: s.session, checkout: s.checkout, lastInvoiceId: s.lastInvoiceId, lastMode: s.lastMode }),
       migrate: () => ({ accounts: seedAccounts(), session: null, checkout: null, lastInvoiceId: null, lastMode: "demo" })
     }

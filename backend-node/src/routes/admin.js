@@ -7,7 +7,7 @@ import { Router } from "express";
 import express from "express";
 import { inspectGlb, isJpeg } from "../glb.js";
 import { bad } from "./util.js";
-import { BANNER_IMAGE_MAX, bannerOut, cleanBanner, imageExt, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
+import { BANNER_IMAGE_MAX, bannerOut, cleanBanner, flashClean, flashGet, imageExt, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
 
 const VARIANTS = ["main", "side", "detail", "close"];
 const sha = (s) => crypto.createHash("sha256").update(s).digest();
@@ -153,6 +153,14 @@ export function adminRouter({ config, db }) {
     }
     refresh(p.id, null);
     res.json({ product: productOut(getP(p.id)) });
+  });
+
+  /* ---- flash sale (acara; frame didaftarkan Mitra dari dasbornya) */
+  r.get("/flash-sale", (req, res) => res.json({ flashSale: flashGet(db) }));
+  r.put("/flash-sale", (req, res) => {
+    const o = flashClean(req.body || {}, flashGet(db));
+    db.prepare("INSERT INTO settings(k,v) VALUES('flash_sale',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v").run(JSON.stringify(o));
+    res.json({ flashSale: o });
   });
 
   /* ---- iklan */

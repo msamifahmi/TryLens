@@ -212,6 +212,7 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
       <button class="tab" role="tab" id="t-prod" aria-selected="true" aria-controls="p-prod">Produk</button>
       <button class="tab" role="tab" id="t-mer" aria-selected="false" aria-controls="p-mer">Toko</button>
       <button class="tab" role="tab" id="t-ad" aria-selected="false" aria-controls="p-ad">Iklan</button>
+      <button class="tab" role="tab" id="t-fl" aria-selected="false" aria-controls="p-fl">Flash Sale</button>
     </div>
     <button class="btn sec sm" id="out" type="button">Keluar</button>
   </div></header>
@@ -245,6 +246,19 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
         <span class="hint">Satu baris pendek di atas situs (hanya tampil di layar lebar). Jika ada beberapa, yang paling atas dipakai.</span><ul class="list" id="trows"></ul></div>
       <div class="adsec"><div class="bar"><h3 style="margin-right:auto">Banner halaman masuk Mitra</h3><button class="btn sec" id="addLogin" type="button"><svg class="i"><use href="#i-plus"/></svg>Tambah banner</button></div>
         <span class="hint">Gambar besar di sisi kiri halaman <b>Masuk/Daftar Mitra</b> (di HP tampil sebagai gambar di atas formulir). Kalau kosong, dipakai tampilan bawaan. Jika ada beberapa, yang paling atas dipakai.</span><ul class="list" id="lrows"></ul></div>
+    </section>
+    <section id="p-fl" role="tabpanel" aria-labelledby="t-fl" hidden style="display:grid;gap:var(--space-4)">
+      <p class="hint" style="font-size:14px">Atur acara Flash Sale di beranda. Toko (Mitra) sendiri yang mendaftarkan frame, harga kilat, dan kuota dari dasbornya — di sini Anda menentukan tampilan acara, waktu berakhir, dan aturannya.</p>
+      <form class="card" id="flform" style="display:grid;gap:var(--space-4);max-width:640px" novalidate>
+        <label style="display:flex;gap:var(--space-2);align-items:center;font-weight:600"><input type="checkbox" id="fl-on" style="width:20px;height:20px">Tampilkan Flash Sale di situs</label>
+        <div class="f"><label for="fl-title">Judul acara</label><input id="fl-title" type="text" maxlength="40"></div>
+        <div class="f"><label for="fl-sub">Teks pendek di bawah judul</label><input id="fl-sub" type="text" maxlength="100"></div>
+        <div class="f"><label for="fl-theme">Warna tema</label><select id="fl-theme"><option value="sunset">Sunset (oranye–merah)</option><option value="ocean">Ocean (biru)</option><option value="berry">Berry (ungu–pink)</option><option value="midnight">Midnight (gelap)</option></select></div>
+        <div class="f"><label for="fl-end">Berakhir pada (kosongkan = berulang tiap hari, reset 00.00)</label><input id="fl-end" type="datetime-local"></div>
+        <div class="f"><label for="fl-min">Diskon minimum agar frame boleh ikut (%)</label><input id="fl-min" type="number" inputmode="numeric" min="0" max="90"></div>
+        <div class="f"><label for="fl-max">Maksimum frame per toko</label><input id="fl-max" type="number" inputmode="numeric" min="1" max="20"></div>
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap"><button class="btn" type="submit" id="fl-save">Simpan pengaturan</button></div>
+      </form>
     </section>
   </main>
 </div>
@@ -311,7 +325,7 @@ function draw(){
     <div class="nm"><b>${esc(m.name)}</b><small>${esc(m.city||"Kota belum diisi")} · WhatsApp ${esc(m.whatsapp||"belum diisi")} · ${n} produk</small></div>
     <span class="chip ${m.published?"ok":""}">${m.published?"Tampil":"Disembunyikan"}</span>
     <button class="btn sec sm" type="button" data-act="editM" aria-label="Ubah ${esc(m.name)}">${ico("edit")}Ubah</button></li>`}).join(""):`<li class="empty"><b>Belum ada toko</b>Tambahkan toko dulu sebelum menambah produk.</li>`}
-async function load(){const[a,b,c]=await Promise.all([api("GET","/products"),api("GET","/merchants"),api("GET","/banners")]);B=c.banners;const old=new Map(P.map(p=>[p.id,p._st]));P=a.products;P.forEach(p=>{if(old.has(p.id))p._st=old.get(p.id)});M=b.merchants;draw();drawAds();probe()}
+async function load(){const[a,b,c]=await Promise.all([api("GET","/products"),api("GET","/merchants"),api("GET","/banners")]);B=c.banners;api("GET","/flash-sale").then(r=>drawFlash(r.flashSale)).catch(()=>{});const old=new Map(P.map(p=>[p.id,p._st]));P=a.products;P.forEach(p=>{if(old.has(p.id))p._st=old.get(p.id)});M=b.merchants;draw();drawAds();probe()}
 /* foto bawaan situs (berkas statis di /products/<id>/main.jpg) dianggap sudah ada foto */
 async function probe(){const todo=P.filter(p=>!p.photos&&p._st===undefined);if(!todo.length)return;
   await Promise.all(todo.map(async p=>{try{const r=await fetch(`/products/${encodeURIComponent(p.id)}/main.jpg`,{method:"HEAD",cache:"no-store"});p._st=r.ok&&/image/.test(r.headers.get("content-type")||"")}catch{p._st=false}}));draw()}
@@ -473,8 +487,13 @@ $("#addAd").onclick=()=>adForm(null,"hero");$("#addBar").onclick=()=>adForm(null
 
 /* ---------- menu & tab ---------- */
 $("#add").onclick=()=>prodForm();$("#addM").onclick=()=>merForm();
-function tab(k){["prod","mer","ad"].forEach(x=>{$("#t-"+x).setAttribute("aria-selected",x===k);$("#p-"+x).hidden=x!==k})}
-$("#t-prod").onclick=()=>tab("prod");$("#t-mer").onclick=()=>tab("mer");$("#t-ad").onclick=()=>tab("ad");
+function tab(k){["prod","mer","ad","fl"].forEach(x=>{$("#t-"+x).setAttribute("aria-selected",x===k);$("#p-"+x).hidden=x!==k})}
+$("#t-prod").onclick=()=>tab("prod");$("#t-mer").onclick=()=>tab("mer");$("#t-ad").onclick=()=>tab("ad");$("#t-fl").onclick=()=>tab("fl");
+function localDT(iso){if(!iso)return"";const d=new Date(iso);if(isNaN(d))return"";const p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
+function drawFlash(f){$("#fl-on").checked=!!f.enabled;$("#fl-title").value=f.title;$("#fl-sub").value=f.subtitle;$("#fl-theme").value=f.theme;$("#fl-end").value=localDT(f.endsAt);$("#fl-min").value=f.minDiscount;$("#fl-max").value=f.maxPerMerchant}
+$("#flform").onsubmit=async e=>{e.preventDefault();const b=$("#fl-save");b.disabled=true;
+  try{const v=$("#fl-end").value;const r=await api("PUT","/flash-sale",{enabled:$("#fl-on").checked,title:$("#fl-title").value,subtitle:$("#fl-sub").value,theme:$("#fl-theme").value,endsAt:v?new Date(v).toISOString():null,minDiscount:$("#fl-min").value,maxPerMerchant:$("#fl-max").value});drawFlash(r.flashSale);toast("Pengaturan Flash Sale disimpan")}
+  catch(x){toast(x.message,1)}b.disabled=false};
 document.addEventListener("click",e=>{const d=$("#more");if(d.open&&!d.contains(e.target))d.open=false});
 $("#exp").onclick=async()=>{$("#more").open=false;try{const j=await api("GET","/export");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:"application/json"}));a.download="trylens-katalog-"+new Date().toISOString().slice(0,10)+".json";a.click();toast("Cadangan diunduh")}catch(x){toast(x.message,1)}};
 $("#imp").onclick=async()=>{$("#more").open=false;

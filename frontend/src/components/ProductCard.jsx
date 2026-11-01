@@ -38,7 +38,7 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
   }
 
   return (
-    <div ref={cardRef} data-id={product.id} className="bg-white border border-border rounded-xl overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200 group">
+    <div ref={cardRef} data-id={product.id} className="bg-white border border-border rounded-xl overflow-hidden flex flex-col tl-lift group">
       <div className="relative aspect-square bg-[#F8FAFC] overflow-hidden">
         {product.badge && (
           <span
@@ -72,7 +72,7 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
             variant="main"
             style={product.style}
             colorKey={product.colorKey}
-            className="w-full h-full group-hover:scale-105 transition-transform duration-200"
+            className="w-full h-full tl-zoom"
             alt={product.name}
           />
         </button>
