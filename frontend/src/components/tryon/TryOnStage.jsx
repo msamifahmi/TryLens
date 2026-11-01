@@ -9,7 +9,7 @@ import { createLandmarker } from "../consult/landmarker.js";
 import { PoseEngine } from "../../ar/PoseEngine.js";
 import { LumaProbe } from "../../ar/quality.js";
 import { estimateRigSpec, readRigSpec, TempleReach } from "../../ar/rigSpecThree.js";
-import { CRANIUM } from "../../ar/modelFit.js";
+import { CRANIUM, craniumRadiusX } from "../../ar/modelFit.js";
 import { estimateSpecFromBox } from "../../ar/rigSpec.js";
 import { FOV_DEG } from "../../ar/faceMetrics.js";
 import canonical from "../../data/canonicalFace.json";
@@ -151,6 +151,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
         rig.rotation.set(0, 0, fit.roll);
         rig.scale.setScalar((spec.unit * cfg.scale * a.s * (live.current.auto || 1)) / k);
         live.current.reach?.fit(rig.position.z, rig.scale.x); // ujung gagang tepat di belakang telinga
+        cranium.scale.x = craniumRadiusX((Math.abs(spec.templeL[0]) / spec.unit) * rig.scale.x) / CRANIUM.radii[0]; // frame sempit: tempurung tidak menelan engsel
         return;
       }
       const d = lastOut?.anchorDelta || [0, 0, 0];

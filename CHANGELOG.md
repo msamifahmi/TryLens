@@ -13,6 +13,7 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 - **Alat baru** `scripts/prepare-glb.mjs`: merapikan model mentah (transformasi, skala cm, gagang, lensa otomatis bila tidak ada, rig) — dipakai untuk keempat model ini. `glbRig.mjs`: node bernama "temple…" dikenali eksplisit sebagai gagang.
 - Data katalog: nama/gaya/warna/kategori f20–f23 diperbarui (seed, mockData, backend). Server yang sudah berjalan menerimanya lewat `katalog-update.json` (`version2`, sekali jalan, hanya menyentuh f20–f23 sehingga ubahan admin pada f0–f19 aman).
 - Pustaka model Mitra kini 24 model (f0–f23).
+- **VTO lebih pas otomatis** (dari keluhan: frame kecil, gagang "masuk kepala", harus diatur manual): `ar/anthropometry.js` meredam rasio lebar-wajah/PD yang tak wajar; `autoFitScale` memakai jarak lensa ≈ PD+3 mm sebagai sasaran utama, lebar frame dijaga 88–103% lebar wajah, skala 0,82–1,2×; ukuran wajah/PD hanya diukur saat kepala lurus (pitch <15°, yaw <25°) dan mata tidak melirik/menyipit; tempurung kepala (penutup gagang) menyusut mengikuti engsel frame sempit sehingga gagang tidak tertelan; faktor panjang gagang 0,6–2,2× (sebelumnya 0,7–1,6×). f20 diperkecil ke 128 mm (proporsi bulat kawat lebih wajar).
 
 ---
 
