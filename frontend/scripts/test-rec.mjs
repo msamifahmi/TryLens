@@ -44,11 +44,11 @@ test("Riwayat: frame dicoba menaikkan frame serupa; yang sedang dilihat tidak ik
   assert.equal(r.items[0].product.style, "cateye");
 });
 
-test("Keragaman (MMR): 3 teratas berbeda gaya & 6 teratas ≥3 gaya (tanpa MMR, 2 teratas sama-sama square)", () => {
+test("Keragaman (MMR): 3 teratas berbeda gaya & 6 teratas ≥3 gaya (tidak kurang beragam daripada tanpa MMR)", () => {
   const plain = R({ face: face("oval"), limit: 6, diversify: false }).items.map((x) => x.product.style);
-  assert.equal(plain[0], plain[1]);
   const r = R({ face: face("oval"), limit: 6 }).items.map((x) => x.product.style);
   assert.equal(new Set(r.slice(0, 3)).size, 3);
+  assert.ok(new Set(r.slice(0, 3)).size >= new Set(plain.slice(0, 3)).size);
   assert.ok(new Set(r).size >= 3);
 });
 

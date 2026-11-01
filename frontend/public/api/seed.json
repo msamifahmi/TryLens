@@ -317,46 +317,46 @@
   {
    "id": "f20",
    "merchantId": "m3",
-   "name": "Aviator Gold Line Clear",
-   "style": "square",
-   "colorKey": "clear",
+   "name": "Round Wire Gold",
+   "style": "round",
+   "colorKey": "gold",
    "cat": "Wanita",
    "price": 289000,
    "oldPrice": 434000,
-   "vto": false
+   "vto": true
   },
   {
    "id": "f21",
    "merchantId": "m4",
-   "name": "Round Acetate Blue",
+   "name": "Cat Eye Acetate Blue",
    "style": "cateye",
    "colorKey": "blue",
-   "cat": "Anak",
+   "cat": "Wanita",
    "price": 269000,
    "oldPrice": 404000,
-   "vto": false
+   "vto": true
   },
   {
    "id": "f22",
    "merchantId": "m5",
-   "name": "Rect Business Navy",
+   "name": "Half Rim Business Navy",
    "style": "rect",
    "colorKey": "navy",
    "cat": "Pria",
    "price": 329000,
    "oldPrice": 494000,
-   "vto": false
+   "vto": true
   },
   {
    "id": "f23",
    "merchantId": "m6",
-   "name": "Oversized Cat Eye Red",
-   "style": "browline",
+   "name": "Cat Eye Slim Red",
+   "style": "cateye",
    "colorKey": "red",
    "cat": "Wanita",
    "price": 219000,
    "oldPrice": 329000,
-   "vto": false
+   "vto": true
   }
  ]
 }

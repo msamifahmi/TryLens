@@ -111,11 +111,12 @@ function apply_catalog_update(PDO $pdo): void {
     $counter = function (string $name) use ($pdo): int { $r = $pdo->query("SELECT value FROM counters WHERE name=" . $pdo->quote($name))->fetch(); return $r ? (int)$r['value'] : 0; };
     $mark = fn(string $name, int $v) => $pdo->prepare("INSERT INTO counters(name,value) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET value=excluded.value")->execute([$name, $v]);
     // 1) Tambalan produk (nama, kategori, tautan, dst.): sekali per `version`.
-    $v = (int)($u['version'] ?? 0);
-    if (is_array($u['products'] ?? null) && $v >= 1 && $counter('katalog_update') < $v) {
+    foreach ([['products', 'version', 'katalog_update'], ['products2', 'version2', 'katalog_update2']] as [$pk, $vk, $ck]) {
+    $v = (int)($u[$vk] ?? 0);
+    if (is_array($u[$pk] ?? null) && $v >= 1 && $counter($ck) < $v) {
         $pdo->beginTransaction();
         try {
-            foreach ($u['products'] as $x) {
+            foreach ($u[$pk] as $x) {
                 $id = (string)($x['id'] ?? '');
                 $q = $pdo->prepare('SELECT * FROM products WHERE id=?'); $q->execute([$id]); $prev = $q->fetch();
                 if (!$prev) continue;
@@ -124,9 +125,10 @@ function apply_catalog_update(PDO $pdo): void {
                 $pdo->prepare('UPDATE products SET ' . implode(',', array_map(fn($c) => "$c=?", PCOLS)) . ',updated_at=? WHERE id=?')
                     ->execute(array_merge(array_map(fn($c) => $o[$c] ?? null, PCOLS), [now(), $id]));
             }
-            $mark('katalog_update', $v);
+            $mark($ck, $v);
             $pdo->commit();
         } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); }
+    }
     }
     // 2) Deskripsi: sekali per `descriptionsVersion`, hanya mengisi produk yang deskripsinya masih kosong (tulisan admin tidak ditimpa).
     $dv = (int)($u['descriptionsVersion'] ?? 0);
