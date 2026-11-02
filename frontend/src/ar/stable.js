@@ -167,6 +167,8 @@ export function solvePivot({ set, canon, lm, W, H, f, k, a, prior, iters = 4 }) 
       const qx = rxv + A[0], qy = ryv + A[1], qz = rzv + A[2];
       const d = -qz;
       if (d < 5) { wt[i] = 0; continue; }
+      // Titik di luar/menempel tepi bingkai: MediaPipe menebak posisinya (wajah terpotong) → jangan ikut menentukan pose.
+      if (ox[i] < 3 || ox[i] > W - 3 || oy[i] < 3 || oy[i] > H - 3) { wt[i] = 0; continue; }
       rx[i] = ox[i] - (cx + (f * qx) / d);
       ry[i] = oy[i] - (cy - (f * qy) / d);
       // bobot tampak-muka: normal (diputar) · arah ke kamera

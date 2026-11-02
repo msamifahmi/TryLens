@@ -6,6 +6,18 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 40 — Scan wajah lebih teliti, anchor hilang setelah 100%, hover produk 360°, VTO tampak samping lebih tahan
+
+- **Bug lingkaran panduan scan**: animasi "bernapas" menimpa posisi tengah sehingga lingkaran bergeser jauh dari wajah dan menyesatkan pengguna. Diperbaiki (dibungkus agar tetap di tengah).
+- **Setelah scan 100%**: mesh + anchor otomatis hilang; kamera tetap hidup. Tombol "Tampilkan mesh" untuk memunculkannya lagi.
+- **Saat memindai**: ada penanda *perkiraan* telinga (cincin oranye putus-putus), diproyeksikan dari pose kepala. Face Landmarker tidak mendeteksi telinga, jadi ini perkiraan, bukan deteksi.
+- **Pengukuran**: 45 sampel (dari 30), pembuangan pencilan lebih ketat (2,5 MAD), rata-rata terpangkas, keyakinan "tinggi" butuh ≥36 sampel; hasil kini menyertakan galat (≈ 154 ± 7 mm, PD ± mm) dari sebaran sampel + ketidakpastian ukuran iris (±4,5%). Label "±154 mm" yang menyesatkan diganti "≈".
+- **VTO**: titik landmark di tepi/luar bingkai (wajah terpotong) tidak ikut menentukan pose; ada saran "Wajah terpotong di tepi layar". Ekstrapolasi kompensasi lag dibatasi ≤60 ms dan dikecilkan saat menoleh >25° (sebelumnya bisa menguatkan getaran di tampak samping).
+- **Beranda**: kursor di atas kartu produk (desktop) langsung menampilkan slide foto, lalu model 3D berputar 360° bila ada (satu per satu, tidak menangkap klik).
+- Uji baru: tracker stable pada yaw ±50° dengan sisi belakang ngawur & wajah terpotong. Catatan jujur: uji sintetis ini lolos juga pada kode lama, jadi belum membuktikan perbaikan getaran di dunia nyata.
+
+---
+
 ## Update 39 — Beranda lebih padat, Flash Sale baru (admin + dasbor Mitra), scan wajah live, VTO lebih sinkron
 
 - **Beranda**: "Toko Optik Pilihan" dan "Koleksi Frame Terbaru" digabung jadi satu section rapat (judul tegas + subjudul sejajar, kartu toko diringkas), tanpa ruang kosong di antaranya.

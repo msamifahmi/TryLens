@@ -27,13 +27,13 @@ export default function FaceSummary({ face, compact = false, className = "" }) {
           <p className="text-[11.5px] text-ink-muted m-0">Perkiraan lebar wajah</p>
           <p className="text-[18px] font-bold text-ink m-0">
             {FACE_WIDTHS[face.width]}
-            {face.mm ? <span className="text-[12px] font-medium text-ink-muted"> · ±{face.mm} mm</span> : null}
+            {face.mm ? <span className="text-[12px] font-medium text-ink-muted"> · ≈ {face.mm}{face.mmErr ? ` ± ${face.mmErr}` : ""} mm</span> : null}
           </p>
         </div>
       </div>
       {face.pd ? (
         <p className="text-[12.5px] text-ink-text m-0 mb-3">
-          Jarak pupil (PD) <span className="font-bold">≈ {face.pd} mm</span>
+          Jarak pupil (PD) <span className="font-bold">≈ {face.pd}{face.pdErr ? ` ± ${face.pdErr}` : ""} mm</span>
           <span className="text-ink-muted"> — perkiraan dari kamera; untuk resep tetap ukur di optik.</span>
         </p>
       ) : null}

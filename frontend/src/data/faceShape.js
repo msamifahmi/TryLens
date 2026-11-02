@@ -72,8 +72,14 @@ const median = (arr) => {
 function robust(values) {
   const m = median(values);
   const mad = median(values.map((v) => Math.abs(v - m))) * 1.4826;
-  const kept = values.filter((v) => Math.abs(v - m) <= 3 * mad + 1e-9);
-  return { value: median(kept), n: kept.length, cv: m ? mad / Math.abs(m) : 0 };
+  const kept = values.filter((v) => Math.abs(v - m) <= 2.5 * mad + 1e-9);
+  // Rata-rata terpangkas dari sampel yang lolos: lebih mulus daripada median murni, tetap kebal pencilan.
+  const s = [...kept].sort((a, b) => a - b);
+  const cut = Math.floor(s.length * 0.15);
+  const core = s.slice(cut, s.length - cut || undefined);
+  const mean = core.length ? core.reduce((a, b) => a + b, 0) / core.length : median(kept);
+  const sd = Math.sqrt(kept.reduce((a, v) => a + (v - mean) ** 2, 0) / Math.max(1, kept.length));
+  return { value: mean, n: kept.length, cv: m ? mad / Math.abs(m) : 0, sd };
 }
 
 /** Gabungkan banyak sampel (median robust) → hasil akhir yang disimpan. Sampel dari ar/PoseEngine (frame.lenR, jawR, foreR, mm, pd). */
@@ -84,16 +90,21 @@ export function summarizeSamples(samples) {
   const ratios = { lenR: L.value, jawR: J.value, foreR: F.value };
   const mmv = samples.map((s) => s.mm).filter((v) => v != null);
   const pdv = samples.map((s) => s.pd).filter((v) => v != null);
-  const mm = mmv.length ? robust(mmv).value : null;
-  const pd = pdv.length ? robust(pdv).value : null;
+  const mmR = mmv.length ? robust(mmv) : null, pdR = pdv.length ? robust(pdv) : null;
+  const mm = mmR ? mmR.value : null;
+  const pd = pdR ? pdR.value : null;
   const spread = Math.max(L.cv, J.cv, F.cv);
-  const confidence = samples.length >= 20 && spread < 0.02 ? "high" : samples.length >= 12 && spread < 0.05 ? "medium" : "low";
+  const confidence = samples.length >= 36 && spread < 0.02 ? "high" : samples.length >= 20 && spread < 0.05 ? "medium" : "low";
+  // Galat perkiraan (±mm): gabungan sebaran antar-sampel dan ketidakpastian ukuran iris manusia (±4,5%) sebagai penggaris.
+  const errOf = (v, r) => (v ? Math.max(2, Math.ceil(Math.hypot(0.045 * v, (1.96 * (r?.sd || 0)) / Math.sqrt(Math.max(1, r?.n || 1))))) : null);
   const shape = classifyRatios(ratios);
   return {
     shape,
     width: widthClass(mm),
     mm: mm ? Math.round(mm) : null,
     pd: pd ? Math.round(pd) : null,
+    mmErr: errOf(mm, mmR),
+    pdErr: errOf(pd, pdR),
     confidence,
     ratios: { lenR: +ratios.lenR.toFixed(2), jawR: +ratios.jawR.toFixed(2), foreR: +ratios.foreR.toFixed(2) },
     styles: FACE_SHAPES[shape].styles,

@@ -31,13 +31,14 @@ export class LumaProbe {
 }
 
 /** Kembalikan { ok, issues[], score 0–1 }. issues[0] = saran paling penting untuk ditampilkan. */
-export function assessQuality({ angles, span, irisPx, center, luma, speed = 0, mode = "tryon" }) {
+export function assessQuality({ angles, span, irisPx, center, luma, speed = 0, mode = "tryon", clipped = 0 }) {
   const lim = LIMITS[mode];
   const issues = [];
   if (luma != null && luma < 55) issues.push("Terlalu gelap — cari cahaya yang lebih terang.");
   if (luma != null && luma > 215) issues.push("Terlalu silau — kurangi cahaya dari belakang atau samping.");
   if (irisPx < lim.iris) issues.push("Terlalu jauh — dekatkan wajah ke kamera.");
   else if (span > 0.7) issues.push("Terlalu dekat — mundur sedikit.");
+  if (clipped > 0) issues.push("Wajah terpotong di tepi layar — geser kamera atau mundur sedikit.");
   if (Math.abs(center[0] - 0.5) > 0.22 || Math.abs(center[1] - 0.5) > 0.25) issues.push("Posisikan wajah di tengah layar.");
   if (Math.abs(angles.yaw) > lim.yaw) issues.push("Hadap lurus ke kamera (jangan menoleh).");
   if (Math.abs(angles.pitch) > lim.pitch) issues.push("Luruskan kepala (jangan menunduk atau mendongak).");

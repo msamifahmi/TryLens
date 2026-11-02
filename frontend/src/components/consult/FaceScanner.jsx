@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, CameraOff, RotateCcw, ScanFace, ShieldCheck } from "lucide-react";
 import { FACE_SHAPES, manualResult, summarizeSamples } from "../../data/faceShape.js";
 import { createLandmarker, faceConnections } from "./landmarker.js";
-import { drawFace } from "./faceOverlay.js";
+import { drawFace, earPoints } from "./faceOverlay.js";
 import { PoseEngine } from "../../ar/PoseEngine.js";
 import { LumaProbe } from "../../ar/quality.js";
 import canonical from "../../data/canonicalFace.json";
 
-const NEED_SAMPLES = 30;
+const NEED_SAMPLES = 45; // lebih banyak sampel → median/rata-rata lebih mantap (±3 detik)
 const SAMPLE_GAP_MS = 70; // jeda antar sampel agar tersebar ±2 detik, bukan 30 frame identik
 const canonArr = Float64Array.from(canonical.v);
 
@@ -22,6 +22,9 @@ export default function FaceScanner({ onResult }) {
   const [hint, setHint] = useState("");
   const [progress, setProgress] = useState(0);
   const [fps, setFps] = useState(0);
+  const [showMesh, setShowMesh] = useState(false); // setelah 100% mesh & anchor disembunyikan (bisa ditampilkan lagi)
+  const showMeshRef = useRef(false);
+  showMeshRef.current = showMesh;
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -96,6 +99,7 @@ export default function FaceScanner({ onResult }) {
       const luma = new LumaProbe();
       let lastT = -1;
       let lastSample = 0;
+      let lastEars = [];
       let frames = 0;
       let fpsT = performance.now();
       const tick = () => {
@@ -105,12 +109,16 @@ export default function FaceScanner({ onResult }) {
           const now = performance.now();
           const res = landmarkerRef.current.detectForVideo(video, now);
           const lm = res?.faceLandmarks?.[0] || null;
-          if (canvasRef.current) drawFace(canvasRef.current, video, lm, conn, now);
+          if (canvasRef.current) {
+            const drawIt = mode.current === "scan" || showMeshRef.current;
+            drawFace(canvasRef.current, video, drawIt ? lm : null, conn, now, drawIt ? lastEars : []);
+          }
           frames++;
           if (now - fpsT >= 1000) { setFps(Math.round((frames * 1000) / (now - fpsT))); frames = 0; fpsT = now; }
 
           if (mode.current === "scan") {
             const out = engine.update(res, video.videoWidth, video.videoHeight, now, luma.sample(video));
+            lastEars = earPoints(out, video.videoWidth, video.videoHeight, canonArr);
             if (!out.tracked) setHint("Wajah belum terdeteksi. Pastikan cahaya cukup.");
             else if (!out.quality.ok) setHint(out.quality.issues[0]);
             else if (!out.frame) setHint("Buka mata lebar dan tatap kamera.");
@@ -124,7 +132,9 @@ export default function FaceScanner({ onResult }) {
             }
             if (samples.current.length >= NEED_SAMPLES) {
               const result = summarizeSamples(samples.current);
-              mode.current = "live"; // kamera tetap menyala; hanya berhenti mengumpulkan sampel
+              mode.current = "live"; // kamera tetap menyala; mesh & anchor disembunyikan setelah 100%
+              lastEars = [];
+              setShowMesh(false);
               setPhase("live");
               setHint(lm ? "Wajah terdeteksi" : "Wajah belum terdeteksi");
               onResultRef.current(result);
@@ -151,9 +161,13 @@ export default function FaceScanner({ onResult }) {
         <canvas ref={canvasRef} aria-hidden="true" className={`absolute inset-0 w-full h-full pointer-events-none ${camOn ? "" : "hidden"}`} />
         {camOn && (
           <>
-            {phase === "scanning" && <div className="tl-breathe absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[46%] aspect-[3/4] rounded-[50%] border-[3px] border-accent-yellow/90 pointer-events-none" />}
+            {phase === "scanning" && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="tl-breathe w-[46%] aspect-[3/4] rounded-[50%] border-[3px] border-accent-yellow/90" />
+              </div>
+            )}
             <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-black/55 text-white text-[11px] font-semibold px-2.5 py-1">
-              <span className={`w-2 h-2 rounded-full ${phase === "live" ? "bg-emerald-400" : "bg-accent-yellow"} tl-blink`} /> {phase === "live" ? "LIVE" : "MEMINDAI"} · 478 titik · {fps} fps
+              <span className={`w-2 h-2 rounded-full ${phase === "live" ? "bg-emerald-400" : "bg-accent-yellow"} tl-blink`} /> {phase === "live" ? "LIVE · selesai" : "MEMINDAI"}{phase === "scanning" || showMesh ? " · 478 titik" : ""} · {fps} fps
             </div>
             {phase === "scanning" && (
               <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/25">
@@ -178,8 +192,9 @@ export default function FaceScanner({ onResult }) {
       </div>
       {camOn && <p role="status" className="text-[13px] text-ink-text text-center m-0 mb-2">{hint}{phase === "scanning" ? ` (${progress}%)` : ""}</p>}
       {phase === "live" && (
-        <div className="flex justify-center gap-2 mb-2">
+        <div className="flex justify-center gap-2 mb-2 flex-wrap">
           <button onClick={rescan} className="h-10 px-4 rounded-xl border border-border text-[13px] font-semibold text-ink-text hover:border-blue flex items-center gap-1.5"><RotateCcw size={14} /> Scan ulang</button>
+          <button onClick={() => setShowMesh((v) => !v)} aria-pressed={showMesh} className="h-10 px-4 rounded-xl border border-border text-[13px] font-semibold text-ink-text hover:border-blue flex items-center gap-1.5"><ScanFace size={14} /> {showMesh ? "Sembunyikan mesh" : "Tampilkan mesh"}</button>
           <button onClick={stopCamera} className="h-10 px-4 rounded-xl border border-border text-[13px] font-semibold text-ink-text hover:border-blue flex items-center gap-1.5"><CameraOff size={14} /> Matikan kamera</button>
         </div>
       )}

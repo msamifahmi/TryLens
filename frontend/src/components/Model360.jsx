@@ -56,13 +56,14 @@ const TAU = Math.PI * 2;
  * Pratinjau 360° dari model .glb produk: seret untuk memutar (ada inersia), putar otomatis saat dibiarkan,
  * geser slider / tombol panah untuk memutar presisi. Render berhenti saat di luar layar atau tab tersembunyi.
  */
-export default function Model360({ productId, alt = "Pratinjau 360 derajat", className = "" }) {
+export default function Model360({ productId, alt = "Pratinjau 360 derajat", className = "", bare = false, onReady }) {
   const host = useRef(null);
   const canvasRef = useRef(null);
   const sliderRef = useRef(null);
   const api = useRef({});
   const [state, setState] = useState("loading"); // loading | ready | error
   const [auto, setAuto] = useState(() => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  useEffect(() => { if (state === "ready") onReady?.(); }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
   const autoRef = useRef(auto);
   autoRef.current = auto;
 
@@ -184,9 +185,9 @@ export default function Model360({ productId, alt = "Pratinjau 360 derajat", cla
         onKeyDown={onKey}
         className="w-full h-full touch-pan-y cursor-grab active:cursor-grabbing outline-none focus-visible:ring-2 focus-visible:ring-blue-deep/40 rounded-xl"
       />
-      {state === "loading" && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-ink-muted">Memuat model 3D…</div>}
+      {!bare && state === "loading" && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-ink-muted">Memuat model 3D…</div>}
       {state === "error" && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-ink-muted">Model 3D tidak bisa dimuat.</div>}
-      {state === "ready" && (
+      {!bare && state === "ready" && (
         <div className="absolute left-0 right-0 bottom-0 flex items-center gap-3 px-1 pt-2">
           <button type="button" onClick={() => setAuto(!auto)} aria-pressed={auto} aria-label={auto ? "Jeda putar otomatis" : "Putar otomatis"} className="w-8 h-8 rounded-full bg-white/90 border border-[#DDE8F4] flex items-center justify-center text-blue-deep hover:border-blue-deep flex-shrink-0">
             {auto ? <Pause size={14} /> : <Play size={14} />}
