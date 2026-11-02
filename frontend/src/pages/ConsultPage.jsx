@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MessageCircle, RotateCcw, Trash2, X } from "lucide-react";
+import { MessageCircle, Trash2, X } from "lucide-react";
 import { MERCHANTS, PRODUCTS, STYLE_LABELS } from "../data/mockData.js";
 import { FACE_SHAPES, FACE_WIDTHS } from "../data/faceShape.js";
 import { useConsult } from "../store/useConsult.js";
@@ -40,7 +40,6 @@ export default function ConsultPage() {
 
   const [merchantId, setMerchantId] = useState(initialMerchant);
   const [includeFace, setIncludeFace] = useState(true);
-  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     if (frameParam && PRODUCTS.some((p) => p.id === frameParam)) markViewed(frameParam);
@@ -70,16 +69,13 @@ export default function ConsultPage() {
         <section className="rounded-2xl border border-border bg-white p-5" aria-labelledby="scan-title">
           <p className="text-xs font-bold tracking-wider text-blue-deep m-0 mb-1">LANGKAH 1 · OPSIONAL</p>
           <h2 id="scan-title" className="text-lg font-bold text-ink m-0 mb-4">Scan bentuk wajah (AR)</h2>
-          {face && !scanning ? (
-            <div>
-              <FaceSummary face={face} className="mb-4" />
-              <div className="flex gap-2">
-                <button onClick={() => setScanning(true)} className="h-10 px-4 rounded-xl border border-border text-[13px] font-semibold text-ink-text hover:border-blue flex items-center gap-1.5"><RotateCcw size={14} /> Scan ulang</button>
-                <button onClick={clearFace} className="h-10 px-4 rounded-xl text-[13px] font-semibold text-error hover:bg-red-50 flex items-center gap-1.5"><Trash2 size={14} /> Hapus hasil</button>
-              </div>
+          {/* Kamera tetap hidup setelah hasil keluar: mesh + titik jangkar tampil langsung di wajah */}
+          <FaceScanner onResult={(r) => setFace(r)} />
+          {face && (
+            <div className="mt-4 pt-4 border-t border-[#EEF3FA] tl-rise">
+              <FaceSummary face={face} className="mb-3" />
+              <button onClick={clearFace} className="h-11 px-4 rounded-xl text-[13px] font-semibold text-error hover:bg-red-50 flex items-center gap-1.5"><Trash2 size={14} /> Hapus hasil</button>
             </div>
-          ) : (
-            <FaceScanner onResult={(r) => { setFace(r); setScanning(false); }} />
           )}
         </section>
 

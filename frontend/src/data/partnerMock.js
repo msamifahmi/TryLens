@@ -172,7 +172,9 @@ function partnerAccount({ id, name, email, merchantId, plan }) {
     oldPrice: p.oldPrice || null,
     stock: 4 + ((i * 7) % 19),
     published: true,
-    vto: true
+    vto: true,
+    // Frame flash bawaan: harga normal = harga coret, harga kilat = harga sekarang; kuota & terjual (mock) dari data katalog.
+    ...(p.flash && p.oldPrice ? { price: p.oldPrice, oldPrice: null, flash: { on: true, price: p.price, quota: 40, sold: Math.round((p.flashSold / 100) * 40) } } : {})
   }));
   const ids = frames.map((f) => f.id);
   const base = defaultData();
@@ -243,6 +245,11 @@ export function seedAccounts() {
   return {
     "basic@optikkusuma.id": partnerAccount({ id: "u1", name: "Ratna Kusuma", email: "basic@optikkusuma.id", merchantId: "m1", plan: "basic" }),
     "pro@lensakita.id": partnerAccount({ id: "u2", name: "Andra Lensa", email: "pro@lensakita.id", merchantId: "m6", plan: "pro" }),
+    // Toko dummy lain: semuanya punya akun & katalog sendiri; hanya dua akun di atas yang ditampilkan di kotak demo halaman masuk.
+    "admin@optiksehat.id": partnerAccount({ id: "u4", name: "Sari Wulandari", email: "admin@optiksehat.id", merchantId: "m2", plan: "basic" }),
+    "admin@visionoptic.id": partnerAccount({ id: "u5", name: "Dimas Prasetyo", email: "admin@visionoptic.id", merchantId: "m3", plan: "pro" }),
+    "admin@optikmaju.id": partnerAccount({ id: "u6", name: "Hendra Gunawan", email: "admin@optikmaju.id", merchantId: "m4", plan: "basic" }),
+    "admin@optikprima.id": partnerAccount({ id: "u7", name: "Lestari Dewi", email: "admin@optikprima.id", merchantId: "m5", plan: "basic" }),
     // Akun tanpa langganan: untuk mencoba alur onboarding lengkap.
     "baru@optikbaru.id": {
       ...defaultData(),
@@ -259,7 +266,6 @@ export function seedAccounts() {
 export const DEMO_ACCOUNTS = [
   { email: "basic@optikkusuma.id", label: "Paket Basic (Optik Kusuma)" },
   { email: "pro@lensakita.id", label: "Paket Pro (Lensa Kita)" },
-  { email: "baru@optikbaru.id", label: "Belum berlangganan (alur onboarding)" }
 ];
 
 /* ------------------------------------------------------------ analitik */

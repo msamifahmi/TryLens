@@ -179,9 +179,10 @@ export class PoseEngine {
 
   /** Atur latensi tampil (detik) yang dikompensasi dengan ekstrapolasi. */
   setLatency(sec) {
-    const v = clamp(sec, 0, 0.08);
+    const v = clamp(sec, 0, 0.12);
     if (this.pos.o) this.pos.o.lead = v;
     if (this.rot.o) this.rot.o.lead = v;
+    if (this.stab?.o) this.stab.o.lead = v;
   }
 
   /**

@@ -21,3 +21,16 @@ export async function createLandmarker(opts = {}) {
     return make("CPU"); // beberapa perangkat tidak mendukung GPU delegate
   }
 }
+
+/** Garis penghubung titik wajah (sama dengan yang dipakai MediaPipe) untuk menggambar mesh di kanvas. */
+export async function faceConnections() {
+  const { FaceLandmarker: F } = await import("@mediapipe/tasks-vision");
+  const pairs = (c) => (c || []).map((x) => [x.start, x.end]);
+  return {
+    tess: pairs(F.FACE_LANDMARKS_TESSELATION),
+    oval: pairs(F.FACE_LANDMARKS_FACE_OVAL),
+    eyes: [...pairs(F.FACE_LANDMARKS_LEFT_EYE), ...pairs(F.FACE_LANDMARKS_RIGHT_EYE), ...pairs(F.FACE_LANDMARKS_LEFT_IRIS), ...pairs(F.FACE_LANDMARKS_RIGHT_IRIS)],
+    brows: [...pairs(F.FACE_LANDMARKS_LEFT_EYEBROW), ...pairs(F.FACE_LANDMARKS_RIGHT_EYEBROW)],
+    lips: pairs(F.FACE_LANDMARKS_LIPS)
+  };
+}

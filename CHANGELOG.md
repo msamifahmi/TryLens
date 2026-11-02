@@ -6,6 +6,19 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 39 — Beranda lebih padat, Flash Sale baru (admin + dasbor Mitra), scan wajah live, VTO lebih sinkron
+
+- **Beranda**: "Toko Optik Pilihan" dan "Koleksi Frame Terbaru" digabung jadi satu section rapat (judul tegas + subjudul sejajar, kartu toko diringkas), tanpa ruang kosong di antaranya.
+- **Flash Sale baru**: panel bertema (Sunset/Ocean/Berry/Midnight) dengan hitung mundur "berdetak", bar kuota bergaris bergerak, label "Hampir habis", kartu padat (2 di HP, 5 di desktop).
+- **Admin** (`/admin` → tab Flash Sale; PHP + Node): judul, subjudul, tema, waktu berakhir (kosong = reset tiap hari), diskon minimum, maks. frame per toko. Tersimpan di tabel `settings`, tayang di `/api/catalog` (`flashSale`). Ada uji baru.
+- **Dasbor Mitra** (Promosi → Flash Sale): Mitra mendaftarkan frame, harga kilat, dan kuota; langsung tayang di beranda/halaman toko/Mitra. Mode demo (localStorage) — mode server belum menyimpan pendaftaran Mitra.
+- **Akun Mitra**: semua 6 toko dummy punya akun & katalog sendiri; kotak demo di halaman masuk hanya menampilkan 2 (Optik Kusuma, Lensa Kita). Data demo di perangkat di-seed ulang (versi penyimpanan 3).
+- **Scan wajah**: kamera tetap aktif setelah hasil keluar, menampilkan mesh MediaPipe 478 titik + titik jangkar berlabel (dahi, dagu, pipi, hidung, pupil), tombol Scan ulang / Matikan kamera. Tetap di browser (bukan library Python); tidak ada klaim akurasi 99%.
+- **VTO**: latensi kamera→layar kini diukur dari `requestVideoFrameCallback` lalu dikompensasi ekstrapolasi (`setLatency`, juga untuk tracker stable). Belum bisa diuji dengan kamera sungguhan di lingkungan ini.
+- **Gerak**: kartu produk terangkat + gambar zoom saat disorot, ikon petir berdenyut, orb latar melayang, tombol utama "bernapas", section muncul saat digulir; semua mati bila pengguna memilih "kurangi gerak".
+
+---
+
 ## Update 38 — f20–f23 memakai model 3D & foto sendiri (tidak ada lagi ilustrasi SVG)
 
 - **4 model 3D baru** masuk katalog sebagai f20–f23 (`public/products/<id>/model.glb`, `main.jpg`, `detail.jpg`), semuanya ber-rig sesuai spesifikasi TryLens dan lolos `npm run glb:check` (24 dari 24 model): f20 Round Wire Gold, f21 Cat Eye Acetate Blue, f22 Half Rim Business Navy, f23 Cat Eye Slim Red. Tombol "Coba Sekarang" dan tab 360° aktif untuk keempatnya.

@@ -37,13 +37,15 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
   const shown = filtered.slice(0, visibleCount);
 
   return (
-    <section id={id} className="max-w-[1280px] mx-auto px-5 py-7">
-      <div className="mb-4">
-        <h2 className="text-[21px] font-bold text-ink tracking-tight mb-1">Koleksi Frame Terbaru</h2>
-        <p className="text-[13.5px] text-ink-muted m-0">Pilihan untukmu, disesuaikan dengan tren minggu ini.</p>
+    <div id={id} className="scroll-mt-24">
+      <div className="flex items-baseline gap-x-3 gap-y-0.5 flex-wrap mb-1">
+        <h2 className="text-[20px] md:text-[22px] font-extrabold text-ink tracking-tight m-0 flex items-center gap-2">
+          <span aria-hidden="true" className="w-1.5 h-5 rounded-full bg-accent-yellow" />Koleksi Frame Terbaru
+        </h2>
+        <p className="text-[12.5px] text-ink-muted m-0 hidden sm:block">Pilihan untukmu, disesuaikan dengan tren minggu ini.</p>
       </div>
 
-      <div className="sticky top-[60px] md:top-[68px] bg-[#F5F7FA] z-20 py-2.5 flex items-center justify-between gap-4 flex-wrap mb-4">
+      <div className="sticky top-[60px] md:top-[68px] bg-white z-20 py-1.5 flex items-center justify-between gap-x-4 gap-y-1 flex-wrap mb-3 border-b border-[#EEF3FA]">
         <div className="flex gap-5 overflow-x-auto scrollbar-none" role="tablist" aria-label="Filter kategori produk">
           {TABS.map((tab) => (
             <button
@@ -111,6 +113,6 @@ export default function RecommendationSection({ id, onTryOn, showToast, cardRefs
           </button>
         </div>
       )}
-    </section>
+    </div>
   );
 }

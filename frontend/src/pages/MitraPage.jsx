@@ -4,6 +4,7 @@ import { mitraBanners } from "../lib/catalog.js";
 import { MERCHANTS, PRODUCTS, OFFICIAL_LINKS } from "../data/mockData.js";
 import { useFilter } from "../store/useFilter.js";
 import PromoAdBanners from "../components/PromoAdBanners.jsx";
+import { flashItems } from "../lib/flashSale.js";
 import FlashSaleSection from "../components/FlashSaleSection.jsx";
 import FilterSortBar from "../components/FilterSortBar.jsx";
 import MerchantCard from "../components/MerchantCard.jsx";
@@ -32,7 +33,7 @@ const PROMO_PRODUCTS = PRODUCTS.filter((p) => !!p.oldPrice);
 const MAX_DISCOUNT = PROMO_PRODUCTS.reduce((max, p) => Math.max(max, Math.round((1 - p.price / p.oldPrice) * 100)), 0);
 const NEW_COUNT = PRODUCTS.filter((p) => p.isNew).length;
 // Flash sale lintas mitra: yang paling banyak terjual dulu.
-const FLASH_ITEMS = PRODUCTS.filter((p) => p.flash).sort((a, b) => b.flashSold - a.flashSold);
+
 
 export default function MitraPage() {
   const navigate = useNavigate();
@@ -133,7 +134,7 @@ export default function MitraPage() {
       </div>
 
       <div className="mb-7">
-        <FlashSaleSection products={FLASH_ITEMS} showMerchant />
+        <FlashSaleSection products={flashItems().slice(0, 10)} limit={10} showMerchant />
       </div>
 
       <FilterSortBar

@@ -255,9 +255,20 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
 
     // Sinkron dengan frame kamera (lebih hemat & lebih sedikit lag); cadangan: cek currentTime tiap rAF.
     const hasVFC = typeof video.requestVideoFrameCallback === "function";
-    const onVideoFrame = () => {
+    // Ukur latensi nyata kamera→layar (waktu tangkap frame sampai deteksi selesai + satu frame render ≈16 ms)
+    // lalu kirim ke mesin supaya ekstrapolasi pose menutup selisihnya (kacamata tidak tertinggal saat kepala bergerak).
+    let latEma = 0.05;
+    const onVideoFrame = (now, meta) => {
       if (!alive) return;
       detect();
+      const cap = meta?.captureTime; // tidak ada di semua browser → pakai bawaan 25 ms
+      if (cap) {
+        const lat = (performance.now() - cap) / 1000 + 0.016;
+        if (lat > 0 && lat < 0.3) {
+          latEma += 0.08 * (lat - latEma);
+          engine.setLatency(latEma);
+        }
+      }
       vfc = video.requestVideoFrameCallback(onVideoFrame);
     };
     if (hasVFC) vfc = video.requestVideoFrameCallback(onVideoFrame);

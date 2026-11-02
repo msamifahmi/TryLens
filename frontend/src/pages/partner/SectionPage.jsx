@@ -1,11 +1,12 @@
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowUpCircle, Award, Bell, Boxes, CreditCard, Eye, FolderOpen, Gauge, Glasses, LineChart, Megaphone, Receipt, ScanFace, Settings2, ShoppingBag, SlidersHorizontal, Sparkles, Store, User, Users } from "lucide-react";
+import { Zap, ArrowUpCircle, Award, Bell, Boxes, CreditCard, Eye, FolderOpen, Gauge, Glasses, LineChart, Megaphone, Receipt, ScanFace, Settings2, ShoppingBag, SlidersHorizontal, Sparkles, Store, User, Users } from "lucide-react";
 import { motion } from "motion/react";
 import TreeNav from "../../components/ui/TreeNav.jsx";
 import { SubTabs } from "../../components/partner/ui.jsx";
 import { StoreProfileTab, ProductsTab, CollectionsTab, PreviewTab } from "./StoreTabs.jsx";
 import { VtoLibraryTab, VtoAnalyticsTab, VtoSettingsTab } from "./VtoTabs.jsx";
 import { AnalyticsOverviewTab, AnalyticsVisitorsTab, AnalyticsProductsTab, AnalyticsTryOnTab } from "./AnalyticsTabs.jsx";
+import { FlashSaleTab } from "./FlashSaleTab.jsx";
 import { BannersTab, HighlightedTab, SponsoredTab } from "./PromotionTabs.jsx";
 import { CurrentPlanTab, BillingTab, UpgradePlanTab } from "./SubscriptionTabs.jsx";
 import { AccountTab, StoreSettingsTab, NotificationsTab } from "./SettingsTabs.jsx";
@@ -54,6 +55,7 @@ export const SECTIONS = {
     subtitle: "Jangkau lebih banyak pelanggan lewat banner dan penempatan unggulan.",
     feature: { title: "Jangkau lebih banyak", text: "Pasang banner di beranda atau tonjolkan frame andalan.", to: "/partner/promotion/banners", cta: "Buat Banner" },
     tabs: [
+      { key: "flash", label: "Flash Sale", icon: Zap, desc: "Daftarkan frame ke acara Flash Sale", C: FlashSaleTab },
       { key: "banners", label: "Iklan Banner", icon: Megaphone, desc: "Banner di beranda TryLens", C: BannersTab },
       { key: "highlighted", label: "Highlighted Brand", icon: Award, desc: "Toko tampil di slot unggulan", C: HighlightedTab, pro: true },
       { key: "sponsored", label: "Sponsored Frame", icon: Sparkles, desc: "Frame tampil di rekomendasi", C: SponsoredTab, pro: true }
