@@ -35,16 +35,15 @@ export default function HomePage() {
       <div className="max-w-[1280px] mx-auto px-3 sm:px-5 pt-2 pb-1">
         <FlashSaleSection id="flash-sale" products={flash} limit={12} layout="slider" showMerchant onSeeAll={seeAllFlash} />
       </div>
-      {/* Satu section: Toko Optik Pilihan + Koleksi Frame Terbaru (rapat, tanpa ruang kosong di antaranya) */}
-      <section className="max-w-[1280px] mx-auto px-3 sm:px-5 py-3 pb-6 tl-scroll-reveal">
-        <div className="bg-white border border-border rounded-2xl p-3 sm:p-4">
+      {/* Dua kartu terpisah: Toko Optik Pilihan, lalu Koleksi Frame Terbaru */}
+      <div className="max-w-[1280px] mx-auto px-3 sm:px-5 pt-4 pb-8 grid grid-cols-[minmax(0,1fr)] gap-4 md:gap-5">
+        <section aria-label="Toko Optik Pilihan" className="bg-white border border-border rounded-2xl p-3.5 sm:p-5 shadow-sm tl-scroll-reveal">
           <MerchantSection id="merchant" />
-          <hr className="border-0 border-t border-[#EEF3FA] my-3" />
-          <div ref={feedRef}>
-            <RecommendationSection id="feed" onTryOn={onTryOn} showToast={showToast} cardRefs={cardRefs} onOpenDetail={goToProduct} />
-          </div>
-        </div>
-      </section>
+        </section>
+        <section aria-label="Koleksi Frame Terbaru" ref={feedRef} className="bg-white border border-border rounded-2xl p-3.5 sm:p-5 shadow-sm">
+          <RecommendationSection id="feed" onTryOn={onTryOn} showToast={showToast} cardRefs={cardRefs} onOpenDetail={goToProduct} />
+        </section>
+      </div>
     </>
   );
 }

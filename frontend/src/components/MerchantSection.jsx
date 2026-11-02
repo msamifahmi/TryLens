@@ -48,7 +48,7 @@ export default function MerchantSection({ id }) {
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-bold text-ink-text truncate">{m.name}</span>
               <span className="flex items-center gap-1.5 text-[11.5px] text-ink-muted truncate">
-                <PinIcon /> {m.city.split(",")[0]} · {m.count}
+                <PinIcon /> {m.city.split(",")[0]}
               </span>
             </span>
             <span className="flex items-center gap-0.5 text-[12px] font-bold text-ink-text flex-shrink-0"><span className="text-accent-yellow"><StarIcon /></span>{m.rating}</span>
