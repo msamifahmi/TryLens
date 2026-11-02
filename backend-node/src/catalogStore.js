@@ -213,8 +213,8 @@ export function publicBanners(db) {
 }
 
 /* ---- flash sale: pengaturan acara dari admin (frame didaftarkan Mitra) */
-export const FLASH_THEMES = ["sunset", "ocean", "berry", "midnight"];
-const FLASH_DEFAULTS = { enabled: true, title: "Flash Sale", subtitle: "Diskon kilat frame pilihan dari optik lokal", theme: "sunset", endsAt: null, minDiscount: 10, maxPerMerchant: 4 };
+export const FLASH_THEMES = ["brand", "sunset", "ocean", "berry", "midnight"];
+const FLASH_DEFAULTS = { enabled: true, title: "Flash Sale", subtitle: "Diskon kilat frame pilihan dari optik lokal", theme: "brand", endsAt: null, minDiscount: 10, maxPerMerchant: 4 };
 export function flashGet(db) {
   let j = null;
   try { const r = db.prepare("SELECT v FROM settings WHERE k='flash_sale'").pluck().get(); j = r ? JSON.parse(r) : null; } catch { j = null; }

@@ -374,8 +374,8 @@ function refresh_media(string $id, ?array $rig, bool $rigGiven): void {
 function rrmdir(string $d): void { if (!is_dir($d)) return; foreach (scandir($d) as $f) if ($f !== '.' && $f !== '..') { $p = "$d/$f"; is_dir($p) ? rrmdir($p) : @unlink($p); } @rmdir($d); }
 
 /* ------------------------------------------------------------------ flash sale (pengaturan acara dari admin; frame didaftarkan Mitra) */
-const FLASH_THEMES = ['sunset', 'ocean', 'berry', 'midnight'];
-function flash_defaults(): array { return ['enabled' => true, 'title' => 'Flash Sale', 'subtitle' => 'Diskon kilat frame pilihan dari optik lokal', 'theme' => 'sunset', 'endsAt' => null, 'minDiscount' => 10, 'maxPerMerchant' => 4]; }
+const FLASH_THEMES = ['brand', 'sunset', 'ocean', 'berry', 'midnight'];
+function flash_defaults(): array { return ['enabled' => true, 'title' => 'Flash Sale', 'subtitle' => 'Diskon kilat frame pilihan dari optik lokal', 'theme' => 'brand', 'endsAt' => null, 'minDiscount' => 10, 'maxPerMerchant' => 4]; }
 function flash_get(): array {
     $r = db()->query("SELECT v FROM settings WHERE k='flash_sale'")->fetchColumn();
     $j = $r ? json_decode((string)$r, true) : null;
