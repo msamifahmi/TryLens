@@ -3,10 +3,12 @@ import { PRODUCTS } from "../data/mockData.js";
 import { usePartner } from "../store/usePartner.js";
 import { catalogInfo } from "./catalog.js";
 
-export const FLASH_DEFAULTS = { enabled: true, title: "Flash Sale", subtitle: "Diskon kilat frame pilihan dari optik lokal", theme: "sunset", endsAt: null, minDiscount: 10, maxPerMerchant: 4 };
+export const FLASH_DEFAULTS = { enabled: true, title: "Flash Sale", subtitle: "Diskon kilat frame pilihan dari optik lokal", theme: "brand", endsAt: null, minDiscount: 10, maxPerMerchant: 4 };
 
 // Warna tiap tema (kontras teks putih ≥ 4.5:1 pada semua titik gradien).
 export const FLASH_THEMES = {
+  // Palet brand TryLens: biru #406AAF/#427AB5 + kuning #F7DD7D (teks putih di atas biru ≥ 5:1; teks gelap di atas kuning)
+  brand: { label: "Brand", from: "#2F559A", to: "#427AB5", glow: "#F7DD7D", chip: "#EEF5FC", accent: "#406AAF", ribbon: "#F7DD7D", ribbonText: "#111827" },
   sunset: { label: "Sunset", from: "#C2410C", to: "#BE123C", glow: "#FDBA74", chip: "#FFF1E6", accent: "#C2410C" },
   ocean: { label: "Ocean", from: "#1D4ED8", to: "#0E7490", glow: "#7DD3FC", chip: "#E6F4FF", accent: "#1D4ED8" },
   berry: { label: "Berry", from: "#7E22CE", to: "#BE185D", glow: "#F0ABFC", chip: "#FBEAFE", accent: "#9333EA" },
@@ -15,7 +17,7 @@ export const FLASH_THEMES = {
 
 export const flashConfig = () => {
   const c = { ...FLASH_DEFAULTS, ...(catalogInfo.flashSale || {}) };
-  if (!FLASH_THEMES[c.theme]) c.theme = "sunset";
+  if (!FLASH_THEMES[c.theme]) c.theme = "brand";
   return c;
 };
 

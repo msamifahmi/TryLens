@@ -175,7 +175,7 @@ process.exit(fail ? 1 : 0);
 test("Flash Sale: pengaturan acara dari admin (validasi, simpan, tayang di /api/catalog, tab di /admin)", async () => {
   assert.equal((await call("GET", "/api/admin/flash-sale", undefined, { headers: {} })).status, 401);
   const d = (await call("GET", "/api/catalog", undefined, { headers: {} })).body.flashSale;
-  assert.equal(d.enabled, true); assert.equal(d.theme, "sunset"); assert.equal(d.endsAt, null);
+  assert.equal(d.enabled, true); assert.equal(d.theme, "brand"); assert.equal(d.endsAt, null);
   assert.equal((await call("PUT", "/api/admin/flash-sale", { theme: "pelangi" })).status, 400);
   assert.equal((await call("PUT", "/api/admin/flash-sale", { title: "ab" })).status, 400);
   assert.equal((await call("PUT", "/api/admin/flash-sale", { minDiscount: 95 })).status, 400);
