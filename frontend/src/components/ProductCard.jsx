@@ -1,3 +1,5 @@
+import ProductHoverPreview from "./ProductHoverPreview.jsx";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductImage from "./ProductImage.jsx";
 import { formatRp } from "../data/mockData.js";
@@ -31,6 +33,8 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
   const isWished = useWishlist((s) => s.isWished(product.id));
   const toggle = useWishlist((s) => s.toggle);
   const navigate = useNavigate();
+  const [hov, setHov] = useState(false);
+  const canHover = () => !!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
 
   function openDetail() {
     if (onOpenDetail) onOpenDetail(product.id);
@@ -38,11 +42,11 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
   }
 
   return (
-    <div ref={cardRef} data-id={product.id} className="bg-white border border-border rounded-xl overflow-hidden flex flex-col tl-lift group">
+    <div ref={cardRef} data-id={product.id} onMouseEnter={() => canHover() && setHov(true)} onMouseLeave={() => setHov(false)} className="bg-white border border-border rounded-xl overflow-hidden flex flex-col tl-lift group">
       <div className="relative aspect-square bg-[#F8FAFC] overflow-hidden">
         {product.badge && (
           <span
-            className={`absolute top-2.5 left-2.5 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+            className={`absolute z-10 top-2.5 left-2.5 text-[11px] font-bold px-2 py-0.5 rounded-md ${
               product.badge.startsWith("-") ? "bg-error text-white" : "bg-accent-yellow text-ink"
             }`}
           >
@@ -56,12 +60,13 @@ export default function ProductCard({ product, onTryOn, showToast, cardRef, onOp
           }}
           aria-pressed={isWished}
           aria-label={`Tambah ke wishlist ${product.name}`}
-          className={`tl-still absolute top-1.5 right-1.5 w-10 h-10 md:w-[34px] md:h-[34px] rounded-full bg-white/95 shadow-sm flex items-center justify-center ${
+          className={`tl-still absolute z-10 top-1.5 right-1.5 w-10 h-10 md:w-[34px] md:h-[34px] rounded-full bg-white/95 shadow-sm flex items-center justify-center ${
             isWished ? "text-error" : "text-ink-muted"
           }`}
         >
           <HeartIcon active={isWished} />
         </button>
+        {hov && <ProductHoverPreview product={product} />}
         <button
           onClick={openDetail}
           className="w-full h-full flex items-center justify-center p-[20%]"

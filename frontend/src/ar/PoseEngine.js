@@ -177,9 +177,15 @@ export class PoseEngine {
     };
   }
 
+  /** Tampak samping: landmark paling berderau → ekstrapolasi kecepatan dikecilkan (sampai 30%) supaya tidak menguatkan getaran. */
+  leadGain() {
+    const y = Math.abs(this.yawNow || 0);
+    return clamp(1 - (y - 25) / 30, 0.3, 1);
+  }
+
   /** Atur latensi tampil (detik) yang dikompensasi dengan ekstrapolasi. */
   setLatency(sec) {
-    const v = clamp(sec, 0, 0.12);
+    const v = clamp(sec, 0, 0.06); // ekstrapolasi lebih jauh dari ±60 ms memperbesar getaran lebih dari memperbaiki lag
     if (this.pos.o) this.pos.o.lead = v;
     if (this.rot.o) this.rot.o.lead = v;
     if (this.stab?.o) this.stab.o.lead = v;
@@ -193,13 +199,14 @@ export class PoseEngine {
     if (this.tracker === "stable") {
       if (!this.tracked || !this.stab?.ready) return null;
       const since = clamp((nowMs - this.lastNow) / 1000, 0, 0.08);
-      const at = this.stab.at(this.stab.o.lead + since);
+      const at = this.stab.at(this.stab.o.lead * this.leadGain() + since);
       if (this.post) { const f = this.post.filter(at.A, at.q, nowMs / 1000); return this.stabPose(f.A, f.q); }
       return this.stabPose(at.A, at.q);
     }
     if (this.tracker !== "magnet" || !this.tracked || !this.pos.x || !this.rot.q) return null;
     const since = clamp((nowMs - this.lastNow) / 1000, 0, 0.08);
-    return { position: this.pos.at(this.pos.o.lead + since), quaternion: this.rot.at(this.rot.o.lead + since) };
+    const g = this.leadGain();
+    return { position: this.pos.at(this.pos.o.lead * g + since), quaternion: this.rot.at(this.rot.o.lead * g + since) };
   }
 
   /** Jalankan perubahan pivot/skala pada stab dan geser keadaan penghalus keluaran sebesar pergeseran pivot (tanpa lompatan). */
@@ -260,6 +267,7 @@ export class PoseEngine {
       q = matToQuat(R);
     } else ({ t: T, R, q } = decomposeMatrix(mat.data));
     const angles = poseAngles(R);
+    this.yawNow = angles.yaw;
 
     const cats = res.faceBlendshapes?.[0]?.categories;
     const bs = (name) => cats?.find((c) => c.categoryName === name)?.score ?? 0;
@@ -274,7 +282,8 @@ export class PoseEngine {
     const irisPx = lm.length >= 478 ? (px(469, 471) + px(470, 472) + px(474, 476) + px(475, 477)) / 4 : 99;
     const nose = lm[1];
     const quality = assessQuality({
-      angles, span, irisPx, center: [nose.x, nose.y], luma, speed: this.rot.speed, mode: this.mode
+      angles, span, irisPx, center: [nose.x, nose.y], luma, speed: this.rot.speed, mode: this.mode,
+      clipped: CLIP_IDX.reduce((n, i) => n + (lm[i].x < 0.005 || lm[i].x > 0.995 || lm[i].y < 0.005 || lm[i].y > 0.995 ? 1 : 0), 0)
     });
 
     // Rekonstruksi 3D → skala sebenarnya dari iris. Hanya frame yang layak dipakai untuk kalibrasi.
@@ -409,3 +418,4 @@ export class PoseEngine {
   }
 }
 export { BRIDGE_IDX };
+const CLIP_IDX = [10, 152, 234, 454, 33, 263, 1, 61, 291]; // titik kunci: bila keluar bingkai, wajah dianggap terpotong

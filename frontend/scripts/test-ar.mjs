@@ -261,6 +261,29 @@ test("Laporan: lebar, pupil, jarak lensa, hidung, alis — semua berstatus", () 
   assert.ok(["ok", "warn"].includes(out.report.find((r) => r.key === "width").status), "frame 146 mm di wajah ±153 mm tidak boleh 'bad'");
 });
 
+
+// Tampak samping: sisi yang membelakangi kamera & titik di luar bingkai hanya "ditebak" MediaPipe → tidak boleh merusak pose.
+test("tracker stable: yaw 50° dengan sisi belakang ngawur + wajah terpotong di bawah tetap akurat", () => {
+  const faces = JSON.parse(fs.readFileSync(new URL("../src/data/canonicalFace.json", import.meta.url))).f;
+  for (const yaw of [50, -50]) {
+    const eng = new PoseEngine(canon, { mode: "tryon", tracker: "stable", faces });
+    let out;
+    for (let i = 0; i < 40; i++) {
+      const sy = synth({ yaw, pitch: 4, dist: 40, noise: 0.4 });
+      const lm = sy.res.faceLandmarks[0];
+      lm.forEach((p, id) => {
+        if (id >= 468) return;
+        const cx = canon[3 * id]; // sisi belakang: x kanonik berlawanan arah putaran
+        if (cx * yaw < -2.5) { p.x += 0.025 * gauss(); p.y += 0.025 * gauss(); }
+        if (p.y > 0.9) p.y = Math.min(1.08, p.y + 0.15); // dagu & rahang keluar bingkai (ditebak model)
+      });
+      out = eng.update(sy.res, sy.W, sy.H, i * 33);
+    }
+    assert.ok(out.tracked, `terlacak (yaw=${yaw})`);
+    assert.ok(Math.abs(out.angles.yaw - yaw) < 7, `yaw ${out.angles.yaw.toFixed(1)} vs ${yaw}`);
+  }
+});
+
 let fail = 0;
 for (const [name, fn] of tests) {
   try { fn(); console.log("✓", name); } catch (e) { fail++; console.log("✗", name, "\n   ", e.message); }
