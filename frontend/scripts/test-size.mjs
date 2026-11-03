@@ -13,15 +13,15 @@ const spec = { unit: 1, lensL: [3, 0, 0], lensR: [-3, 0, 0], bridge: [0, 0, -1],
 const r = applyRealSize(spec, { frameWidthMm: 126, lensWidthMm: 46 });
 ok(Math.abs(r.unit - 0.9) < 1e-9 && Math.abs(r.lensL[0] - 2.7) < 1e-9 && r.frameWidthMm === 126 && r.lensWidthMm === 46 && r.realSize, "Ukuran asli 126 mm pada model 140 mm → skala 0,9, nilai Mitra dipakai");
 ok(applyRealSize(spec, null) === spec, "Tanpa ukuran → spesifikasi tidak diubah");
-ok(Math.abs(autoFitScale(spec, 140) - 0.99) < 1e-9 && autoFitScale(spec, 200) > 1.1 && autoFitScale(spec, 200) <= 1.2 && Math.abs(autoFitScale(spec, 90) - 0.884) < 0.001 && autoFitScale(spec, null) === 1, "Fit otomatis: ≈ lebar wajah, wajah dibatasi 125–180 mm, skala 0,82–1,2×");
+ok(Math.abs(autoFitScale(spec, 140) - 0.99) < 1e-9 && autoFitScale(spec, 200) === 1.07 && autoFitScale(spec, 90) === 0.93 && autoFitScale(spec, null) === 1, "Fit otomatis: ≈ lebar wajah, dibatasi 0,93–1,07× (frame produk berukuran tetap, tidak lagi membesar sampai 1,2×)");
 const wide = { ...spec, frameWidthMm: 141, lensSepMm: 70.8 };
 const a = autoFitScale(wide, 161, 63);
-ok(autoFitScale(wide, 161) > 1.1 && Math.abs(a - 1.0) < 0.01, "Wajah terukur terlalu lebar dibanding PD 63 mm: lebar diredam (fuse), frame tidak membesar");
+ok(autoFitScale(wide, 161) >= 1.06 && Math.abs(a - 1.0) < 0.01, "Wajah terukur terlalu lebar dibanding PD 63 mm: lebar diredam (fuse), frame tidak membesar");
 ok(autoFitScale(wide, 161, 30) === autoFitScale(wide, 161) && autoFitScale({ ...wide, lensSepMm: 0 }, 161, 63) > 1.0, "PD tidak wajar → patokan lebar wajah saja; model tanpa jarak lensa tidak dipaksa menyesuaikan PD");
 // Frame tidak boleh lebih sempit dari wajah (engsel harus di luar kepala) walau PD kecil; jarak lensa tetap didekatkan ke PD.
 const roundWire = { ...spec, frameWidthMm: 135, lensSepMm: 76 };
 const rw = autoFitScale(roundWire, 131, 59);
-ok(rw >= (131 * 0.88) / 135 - 1e-9 && rw < 1, `Wajah 131 mm / PD 59 mm, model lebar 135 mm & jarak lensa 76 mm: ${rw.toFixed(3)}× (≥ 88% lebar wajah, < 1)`);
+ok(rw >= 0.93 - 1e-9 && rw < 1, `Wajah 131 mm / PD 59 mm, model lebar 135 mm & jarak lensa 76 mm: ${rw.toFixed(3)}× (≥ batas bawah 0,93, < 1)`);
 ok(fuseFace(170, 59).corrected && fuseFace(170, 59).face / 59 < 2.66 + 0.2 && fuseFace(170, 59).face < 170, "Lebar wajah 170 mm vs PD 59 mm (rasio 2,9) diredam ke rasio wajar");
 ok(!fuseFace(153, 63).corrected && fuseFace(153, 63).face === 153 && !fuseFace(155, 59).corrected, "Rasio wajar (2,43 / 2,63) tidak diubah");
 ok(fuseFace(140, 30).pd === null && fuseFace(null, 62).face > 130 && fuseFace(null, null).face === null, "PD tak wajar dibuang; tanpa lebar wajah diturunkan dari PD");

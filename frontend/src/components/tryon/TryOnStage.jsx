@@ -19,7 +19,7 @@ import { applyRealSize, autoFitScale } from "../../ar/sizeSpec.js";
 const CORRECTOR = Object.values(import.meta.glob("../../data/nodeCorrector.json", { eager: true }))[0]?.default ?? null;
 
 const canonArr = Float64Array.from(canonical.v);
-const FALLBACK_FRAMES = 45; // bila iris tak terbaca sebanyak ini frame, tampilkan model dengan skala bawaan
+const FALLBACK_FRAMES = 90; // bila kalibrasi belum selesai sebanyak ini frame (±3 dtk): tampilkan saran, bukan model di posisi bawaan
 const storeKey = (id) => `trylens.tryon.adj.${id}`;
 const DEFAULT_ADJ = { y: 0, z: 0, s: 1 };
 
@@ -121,6 +121,19 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
     const occGeo = new THREE.BufferGeometry();
     occGeo.setAttribute("position", new THREE.Float32BufferAttribute(canonical.v, 3));
     occGeo.setIndex(canonical.f);
+    // Mesh landmark hanya perkiraan permukaan wajah (galat beberapa mm). Dipakai apa adanya sebagai penutup, rim/lensa yang
+    // sebenarnya berada di depan pipi & alis ikut terpotong → frame tampak "masuk ke wajah". Mesh digeser 3,5 mm ke dalam
+    // sepanjang normal (kecuali tepi samping, supaya gagang tetap tersembunyi di balik pelipis).
+    occGeo.computeVertexNormals();
+    {
+      const pos = occGeo.attributes.position, nrm = occGeo.attributes.normal;
+      for (let i = 0; i < pos.count; i++) {
+        const side = Math.min(1, Math.max(0, (Math.abs(pos.getX(i)) - 6.2) / 1.2)); // 0 di depan wajah → 1 di tepi samping
+        const inset = 0.35 * (1 - side);
+        pos.setXYZ(i, pos.getX(i) - nrm.getX(i) * inset, pos.getY(i) - nrm.getY(i) * inset, pos.getZ(i) - nrm.getZ(i) * inset);
+      }
+      pos.needsUpdate = true;
+    }
     const occluder = new THREE.Mesh(occGeo, new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide }));
     occluder.renderOrder = -1;
     head.add(occluder);
@@ -203,7 +216,10 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
 
       if (out.tracked) {
         trackedFrames++;
-        const showModel = out.calibrated || trackedFrames > FALLBACK_FRAMES;
+        // Model ber-rig/ber-spesifikasi baru tampil setelah penempatan pupil (fit) tersedia. Dulu, bila kalibrasi gagal,
+        // model ditempel di titik bawaan (terlihat di dahi) sementara UI tertulis "Terkalibrasi". Titik bawaan hanya dipakai
+        // untuk model tanpa spesifikasi sama sekali.
+        const showModel = live.current.spec ? !!out.fit && out.calibrated : out.calibrated || trackedFrames > FALLBACK_FRAMES;
         if (live.current.mode === "3d" && showModel) {
           head.position.set(out.position[0], out.position[1], out.position[2]);
           head.quaternion.set(out.quaternion[0], out.quaternion[1], out.quaternion[2], out.quaternion[3]);
@@ -224,7 +240,8 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       // Perbarui UI hanya saat ada perubahan berarti (bukan tiap frame).
       const next = {
         tracked: out.tracked,
-        calibrated: out.calibrated || trackedFrames > FALLBACK_FRAMES,
+        calibrated: out.calibrated,
+        stuck: !out.calibrated && trackedFrames > FALLBACK_FRAMES,
         progress: Math.round(out.calibProgress * 10) * 10,
         issue: out.tracked ? out.quality?.issues?.[0] ?? null : null,
         pd: out.pdMm ? Math.round(out.pdMm) : null,
@@ -245,8 +262,9 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
       // Tanpa ukuran dari Mitra: sesuaikan lebar frame dengan wajah (perubahan kecil diabaikan agar tidak bergetar).
       if (!live.current.realSize && live.current.spec && out.calibrated && out.faceMm) {
         const want = autoFitScale(live.current.spec, out.faceMm, out.pdMm);
-        if (Math.abs(want / (live.current.auto || 1) - 1) > 0.015) {
-          live.current.auto = want;
+        const cur = live.current.auto || 1;
+        if (Math.abs(want / cur - 1) > 0.015) {
+          live.current.auto = cur + Math.max(-0.01, Math.min(0.01, want - cur)); // ≤1%/frame: ukuran tidak melompat saat kalibrasi selesai
           engine.setUserScale(fitRef.current.adj.s * want);
           applyRig();
         }
@@ -434,7 +452,7 @@ export default function TryOnStage({ stream, product, onProfile, onReport }) {
           {phase === "static" && "Pelacak wajah gagal dimuat (butuh internet) — pratinjau statis"}
           {phase === "ready" && !ui.tracked && "Hadapkan wajahmu ke kamera"}
           {phase === "ready" && ui.tracked && ui.issue}
-          {calibrating && !ui.issue && `Mengkalibrasi ukuran wajah… ${ui.progress}%`}
+          {calibrating && !ui.issue && (ui.stuck ? "Kalibrasi sulit — hadap lurus, dekatkan wajah, tambah cahaya depan" : `Mengkalibrasi ukuran wajah… ${ui.progress}%`)}
           {phase === "ready" && ui.tracked && !ui.issue && !calibrating && mode === "2d" && "Model 3D frame ini belum ada — memakai ilustrasi"}
         </span>
 

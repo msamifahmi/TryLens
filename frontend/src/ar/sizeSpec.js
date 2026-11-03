@@ -2,6 +2,7 @@
 import { effectiveFrameWidthMm } from "../data/frameSize.js";
 import { fuseFace } from "./anthropometry.js";
 
+export const AUTO_RANGE = [0.93, 1.07];
 const mul = (p, f) => p.map((v) => v * f);
 
 /** Skala spesifikasi model agar lebar frame = ukuran asli dari Mitra. Mengembalikan spesifikasi baru (cm) atau spec apa adanya. */
@@ -30,7 +31,10 @@ export function applyRealSize(spec, size) {
  *  - sasaran utama: jarak pusat lensa ≈ PD + 3 mm (aturan optik: 0–6 mm lebih besar dari PD) → pupil di tengah lensa;
  *  - dibatasi: lebar frame 88–103% dari lebar wajah terukur (sama dengan ambang laporan kecocokan; di luar itu terasa
  *    kecil / kebesaran). Gagang tidak masuk ke kepala karena tempurung kepala menyusut mengikuti engsel (craniumRadiusX);
- *  - batas mutlak 0,82–1,2× ukuran model. Tanpa PD → hanya patokan lebar wajah.
+ *  - batas mutlak AUTO_RANGE (0,93–1,07×) ukuran model. Frame adalah produk berukuran tetap (±138–146 mm); dulu boleh membesar sampai 1,2×
+ *    sehingga pada lebar wajah terukur berlebih (iris sebagian tertutup kelopak) frame tampil 165+ mm — tidak masuk akal. Selisih yang
+ *    lebih besar dari itu sengaja TIDAK disembunyikan: laporan kecocokan menyebut "terlalu sempit/lebar", dan ada slider ukuran.
+ *    Tanpa PD → hanya patokan lebar wajah.
  */
 export function autoFitScale(spec, faceMm, pdMm) {
   if (!spec || !(faceMm > 0) || !(spec.frameWidthMm > 0)) return 1;
@@ -39,5 +43,5 @@ export function autoFitScale(spec, faceMm, pdMm) {
   let s = (face * 0.99) / W;
   if (pd && spec.lensSepMm > 40) s = Math.pow(s, 0.4) * Math.pow((pd + 3) / spec.lensSepMm, 0.6);
   s = Math.min((face * 1.03) / W, Math.max((face * 0.88) / W, s));
-  return Math.min(1.2, Math.max(0.82, s));
+  return Math.min(AUTO_RANGE[1], Math.max(AUTO_RANGE[0], s));
 }

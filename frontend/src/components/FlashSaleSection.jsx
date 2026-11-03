@@ -36,9 +36,9 @@ function FlashCard({ product: p, theme, showMerchant }) {
   const almost = p.flashSold >= 80;
   return (
     <Link to={`/produk/${p.id}`} className="tl-lift group flex flex-col w-full bg-white rounded-xl overflow-hidden shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-      <div className="relative aspect-[4/3] bg-[#F8FAFC] p-3 overflow-hidden">
+      <div className="relative aspect-[4/3] bg-surface-blue p-3 overflow-hidden">
         <span className="absolute top-0 left-0 z-10 text-[11px] font-extrabold pl-2 pr-2.5 py-1 rounded-br-xl" style={{ background: theme.ribbon || theme.accent, color: theme.ribbonText || "#fff" }}>-{discount}%</span>
-        {almost && <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white tl-blink">Hampir habis</span>}
+        {almost && <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-error text-white tl-blink">Hampir habis</span>}
         <ProductImage productId={p.id} variant="main" style={p.style} colorKey={p.colorKey} className="w-full h-full tl-zoom" alt={p.name} />
       </div>
       <div className="p-2.5 flex flex-col flex-1">

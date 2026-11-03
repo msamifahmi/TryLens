@@ -37,6 +37,21 @@ export default function FaceSummary({ face, compact = false, className = "" }) {
           <span className="text-ink-muted"> — perkiraan dari kamera; untuk resep tetap ukur di optik.</span>
         </p>
       ) : null}
+      {face.source === "ar" && face.accuracy ? (
+        <div className="rounded-xl bg-surface-blue px-3 py-2 mb-3" aria-label="Ketepatan scan">
+          <div className="flex items-center justify-between gap-3 mb-1.5">
+            <span className="text-[12px] font-semibold text-ink-text">Keandalan scan</span>
+            <span className="text-[13px] font-extrabold text-blue-deep">{face.accuracy.score}/100</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white overflow-hidden mb-1.5" role="presentation">
+            <div className="h-full rounded-full bg-blue" style={{ width: `${face.accuracy.score}%` }} />
+          </div>
+          <p className="text-[11.5px] text-ink-muted m-0">
+            {face.accuracy.n} sampel{face.accuracy.ensemble ? ` · deteksi ganda (selisih antar-deteksi ≈ ${face.accuracy.ttaMm} mm)` : " · deteksi tunggal"}
+            {face.accuracy.level > 0 ? " · toleransi dilonggarkan" : ""}. Skor ini ukuran konsistensi pengukuran, bukan jaminan ketepatan.
+          </p>
+        </div>
+      ) : null}
       <p className="text-[11.5px] text-ink-muted m-0 mb-1.5">Gaya frame yang disarankan</p>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {styles.map((s) => (
