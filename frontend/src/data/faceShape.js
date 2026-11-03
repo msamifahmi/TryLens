@@ -68,35 +68,68 @@ const median = (arr) => {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
-/** Median setelah membuang pencilan (>3 MAD). cv = sebaran relatif -> dasar tingkat kepercayaan. */
-function robust(values) {
+/**
+ * Median setelah membuang pencilan (>2,5 MAD), lalu rata-rata terpangkas berbobot. `w` = bobot keandalan tiap sampel (0–1, opsional):
+ * frame yang taksiran skalanya tidak sepakat / iris tidak simetris berbobot kecil. cv = sebaran relatif -> dasar tingkat kepercayaan.
+ */
+function robust(values, w = null) {
   const m = median(values);
   const mad = median(values.map((v) => Math.abs(v - m))) * 1.4826;
-  const kept = values.filter((v) => Math.abs(v - m) <= 2.5 * mad + 1e-9);
-  // Rata-rata terpangkas dari sampel yang lolos: lebih mulus daripada median murni, tetap kebal pencilan.
-  const s = [...kept].sort((a, b) => a - b);
-  const cut = Math.floor(s.length * 0.15);
-  const core = s.slice(cut, s.length - cut || undefined);
-  const mean = core.length ? core.reduce((a, b) => a + b, 0) / core.length : median(kept);
+  const idx = values.map((_, i) => i).filter((i) => Math.abs(values[i] - m) <= 2.5 * mad + 1e-9);
+  const kept = idx.map((i) => values[i]);
+  // Rata-rata terpangkas (15% tiap ujung) dari sampel yang lolos: lebih mulus daripada median murni, tetap kebal pencilan.
+  const order = idx.sort((a, b) => values[a] - values[b]);
+  const cut = Math.floor(order.length * 0.15);
+  const core = order.slice(cut, order.length - cut || undefined);
+  let mean;
+  if (core.length) {
+    let sw = 0, sv = 0;
+    for (const i of core) { const wi = w ? Math.max(0.05, w[i] ?? 1) : 1; sw += wi; sv += wi * values[i]; }
+    mean = sv / sw;
+  } else mean = median(kept);
   const sd = Math.sqrt(kept.reduce((a, v) => a + (v - mean) ** 2, 0) / Math.max(1, kept.length));
   return { value: mean, n: kept.length, cv: m ? mad / Math.abs(m) : 0, sd };
 }
 
-/** Gabungkan banyak sampel (median robust) → hasil akhir yang disimpan. Sampel dari ar/PoseEngine (frame.lenR, jawR, foreR, mm, pd). */
-export function summarizeSamples(samples) {
-  const L = robust(samples.map((s) => s.lenR));
-  const J = robust(samples.map((s) => s.jawR));
-  const F = robust(samples.map((s) => s.foreR));
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+/**
+ * Gabungkan banyak sampel (rata-rata terpangkas berbobot) → hasil akhir yang disimpan. Sampel dari ar/PoseEngine
+ * (frame.lenR, jawR, foreR, mm, pd, rel) + opsional ttaMm (selisih dua deteksi jaringan, mm).
+ * opts: { level (tingkat toleransi scan 0–2), hair ({extraR, conf} dari ar/hairline.js) }.
+ */
+export function summarizeSamples(samples, opts = {}) {
+  const w = samples.map((s) => s.rel ?? 1);
+  const L = robust(samples.map((s) => s.lenR), w);
+  const J = robust(samples.map((s) => s.jawR), w);
+  const F = robust(samples.map((s) => s.foreR), w);
   const ratios = { lenR: L.value, jawR: J.value, foreR: F.value };
-  const mmv = samples.map((s) => s.mm).filter((v) => v != null);
-  const pdv = samples.map((s) => s.pd).filter((v) => v != null);
-  const mmR = mmv.length ? robust(mmv) : null, pdR = pdv.length ? robust(pdv) : null;
+  const mmIdx = samples.map((s, i) => (s.mm != null ? i : -1)).filter((i) => i >= 0);
+  const pdIdx = samples.map((s, i) => (s.pd != null ? i : -1)).filter((i) => i >= 0);
+  const mmR = mmIdx.length ? robust(mmIdx.map((i) => samples[i].mm), mmIdx.map((i) => w[i])) : null;
+  const pdR = pdIdx.length ? robust(pdIdx.map((i) => samples[i].pd), pdIdx.map((i) => w[i])) : null;
   const mm = mmR ? mmR.value : null;
   const pd = pdR ? pdR.value : null;
   const spread = Math.max(L.cv, J.cv, F.cv);
-  const confidence = samples.length >= 36 && spread < 0.02 ? "high" : samples.length >= 20 && spread < 0.05 ? "medium" : "low";
-  // Galat perkiraan (±mm): gabungan sebaran antar-sampel dan ketidakpastian ukuran iris manusia (±4,5%) sebagai penggaris.
-  const errOf = (v, r) => (v ? Math.max(2, Math.ceil(Math.hypot(0.045 * v, (1.96 * (r?.sd || 0)) / Math.sqrt(Math.max(1, r?.n || 1))))) : null);
+  const level = opts.level ?? 0;
+  let confidence = samples.length >= 36 && spread < 0.02 ? "high" : samples.length >= 20 && spread < 0.05 ? "medium" : "low";
+  if (level >= 2 && confidence === "high") confidence = "medium"; // toleransi paling longgar → jangan klaim "tinggi"
+
+  // Ketidakpastian teknik: selisih dua deteksi jaringan (ensemble cermin) pada titik kunci, dalam mm.
+  const tta = samples.map((s) => s.ttaMm).filter((v) => Number.isFinite(v));
+  const ttaMm = tta.length ? median(tta) : null;
+  // Galat perkiraan (±mm, ±95%): sebaran antar-sampel, ketidakpastian ukuran iris manusia (±4,5%) sebagai penggaris,
+  // dan (bila ada) selisih dua deteksi jaringan.
+  const errOf = (v, r) => (v ? Math.max(2, Math.ceil(Math.hypot(0.045 * v, (1.96 * (r?.sd || 0)) / Math.sqrt(Math.max(1, r?.n || 1)), ttaMm ? ttaMm * 1.5 : 0))) : null);
+
+  // Skor keandalan 0–100 (BUKAN peluang kebenaran): jumlah sampel, kekompakan, kesepakatan dua deteksi, kualitas pose per frame.
+  const relMean = w.reduce((a, b) => a + b, 0) / Math.max(1, w.length);
+  const sCount = clamp01(samples.length / 45), sSpread = 1 - clamp01(spread / 0.06);
+  const sTta = tta.length ? 1 - clamp01((median(samples.map((s) => s.meshRel).filter(Number.isFinite)) || 0) / 0.01) : 0.65;
+  const score = Math.round(100 * (0.2 * sCount + 0.3 * sSpread + 0.25 * sTta + 0.25 * clamp01(relMean)) * (level >= 2 ? 0.9 : 1));
+
+  // Tinggi wajah sampai garis rambut (bukan sampai oval mesh): hanya dilaporkan, klasifikasi bentuk tetap memakai rasio mesh.
+  const hair = opts.hair && opts.hair.conf >= 0.5 ? opts.hair : null;
   const shape = classifyRatios(ratios);
   return {
     shape,
@@ -106,7 +139,11 @@ export function summarizeSamples(samples) {
     mmErr: errOf(mm, mmR),
     pdErr: errOf(pd, pdR),
     confidence,
-    ratios: { lenR: +ratios.lenR.toFixed(2), jawR: +ratios.jawR.toFixed(2), foreR: +ratios.foreR.toFixed(2) },
+    accuracy: { score, n: samples.length, ensemble: tta.length > 0, ttaMm: ttaMm != null ? +ttaMm.toFixed(2) : null, spreadPct: +(spread * 100).toFixed(1), level, hairline: !!hair },
+    ratios: {
+      lenR: +ratios.lenR.toFixed(2), jawR: +ratios.jawR.toFixed(2), foreR: +ratios.foreR.toFixed(2),
+      ...(hair ? { lenFullR: +(ratios.lenR * (1 + hair.extraR)).toFixed(2) } : {})
+    },
     styles: FACE_SHAPES[shape].styles,
     source: "ar",
     at: new Date().toISOString()

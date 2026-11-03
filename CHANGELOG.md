@@ -6,6 +6,19 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 42 — Scan tidak macet, anchor dahi/pipi/telinga benar, ensemble ML, VTO lebih tepat
+
+- **Scan macet di 24–27%** (diuji ulang pada kode lama: 0 sampel): batas menoleh 8°/mengangguk 10° terlalu ketat untuk webcam laptop, dan frame ditolak bila mata melirik ke layar (eyeLookDown > 0,4). Kini: batas 10–20° bertingkat (`SCAN_LEVELS`), pengukuran per frame tidak lagi bergantung kalibrasi tryon, lirikan ke layar diterima, bobot keandalan per frame. Bila progres macet 6 dtk toleransi naik satu tingkat; di tingkat terlonggar hasil sebagian (≥18 sampel) tetap diberikan, atau pilihan manual muncul. Daftar centang (Cahaya/Jarak/Di tengah/Lurus/Diam/Mata) dan derajat nyata ditampilkan.
+- **Anchor**: "Pipi" dipindah ke tulang pipi (50/280); 234/454 ternyata titik tepi wajah di depan telinga. "Telinga (perkiraan)" kini DIJANGKARKAN ke 234/454 (garis putus-putus) dan ikut bergerak bersama wajah. "Dahi" = garis rambut dari deteksi warna (`ar/hairline.js`), bukan hanya landmark 10; poni menutup → ditandai; gagal → "perkiraan".
+- **ML / ketepatan**: ensemble uji-balik (jaringan MediaPipe dijalankan juga pada bingkai tercermin, `ar/ensemble.js`) → galat acak titik turun, selisih kedua deteksi dipakai sebagai ukuran ketidakpastian → ± mm dan "Keandalan scan 0–100" di hasil. Rata-rata terpangkas berbobot keandalan.
+- **VTO**: kalibrasi tidak lagi macet (pelipis tertutup rambut, solver "tidak bersih" dilonggarkan setelah 25 frame; wajib ≥20 frame). Model TIDAK lagi ditempel di titik bawaan (dahi) saat kalibrasi gagal; pesan "Kalibrasi sulit" muncul. Ukuran otomatis dibatasi 0,93–1,07× (dulu sampai 1,2× → frame 165+ mm) dan berubah ≤1%/frame. Mesh penutup wajah digeser 3,5 mm ke dalam agar rim tidak terpotong ("masuk ke wajah").
+- **Flash Sale**: tema lama "sunset" tersimpan di server ditampilkan sebagai Brand; lencana "Hampir habis" memakai token `error`.
+- **Hover kartu produk**: selalu foto dulu → 360° setelah 5 detik (model baru dimuat di tahap itu).
+- Tes baru `npm run test:scan` (25 uji); `test-size` disesuaikan.
+- **Belum terbukti dengan kamera nyata** (tidak bisa diuji di sini); model MediaPipe tidak punya telinga; garis rambut adalah heuristik warna, bukan ML; skor keandalan bukan jaminan ketepatan.
+
+---
+
 ## Update 40 — Scan wajah lebih teliti, anchor hilang setelah 100%, hover produk 360°, VTO tampak samping lebih tahan
 
 - **Bug lingkaran panduan scan**: animasi "bernapas" menimpa posisi tengah sehingga lingkaran bergeser jauh dari wajah dan menyesatkan pengguna. Diperbaiki (dibungkus agar tetap di tengah).

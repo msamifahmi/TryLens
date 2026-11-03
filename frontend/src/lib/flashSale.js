@@ -17,7 +17,8 @@ export const FLASH_THEMES = {
 
 export const flashConfig = () => {
   const c = { ...FLASH_DEFAULTS, ...(catalogInfo.flashSale || {}) };
-  if (!FLASH_THEMES[c.theme]) c.theme = "brand";
+  // "sunset" (oranye–merah) dulu tema bawaan dan masih tersimpan di pengaturan server lama; di luar palet brand → ditampilkan sebagai brand.
+  if (!FLASH_THEMES[c.theme] || c.theme === "sunset") c.theme = "brand";
   return c;
 };
 

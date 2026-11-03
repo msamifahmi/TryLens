@@ -17,7 +17,9 @@ import { EYE_LEN, describeFit, eyeTargets, packEyeTargets, placeOnEyes, unpackEy
 const POS = { minCutoff: 0.8, beta: 0.3, dCutoff: 1 };
 const ROT = { minCutoff: 1.2, beta: 4, dCutoff: 1 };
 const BUF = 45; // jumlah frame untuk median kalibrasi
-const MIN_CALIB = 12; // frame valid minimum sebelum skala dipakai
+const MIN_CALIB = 20; // frame valid minimum sebelum skala dipakai (dulu 12: median dari 12 frame masih bergeser sesudah model tampil → lensa tidak pas di awal)
+const RELAX_AFTER = 25; // frame terlacak tanpa kalibrasi → gerbang kalibrasi dilonggarkan (webcam gelap/berderau tidak pernah "bersih")
+const PAIR_SPREAD_RELAXED = 0.12;
 const RELOCK = { frac: 0.08, frames: 10, spread: 0.03, cooldown: 90 }; // ukuran berubah >8% selama 10 frame yang STABIL (sebaran <3%), dan ≥90 frame sejak kalibrasi ulang terakhir
 const K_STEP = 0.006; // laju maksimum perubahan ukuran per frame (0,6%) — mencegah ukuran "berdenyut"; 2% sesaat setelah kalibrasi ulang
 const PAIR_SPREAD = 0.06; // taksiran skala antar-pasangan landmark harus sepakat (<6%); selisih besar = ada landmark tertutup (rambut, tangan)
@@ -92,6 +94,8 @@ export class PoseEngine {
     this.wasCalibrated = false;
     this.miss = 0;
     this.tracked = false;
+    this.uncal = 0; // frame terlacak berturut-turut yang belum menghasilkan kalibrasi
+    this.scanLevel = this.scanLevel ?? 1; // tingkat toleransi mode scan (quality.js SCAN_LEVELS)
   }
 
   /** Kedalaman centroid wajah (bukan titik asal kepala) — skala dunia yang konsisten untuk posisi node. */
@@ -282,7 +286,7 @@ export class PoseEngine {
     const irisPx = lm.length >= 478 ? (px(469, 471) + px(470, 472) + px(474, 476) + px(475, 477)) / 4 : 99;
     const nose = lm[1];
     const quality = assessQuality({
-      angles, span, irisPx, center: [nose.x, nose.y], luma, speed: this.rot.speed, mode: this.mode,
+      angles, span, irisPx, center: [nose.x, nose.y], luma, speed: this.rot.speed, mode: this.mode, level: this.scanLevel,
       clipped: CLIP_IDX.reduce((n, i) => n + (lm[i].x < 0.005 || lm[i].x > 0.995 || lm[i].y < 0.005 || lm[i].y > 0.995 ? 1 : 0), 0)
     });
 
@@ -292,10 +296,18 @@ export class PoseEngine {
       const D0 = Math.max(10, -T[2]);
       const F = reconstructFrontal(lm, W, H, R, D0);
       const est = estimateScale(F, this.canon);
+      // Tiga taksiran skala (pipi, pelipis, sudut mata) harus sepakat. Bila satu pasangan menyimpang (pelipis tertutup rambut)
+      // tetapi dua lainnya sepakat, frame tetap dipakai: median sudah membuang pencilannya.
+      const ps = est ? [...est.pairs].sort((a, b) => a - b) : null;
+      const pm = ps ? median(ps) : 1;
+      const pairSpread = ps ? (ps[2] - ps[0]) / pm : 1;
+      const pairBest = ps ? Math.min(ps[1] - ps[0], ps[2] - ps[1]) / pm : 1;
+      const relaxed = this.kBuf.length < MIN_CALIB && this.uncal > RELAX_AFTER;
+      const spreadOK = pairSpread < (relaxed ? PAIR_SPREAD_RELAXED : PAIR_SPREAD) || pairBest < PAIR_SPREAD / 2;
       const calibOK =
-        est && !blink && (this.tracker !== "stable" || this.stab.clean) && est.iris.asym < 0.25 && irisPx >= 8 &&
-        (Math.max(...est.pairs) - Math.min(...est.pairs)) / median(est.pairs) < PAIR_SPREAD &&
-        Math.abs(angles.yaw) < 30 && Math.abs(angles.pitch) < 22 && Math.abs(angles.roll) < 25 &&
+        est && !blink && (this.tracker !== "stable" || this.stab.clean || relaxed) && est.iris.asym < (relaxed ? 0.35 : 0.25) && irisPx >= 8 &&
+        spreadOK &&
+        Math.abs(angles.yaw) < (relaxed ? 38 : 30) && Math.abs(angles.pitch) < (relaxed ? 28 : 22) && Math.abs(angles.roll) < (relaxed ? 30 : 25) &&
         est.k > 0.7 && est.k < 1.4;
       if (calibOK) {
         this.mCal = this.mCal ? this.mCal * 0.9 + est.m * 0.1 : est.m;
@@ -331,9 +343,20 @@ export class PoseEngine {
         }
         if (pack.ms) frame = pack.ms;
       }
+      // Mode scan: sampel TIDAK bergantung pada kalibrasi tryon (yang menolak frame bila mata melirik ke layar, pelipis tertutup rambut,
+      // atau solver belum "bersih"). Tiap frame yang wajar diukur langsung; keandalannya (rel) ikut dicatat dan disaring di pemindai.
+      if (this.mode === "scan" && est && !blink) {
+        const lookExtreme = Math.max(bs("eyeLookDownLeft"), bs("eyeLookDownRight"), bs("eyeLookUpLeft"), bs("eyeLookUpRight")) > 0.75 || Math.max(bs("eyeSquintLeft"), bs("eyeSquintRight")) > 0.6;
+        const looseOK = !lookExtreme && est.iris.asym < 0.4 && irisPx >= 7 && pairSpread < 0.16 && Math.abs(angles.yaw) < 24 && Math.abs(angles.pitch) < 26 && Math.abs(angles.roll) < 22 && est.k > 0.65 && est.k < 1.5;
+        if (looseOK && (frame || measureFrontal(F, est.m))) {
+          frame = frame || measureFrontal(F, est.m);
+          frame = { ...frame, rel: Math.max(0.1, 1 - pairSpread / 0.16) * (1 - est.iris.asym), q: { spread: pairSpread, asym: est.iris.asym, irisPx, yaw: angles.yaw, pitch: angles.pitch } };
+        } else frame = null;
+      }
     }
 
     const calibrated = this.kBuf.length >= MIN_CALIB;
+    this.uncal = calibrated ? 0 : this.uncal + 1;
     const kTarget = calibrated ? clamp(median(this.kBuf), K_RANGE[0], K_RANGE[1]) : 1;
     // Saat kalibrasi pertama selesai, langsung pakai nilainya (UI menahan model sampai saat itu); setelahnya diperhalus.
     if (!this.tracked || (calibrated && !this.wasCalibrated)) this.kSm = kTarget;
