@@ -571,6 +571,7 @@ test("Admin: hapus produk menghapus berkasnya; ekspor memuat semua baris", async
 
 test("Update 43: Flash Sale admin (validasi, status, batas per toko, katalog), Highlighted Brand, statistik pengunjung", async () => {
   const c = new Client();
+  await c.req("PUT", "/api/admin/demo-stats", { enabled: false }, { headers: AH });
   assert.equal((await c.req("POST", "/api/admin/merchants", { id: "mx", name: "Optik Uji Kilat", whatsapp: "081200000000" }, { headers: AH })).status, 201);
   const mk = async (name, price) => (await c.req("POST", "/api/admin/products", { name, merchantId: "mx", style: "round", colorKey: "black", category: "Pria", price }, { headers: AH })).body.product.id;
   const a = await mk("Kilat Satu", 300000), b = await mk("Kilat Dua", 200000);
@@ -619,6 +620,7 @@ test("Update 43: Flash Sale admin (validasi, status, batas per toko, katalog), H
 
 test("Update 45: statistik nyata per toko (Node = PHP)", async () => {
   const c = new Client();
+  await c.req("PUT", "/api/admin/demo-stats", { enabled: false }, { headers: AH });
   await c.req("POST", "/api/admin/merchants", { id: "ms", name: "Optik Statistik" }, { headers: AH });
   const p = (await c.req("POST", "/api/admin/products", { name: "Frame Statistik", merchantId: "ms", style: "round", colorKey: "black", category: "Pria", price: 150000 }, { headers: AH })).body.product.id;
   for (const k of ["try", "try", "view", "wish", "buy"]) await c.req("POST", "/api/event", { kind: k, productId: p });
@@ -628,6 +630,40 @@ test("Update 45: statistik nyata per toko (Node = PHP)", async () => {
   assert.deepEqual(s.totals, { view: 1, try: 2, buy: 1, contact: 0, store: 1, capture: 0, wish: 1 });
   assert.equal(s.products[0].id, p); assert.equal(s.products[0].try, 2);
   assert.equal((await c.req("GET", "/api/stats/merchant/zzz")).status, 404);
+});
+
+test("Update 46: data contoh presentasi — dijumlahkan ke data nyata, bisa dimatikan, rumus PHP = Node", async () => {
+  const c = new Client();
+  await c.req("POST", "/api/admin/merchants", { id: "md", name: "Optik Demo" }, { headers: AH });
+  const p = (await c.req("POST", "/api/admin/products", { name: "Frame Demo", merchantId: "md", style: "round", colorKey: "black", category: "Pria", price: 150000 }, { headers: AH })).body.product.id;
+  await c.req("PUT", "/api/admin/demo-stats", { enabled: false }, { headers: AH });
+  const real = (await c.req("GET", "/api/stats/merchant/md?days=60")).body;
+  assert.equal(real.demo, false); assert.equal(real.totals.view, 0);
+  assert.equal((await c.req("PUT", "/api/admin/demo-stats", { enabled: true }, { headers: AH })).body.enabled, true);
+  const a = (await c.req("GET", "/api/stats/merchant/md?days=60")).body;
+  assert.equal(a.demo, true); assert.equal(a.series.length, 60);
+  assert.ok(a.totals.view > 100 && a.totals.try > 20 && a.totals.store > 100 && a.totals.buy > 0 && a.totals.wish > 0, JSON.stringify(a.totals));
+  assert.ok(a.prev.view > 100, "periode sebelumnya juga terisi (perbandingan bermakna)");
+  assert.equal(a.hours.reduce((x, h) => x + h.view, 0), a.totals.view, "per jam = total");
+  await c.req("POST", "/api/event", { kind: "try", productId: p });
+  const b = (await c.req("GET", "/api/stats/merchant/md?days=60")).body;
+  assert.equal(b.totals.try, a.totals.try + 1, "pengunjung nyata tetap menambah +1");
+  const ad = (await c.req("GET", "/api/admin/stats?days=7", undefined, { headers: AH })).body;
+  assert.ok(ad.demo && ad.totals.visit > 500 && ad.products.length > 0);
+  // paritas rumus dengan PHP
+  const { spawnSync } = await import("node:child_process");
+  if (spawnSync("php", ["-v"]).status === 0) {
+    const D = await import("../src/demoStats.js");
+    const php = `require '${new URL("../../frontend/public/api/index.php", import.meta.url).pathname}';`;
+    const days = ["2026-01-03", "2026-06-14", "2026-11-01"], ids = ["f0", "f13", "m6"];
+    const code = `function today_wib(int $o = 0): string { return '2099-01-01'; } ` ;
+    const out = spawnSync("php", ["-r", `$_SERVER['REQUEST_METHOD']='GET';$_SERVER['REQUEST_URI']='/__parity';putenv('TRYLENS_DATA=${dir}/phpd');ob_start();register_shutdown_function(function(){ob_end_clean();echo json_encode(['h'=>h32('trylens|f13'),'p'=>array_map(fn($d)=>array_map(fn($i)=>demo_product($d,$i),${JSON.stringify(ids).replace(/"/g, "'")}),${JSON.stringify(days).replace(/"/g, "'")}),'s'=>demo_store('2026-06-14','m6'),'v'=>demo_visit('2026-06-14'),'w'=>demo_spread(57, demo_hour_weights())]);});${php}`], { encoding: "utf8" });
+    const j = JSON.parse(out.stdout);
+    assert.equal(j.h, D.h32("trylens|f13"));
+    assert.deepEqual(j.p, days.map((d) => ids.map((i) => D.demoProduct(d, i))));
+    assert.equal(j.s, D.demoStore("2026-06-14", "m6")); assert.equal(j.v, D.demoVisit("2026-06-14"));
+    assert.deepEqual(j.w, D.spread(57, D.hourWeights()));
+  }
 });
 
 test("Admin nonaktif bila ADMIN_TOKEN kosong/pendek (503)", async () => {

@@ -177,6 +177,7 @@ test("Update 44 PHP: Flash Sale terisi otomatis sekali dari seed.json (section t
   assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.flashItems.length, 0, "dikosongkan admin → tidak muncul lagi");
 });
 test("Update 45 PHP: statistik nyata per toko (coba berulang dihitung, kunjungan toko, wishlist, per jam, rentang 1/3/7/30 hari)", async () => {
+  await call("PUT", "/api/admin/demo-stats", { enabled: false });
   const X = { "X-TryLens": "1" };
   const m6 = (await call("GET", "/api/admin/products")).body.products.filter((p) => p.merchantId === "m6").map((p) => p.id);
   const [a, b] = m6;
@@ -202,6 +203,7 @@ test("Update 45 PHP: statistik nyata per toko (coba berulang dihitung, kunjungan
   assert.equal(ad.days, 1); assert.ok(!("store" in ad.totals), "ringkasan admin tetap 5 angka utama");
 });
 test("Update 43 PHP: Flash Sale admin + katalog, Highlighted Brand, statistik pengunjung (paritas Node)", async () => {
+  await call("PUT", "/api/admin/demo-stats", { enabled: false });
   await call("PUT", "/api/admin/flash-sale", { enabled: true, minDiscount: 10, maxPerMerchant: 4 });
   assert.equal((await call("PUT", "/api/admin/flash-items/f1", { price: 99999999, quota: 5 })).status, 400);
   assert.equal((await call("PUT", "/api/admin/flash-items/f1", { price: 1000, quota: 5 })).status, 400, "diskon > 90%");

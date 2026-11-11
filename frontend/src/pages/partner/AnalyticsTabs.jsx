@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, Eye, Pencil, RefreshCw, Search } from "lucide-react";
+import { Link } from "react-router-dom";
 import { ProLock } from "../../components/partner/PlanCard.jsx";
 import { Btn, Card, CardHeader, Tile } from "../../components/partner/ui.jsx";
-import { BarList, Change, FunnelViz, HourBars, InsightCards, KpiTile, Ring, TrendChart, useWeekday } from "../../components/partner/StatCharts.jsx";
+import { BarList, CapsuleBars, Change, CountUp, FunnelViz, HalfGauge, HeroCard, HourBars, InsightCards, KpiTile, MiniArea, Ring, STATUS_OPTIONS, StatusBadge, TrendChart, bucketize, frameStatus, useWeekday } from "../../components/partner/StatCharts.jsx";
 import { FrameThumb } from "../../components/partner/FrameAssets.jsx";
 import { useAccount } from "../../store/usePartner.js";
 import { STYLE_LABELS } from "../../data/mockData.js";
@@ -32,7 +33,7 @@ export function SourceNote({ status, model, refresh }) {
   return (
     <p className="text-[11.5px] text-ink-muted m-0 flex items-center gap-1.5 flex-wrap">
       <span className="inline-flex items-center gap-1 font-semibold text-success"><span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" aria-hidden="true" />Data nyata</span>
-      dari pengunjung TryLens, diperbarui otomatis tiap 20 detik{model?.trackingSince ? ` · pencatatan mulai ${new Date(model.trackingSince + "T00:00:00Z").toLocaleDateString("id-ID", { day: "numeric", month: "long", timeZone: "UTC" })}` : ""}.
+      {model?.demo ? "+ data contoh untuk presentasi (bisa dimatikan admin)" : "dari pengunjung TryLens"}, diperbarui otomatis tiap 20 detik{model?.trackingSince ? ` · pencatatan mulai ${new Date(model.trackingSince + "T00:00:00Z").toLocaleDateString("id-ID", { day: "numeric", month: "long", timeZone: "UTC" })}` : ""}.
       <button type="button" onClick={refresh} className="inline-flex items-center gap-1 text-ink underline"><RefreshCw size={11} aria-hidden="true" />Perbarui</button>
     </p>
   );
@@ -61,60 +62,144 @@ const csvOf = (m) => [["Waktu", ...Object.values(METRICS).map((x) => x.label)].j
 
 const unitOf = (days) => (days === 1 ? "kemarin" : `${rangeOf(days).label} sebelumnya`);
 
-/* --------------------------------------------------------------- Ikhtisar */
-export function AnalyticsOverviewTab() {
-  const { days, setDays, model: m, status, refresh } = useStats();
-  const [metric, setMetric] = useState("view");
-  const tiles = ["store", "view", "try", "buy", "contact", "wish"];
-  const insights = useMemo(() => storeInsights(m), [m]);
-  const top = m ? [...m.products].sort((a, b) => b.view + b.try * 2 - (a.view + a.try * 2)).slice(0, 5) : [];
+/* --------------------------------------------------------------- Overview */
+const BAR_METRICS = ["try", "view", "store", "buy", "contact", "wish"];
+const CATS = ["Pria", "Wanita", "Anak"];
+
+function Panel({ title, sub, right, children, className = "" }) {
   return (
-    <>
-      <Card className="mb-5">
-        <CardHeader title="Ikhtisar" subtitle={`Apa yang terjadi di toko Anda ${rangeOf(days).long}, dibanding ${unitOf(days)}`}
-          right={<div className="flex items-center gap-2 flex-wrap"><RangePicker days={days} setDays={setDays} />
-            {m && <Btn variant="outline" size="sm" onClick={() => downloadCsv(`trylens-analitik-${days}hari.csv`, csvOf(m))}><Download size={14} /> Ekspor CSV</Btn>}</div>} />
-        <div className="mb-4"><SourceNote status={status} model={m} refresh={refresh} /></div>
-        {!m ? <Loading /> : (
-          <>
-            <p className="text-[12.5px] text-ink-muted m-0 mb-2">Ketuk salah satu kartu untuk melihat grafiknya.</p>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
-              {tiles.map((k) => (
-                <KpiTile key={k} label={METRICS[k].label} value={m.totals[k]} prev={m.prev[k]} unit={unitOf(days)} active={metric === k} onClick={() => setMetric(k)}
-                  spark={m.series.map((s) => s[k])} />
-              ))}
-            </div>
-            <div className="rounded-2xl border border-[#DDE8F4] bg-white p-4">
-              <p className="text-[14px] font-semibold text-ink m-0">{METRICS[metric].label} {days === 1 ? "per jam (WIB)" : "per hari"}</p>
-              <p className="text-[12px] text-ink-muted m-0 mb-2">Menunjukkan {METRICS[metric].desc}.</p>
-              <TrendChart series={m.series} metric={metric} label={METRICS[metric].label} />
-            </div>
-          </>
-        )}
-      </Card>
-      {m && (
+    <section className={`rounded-2xl border border-[#DDE8F4] bg-white p-4 sm:p-5 min-w-0 ${className}`}>
+      {(title || right) && (
+        <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+          <div className="min-w-0"><h3 className="text-[15px] font-semibold text-ink m-0">{title}</h3>{sub && <p className="text-[12px] text-ink-muted m-0">{sub}</p>}</div>
+          {right}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+const Select = ({ value, onChange, options, label }) => (
+  <label className="inline-flex items-center"><span className="sr-only">{label}</span>
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-xl border border-[#DDE8F4] bg-white px-3 text-[12.5px] font-medium text-ink-text">
+      {options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+    </select>
+  </label>
+);
+
+export function AnalyticsOverviewTab() {
+  const { acc, days, setDays, model: m, status, refresh } = useStats();
+  const [metric, setMetric] = useState("try");
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState("all");
+  const insights = useMemo(() => storeInsights(m), [m]);
+  const buckets = useMemo(() => (m ? bucketize(m.series, days, BAR_METRICS) : []), [m, days]);
+  const unit = unitOf(days);
+  const rows = useMemo(() => {
+    if (!m) return [];
+    const all = m.products.map((f) => ({ ...f, status: null }));
+    for (const f of all) f.status = frameStatus(f, all);
+    return all.sort((a, b) => b.try - a.try || b.view - a.view);
+  }, [m]);
+  const shown = rows.filter((f) => (filter === "all" || f.status === filter) && (!q || `${f.name} ${f.id}`.toLowerCase().includes(q.toLowerCase())));
+  const cats = m ? CATS.map((c) => ({ label: `Frame ${c}`, value: m.products.filter((f) => (f.category || f.cat) === c).reduce((a, f) => a + f.try, 0) })) : [];
+  const actions = m ? m.totals.buy + m.totals.contact : 0, prevActions = m ? m.prev.buy + m.prev.contact : 0;
+  const tryRate = m && m.totals.view ? Math.round((m.totals.try / m.totals.view) * 100) : 0;
+  const convRate = m && m.totals.try ? Math.round((actions / m.totals.try) * 100) : 0;
+  const exportRows = () => downloadCsv(`trylens-aktivitas-frame-${days}hari.csv`, ["Kode,Frame,Dilihat,Dicoba,Klik beli,Hubungi,Wishlist,Status", ...shown.map((f) => [f.id, `"${f.name}"`, f.view, f.try, f.buy, f.contact, f.wish, STATUS_OPTIONS.find((s) => s.key === f.status)?.label].join(","))].join("\n"));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-[20px] font-bold text-ink m-0">Overview</h2>
+          <p className="text-[12.5px] text-ink-muted m-0">Semua yang terjadi di toko Anda {rangeOf(days).long}, dibanding {unit}.</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap"><RangePicker days={days} setDays={setDays} />
+          {m && <Btn variant="outline" size="sm" onClick={() => downloadCsv(`trylens-analitik-${days}hari.csv`, csvOf(m))}><Download size={14} /> Ekspor CSV</Btn>}</div>
+      </div>
+      <SourceNote status={status} model={m} refresh={refresh} />
+      {!m ? <Loading /> : (
         <>
-          <Card className="mb-5">
-            <CardHeader title="Insight untuk Anda" subtitle="Dibaca otomatis dari angka di atas, dalam bahasa sehari-hari" />
-            <InsightCards items={insights} />
-          </Card>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <Card>
-              <CardHeader title="Perjalanan Pengunjung" subtitle="Dari melihat frame sampai membeli atau menghubungi toko" />
+          {/* baris 1: kartu utama · area · kapsul */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2.1fr)] gap-4">
+            <div className="flex flex-col gap-4">
+              <HeroCard title="Sesi Try-On" sub="Kamera menyala dengan frame Anda" value={m.totals.try} prev={m.prev.try} unit={unit} />
+              <HeroCard tone="plain" title="Kunjungan Toko" sub="Halaman toko Anda dibuka" value={m.totals.store} prev={m.prev.store} unit={unit} />
+            </div>
+            <Panel title="Klik Beli & Hubungi" sub="Pengunjung yang lanjut ke e-commerce atau WhatsApp">
+              <p className="text-[32px] leading-tight font-bold text-ink tracking-tight m-0"><CountUp value={actions} /></p>
+              <p className="text-[12px] text-ink-muted m-0 mb-1">{fmtNum(m.totals.buy)} klik beli · {fmtNum(m.totals.contact)} hubungi toko</p>
+              <MiniArea values={buckets.map((b) => b.buy + b.contact)} />
+              <div className="mt-2"><Change cur={actions} prev={prevActions} unit={unit} /></div>
+            </Panel>
+            <Panel className="md:col-span-2 xl:col-span-1" title="Ringkasan Aktivitas" sub="Arahkan kursor/ketuk batang untuk melihat angkanya"
+              right={<Select label="Pilih angka" value={metric} onChange={setMetric} options={BAR_METRICS.map((k) => ({ key: k, label: METRICS[k].label }))} />}>
+              <CapsuleBars buckets={buckets} metric={metric} label={METRICS[metric].short} />
+            </Panel>
+          </div>
+
+          {/* baris 2: angka kecil */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiTile label="Frame dilihat" value={m.totals.view} prev={m.prev.view} unit={unit} spark={m.series.map((s) => s.view)} />
+            <KpiTile label="Masuk wishlist" value={m.totals.wish} prev={m.prev.wish} unit={unit} spark={m.series.map((s) => s.wish)} />
+            <div className="rounded-2xl border border-[#DDE8F4] bg-white p-4 flex items-center"><Ring pct={tryRate} label="Lihat → coba" sub="yang melihat frame lalu mencobanya" /></div>
+            <div className="rounded-2xl border border-[#DDE8F4] bg-white p-4 flex items-center"><Ring pct={convRate} label="Coba → beli/hubungi" sub="yang mencoba lalu lanjut membeli" /></div>
+          </div>
+
+          {/* baris 3: gauge kategori · tabel aktivitas frame */}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,2.2fr)] gap-4">
+            <Panel title="Try-On per Kategori" sub="Frame pria, wanita, atau anak yang paling sering dicoba">
+              <HalfGauge parts={cats} unit="sesi" />
+            </Panel>
+            <Panel title="Aktivitas Frame" sub="Angka tiap frame dan statusnya, diperbarui otomatis"
+              right={<div className="flex items-center gap-2 flex-wrap">
+                <label className="relative"><span className="sr-only">Cari frame</span><Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari frame" className="h-9 w-[150px] rounded-xl border border-[#DDE8F4] pl-8 pr-2 text-[12.5px]" /></label>
+                <Select label="Filter status" value={filter} onChange={setFilter} options={[{ key: "all", label: "Semua status" }, ...STATUS_OPTIONS]} />
+                <Btn variant="outline" size="sm" onClick={exportRows}><Download size={14} /> Ekspor</Btn>
+              </div>}>
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-[12.5px] border-collapse min-w-[560px]">
+                  <thead><tr className="text-left text-ink-muted text-[11.5px] bg-surface-blue/50">
+                    {["Frame", "Dilihat", "Dicoba", "Beli", "Hubungi", "Status", "Aksi"].map((h, i) => <th key={h} className={`font-medium px-2.5 py-2.5 ${i === 0 ? "rounded-l-lg" : ""} ${i === 6 ? "rounded-r-lg text-right" : ""} ${i > 0 && i < 5 ? "text-right" : ""}`}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {shown.length === 0 ? <tr><td colSpan={7} className="px-3 py-6 text-center text-ink-muted">Tidak ada frame yang cocok.</td></tr> : shown.map((f) => (
+                      <tr key={f.id} className="border-b border-[#EEF3F9] last:border-0">
+                        <td className="px-2.5 py-2.5"><div className="flex items-center gap-2.5 min-w-0"><span className="w-10 h-7 flex-shrink-0"><FrameThumb frame={f.frame} className="w-full h-full" /></span><span className="min-w-0"><span className="block truncate max-w-[190px] text-ink" title={f.name}>{f.name}</span><span className="block font-mono text-[10.5px] text-ink-muted">#{f.id}</span></span></div></td>
+                        <td className="px-2.5 py-2.5 text-right">{fmtNum(f.view)}</td>
+                        <td className="px-2.5 py-2.5 text-right font-semibold text-ink">{fmtNum(f.try)}</td>
+                        <td className="px-2.5 py-2.5 text-right">{fmtNum(f.buy)}</td>
+                        <td className="px-2.5 py-2.5 text-right">{fmtNum(f.contact)}</td>
+                        <td className="px-2.5 py-2.5"><StatusBadge code={f.status} /></td>
+                        <td className="px-2.5 py-2.5"><div className="flex justify-end gap-1">
+                          <Link to="/partner/store/products" className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-muted hover:bg-surface-blue hover:text-ink" aria-label={`Ubah ${f.name}`} title="Ubah frame"><Pencil size={14} /></Link>
+                          <a href={`/produk/${encodeURIComponent(f.id)}`} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-muted hover:bg-surface-blue hover:text-ink" aria-label={`Lihat ${f.name} di situs`} title="Lihat di situs"><Eye size={14} /></a>
+                        </div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </div>
+
+          {/* baris 4: insight · perjalanan pengunjung · jam ramai */}
+          <Panel title="Insight untuk Anda" sub="Dibaca otomatis dari angka di atas, dalam bahasa sehari-hari"><InsightCards items={insights} /></Panel>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Panel title="Perjalanan Pengunjung" sub="Dari melihat frame sampai membeli atau menghubungi toko">
               <FunnelViz steps={[
                 { label: "Melihat frame", value: m.totals.view, noun: "kali frame dilihat" },
                 { label: "Mencoba virtual", value: m.totals.try, verb: "dicoba di wajah" },
-                { label: "Klik beli / hubungi", value: m.totals.buy + m.totals.contact, verb: "berlanjut ke tombol beli atau WhatsApp" }
+                { label: "Klik beli / hubungi", value: actions, verb: "berlanjut ke tombol beli atau WhatsApp" }
               ]} />
-            </Card>
-            <Card>
-              <CardHeader title="Frame Paling Diminati" subtitle={`Dilihat + dicoba, ${rangeOf(days).long}`} />
-              <BarList rows={top.map((f) => ({ id: f.id, label: f.name, frame: f.frame, value: f.view + f.try, sub: `${fmtNum(f.try)} dicoba` }))} unit="" empty="Belum ada frame yang dilihat pada periode ini." />
-            </Card>
+            </Panel>
+            <Panel title="Jam Ramai" sub={`Per jam WIB, ${rangeOf(days).long}. Batang kuning = paling ramai.`}><HourBars hours={m.hours} /></Panel>
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 

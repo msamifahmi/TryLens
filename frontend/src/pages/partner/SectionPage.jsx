@@ -44,7 +44,7 @@ export const SECTIONS = {
     subtitle: "Pahami pengunjung, produk, dan performa try-on toko Anda.",
     feature: { title: "Ringkasan minggu ini", text: "Pengunjung, klik, dan percobaan try-on dalam satu layar.", to: "/partner/analytics/overview", cta: "Lihat Overview" },
     tabs: [
-      { key: "overview", label: "Ikhtisar", icon: Gauge, desc: "Angka utama toko Anda", C: AnalyticsOverviewTab },
+      { key: "overview", label: "Overview", icon: Gauge, desc: "Angka utama toko Anda", C: AnalyticsOverviewTab },
       { key: "visitors", label: "Pengunjung Toko", icon: Users, desc: "Siapa yang mengunjungi toko", C: AnalyticsVisitorsTab, pro: true },
       { key: "products", label: "Performa Produk", icon: ShoppingBag, desc: "Frame terlaris dan paling dilihat", C: AnalyticsProductsTab, pro: true },
       { key: "tryon", label: "Performa Try-On", icon: ScanFace, desc: "Percobaan virtual per frame", C: AnalyticsTryOnTab, pro: true }

@@ -66,7 +66,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <div className="flex flex-col gap-5 min-w-0">
           <Card>
-            <CardHeader title="Ikhtisar Kunjungan" subtitle={`Halaman toko dibuka ${days === 1 ? "per jam" : "per hari"}, ${rangeOf(days).long}`}
+            <CardHeader title="Overview Kunjungan" subtitle={`Halaman toko dibuka ${days === 1 ? "per jam" : "per hari"}, ${rangeOf(days).long}`}
               right={<Btn as={Link} to="/partner/analytics/overview" size="sm" variant="outline">Analitik lengkap</Btn>} />
             {m ? <TrendChart series={m.series} metric="store" label="Kunjungan toko" /> : <div className="h-48 rounded-xl bg-surface-blue/60 animate-pulse" />}
             {m && (

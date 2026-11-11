@@ -9,11 +9,11 @@ import { buildAnalytics } from "../data/partnerMock.js";
 
 export const RANGES = [
   { days: 1, label: "1 hari", long: "hari ini" },
-  { days: 3, label: "3 hari", long: "3 hari terakhir" },
   { days: 7, label: "1 minggu", long: "7 hari terakhir" },
-  { days: 30, label: "1 bulan", long: "30 hari terakhir" }
+  { days: 30, label: "1 bulan", long: "30 hari terakhir" },
+  { days: 60, label: "60 hari", long: "60 hari terakhir" }
 ];
-export const rangeOf = (days) => RANGES.find((r) => r.days === days) || RANGES[3];
+export const rangeOf = (days) => RANGES.find((r) => r.days === days) || RANGES[2];
 export const METRICS = {
   store: { label: "Kunjungan toko", short: "Kunjungan", desc: "berapa kali halaman toko Anda dibuka" },
   view: { label: "Frame dilihat", short: "Dilihat", desc: "berapa kali detail frame Anda dibuka" },
@@ -41,7 +41,7 @@ export function fromServer(s, frames = []) {
     ? (s.hours || []).map((h) => ({ key: `h${h.hour}`, label: `${pad(h.hour)}.00`, ...zero(), ...pick(h) }))
     : (s.series || []).map((d) => ({ key: d.day, date: d.day, label: dayLabel(d.day), ...zero(), ...pick(d) }));
   return {
-    live: true, days: s.days, from: s.from, to: s.to, totals: { ...zero(), ...pick(s.totals) }, prev: { ...zero(), ...pick(s.prev) },
+    live: true, demo: !!s.demo, days: s.days, from: s.from, to: s.to, totals: { ...zero(), ...pick(s.totals) }, prev: { ...zero(), ...pick(s.prev) },
     series, hours: (s.hours || []).map((h) => ({ hour: h.hour, ...zero(), ...pick(h) })), products, trackingSince: s.trackingSince, generatedAt: s.generatedAt
   };
 }

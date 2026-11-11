@@ -1,4 +1,4 @@
-# HANDOFF TryLens — per Rabu 11 Nov 2026 (Update 45)
+# HANDOFF TryLens — per Rabu 11 Nov 2026 (Update 46)
 
 Tempel seluruh isi file ini sebagai pesan pertama di session baru.
 
@@ -22,7 +22,9 @@ Tempel seluruh isi file ini sebagai pesan pertama di session baru.
 - Update 43: lihat CHANGELOG. Statistik hanya mulai terisi setelah versi ini tayang.
 
 ## 4. TUGAS BERIKUTNYA (urut prioritas)
-### 0. Keputusan bisnis terbaru (Update 44)
+### 0. Keputusan bisnis terbaru (Update 44–46)
+- Data contoh presentasi dijumlahkan ke statistik nyata (saklar di /admin → Ringkasan, `settings.demo_stats`, bawaan nyala). Matikan sebelum dipakai untuk keputusan bisnis sungguhan.
+- Rentang analitik Mitra: 1 hari, 1 minggu, 1 bulan, 60 hari.
 - Paket: katalog tanpa batas; VTO Basic 5, Pro 15; slot tambahan Rp30.000/slot, promo 5 slot Rp145.000 — **sekali bayar, permanen** selama langganan aktif (`VTO_SLOT`, `vtoSlotPrice`, `vtoLimitOf` di `backend-node/src/pricing.js` = `frontend/src/data/partnerMock.js`).
 - Flash Sale Mitra **langsung tayang** bila memenuhi aturan admin (tanpa antrean persetujuan); admin tetap bisa menonaktifkan.
 - Flash Sale diisi awal sekali dari `seed.json` → `flash` (counter `flash_seeded`).

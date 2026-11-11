@@ -6,6 +6,7 @@ import path from "node:path";
 import { Router } from "express";
 import express from "express";
 import { inspectGlb, isJpeg } from "../glb.js";
+import { demoOn } from "../demoStats.js";
 import { bad } from "./util.js";
 import { BANNER_IMAGE_MAX, adminStats, bannerOut, cleanBanner, flashClean, flashGet, flashItemClean, flashRows, imageExt, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
 
@@ -181,10 +182,18 @@ export function adminRouter({ config, db }) {
     res.json({ ok: true });
   });
 
+  /* ---- data contoh presentasi (nyala/mati) */
+  r.get("/demo-stats", (req, res) => res.json({ enabled: demoOn(db) }));
+  r.put("/demo-stats", (req, res) => {
+    const on = req.body?.enabled === true || req.body?.enabled === 1 || req.body?.enabled === "1" || req.body?.enabled === "true";
+    db.prepare("INSERT INTO settings(k,v) VALUES('demo_stats',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v").run(on ? "1" : "0");
+    res.json({ enabled: on });
+  });
+
   /* ---- ringkasan & statistik pengunjung */
   r.get("/stats", (req, res) => {
     const d = Number(req.query.days);
-    res.json(adminStats(db, [1, 3, 7, 30, 90].includes(d) ? d : 30));
+    res.json(adminStats(db, [1, 3, 7, 30, 60, 90].includes(d) ? d : 30));
   });
 
   /* ---- iklan */
