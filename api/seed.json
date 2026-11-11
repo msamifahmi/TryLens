@@ -93,6 +93,80 @@
    }
   }
  ],
+ "flash": [
+  {
+   "id": "f6",
+   "pct": 20,
+   "quota": 40,
+   "sold": 26
+  },
+  {
+   "id": "f7",
+   "pct": 20,
+   "quota": 40,
+   "sold": 29
+  },
+  {
+   "id": "f8",
+   "pct": 20,
+   "quota": 40,
+   "sold": 31
+  },
+  {
+   "id": "f9",
+   "pct": 20,
+   "quota": 40,
+   "sold": 23
+  },
+  {
+   "id": "f10",
+   "pct": 20,
+   "quota": 40,
+   "sold": 35
+  },
+  {
+   "id": "f11",
+   "pct": 20,
+   "quota": 40,
+   "sold": 34
+  },
+  {
+   "id": "f18",
+   "pct": 20,
+   "quota": 40,
+   "sold": 31
+  },
+  {
+   "id": "f19",
+   "pct": 20,
+   "quota": 40,
+   "sold": 18
+  },
+  {
+   "id": "f20",
+   "pct": 20,
+   "quota": 40,
+   "sold": 36
+  },
+  {
+   "id": "f21",
+   "pct": 20,
+   "quota": 40,
+   "sold": 27
+  },
+  {
+   "id": "f22",
+   "pct": 20,
+   "quota": 40,
+   "sold": 20
+  },
+  {
+   "id": "f23",
+   "pct": 20,
+   "quota": 40,
+   "sold": 20
+  }
+ ],
  "products": [
   {
    "id": "f0",
