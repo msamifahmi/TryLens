@@ -6,6 +6,17 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 43 — /admin dinamis: Ringkasan & statistik pengunjung nyata, Flash Sale diatur admin, Highlighted Brand
+
+- **Tab baru "Ringkasan"** (tab pertama di `/admin`): angka *nyata* dari server untuk 7/30/90 hari (WIB) — Kunjungan, Produk dilihat, Coba virtual, Klik beli, Hubungi toko (WhatsApp/telepon), rasio coba → beli/hubungi, dan perbandingan dengan periode sebelumnya. Grafik batang per hari (pilih angka, tooltip saat disorot, "Lihat sebagai tabel"), tabel produk paling diminati dan per toko, kartu Kesehatan katalog (klik → tab Produk terfilter) dan Promosi aktif.
+- **Pencatatan pengunjung** (`POST /api/event`, PHP + Node): hanya angka harian teragregasi di tabel `stats` — tanpa cookie, tanpa ID pengguna, IP tidak disimpan (hanya hash sementara untuk batas laju 60/menit). Bot/headless diabaikan; kunjungan/lihat/coba dihitung sekali per sesi tab per produk (`lib/track.js`), klik beli/hubungi selalu dihitung (`keepalive` agar tetap terkirim saat pindah ke Shopee/WhatsApp). Hanya aktif bila situs memakai server (mode demo tidak mengirim apa pun).
+- **Flash Sale benar-benar dari server**: admin memilih frame, harga kilat, kuota, dan jumlah terjual di tab Flash Sale (tabel `flash_items`, `GET/PUT/DELETE /api/admin/flash-items/:id`). Tiap frame diberi status **Tayang / Tidak tayang + alasannya** (dimatikan, produk disembunyikan, tidak lebih murah, diskon di bawah minimum, kuota habis, melebihi batas per toko). `/api/catalog` kini mengirim `flashItems`; beranda, halaman toko, dan /mitra memakainya (harga kilat, harga coret = harga normal, bar terjual, "Sisa N"). Sebelumnya situs live menampilkan tanda flash bawaan (data contoh) karena frame yang didaftarkan Mitra hanya tersimpan di browser Mitra. Pengaman salah ketik: diskon >90% ditolak. Menghapus produk ikut mengeluarkannya dari Flash Sale.
+- **Highlighted Brand diatur admin**: kolom "Tampil sebagai Highlighted Brand sampai tanggal" di formulir Toko (`highlight_until`, migrasi otomatis); `/api/catalog` → `highlighted` (sebelumnya selalu kosong di PHP). Lencana "Highlighted s/d …" di daftar toko.
+- Ekspor cadangan memuat `flashItems`. Tes baru: Node (38), PHP (10), `npm run test:flash` (frontend). `api/http.js` memakai `import.meta.env?.` agar bisa diimpor uji Node.
+- **Jujur soal batasan**: "Terjual" diisi admin manual (transaksi terjadi di luar TryLens); angka statistik baru mulai terisi setelah versi ini tayang (tidak ada data mundur); dasbor Mitra (akun, frame, banner, analitik Mitra) masih mode demo → direncanakan Update 44 (akun Mitra di server PHP + persetujuan iklan Mitra dari admin).
+
+---
+
 ## Update 42 — Scan tidak macet, anchor dahi/pipi/telinga benar, ensemble ML, VTO lebih tepat
 
 - **Scan macet di 24–27%** (diuji ulang pada kode lama: 0 sampel): batas menoleh 8°/mengangguk 10° terlalu ketat untuk webcam laptop, dan frame ditolak bila mata melirik ke layar (eyeLookDown > 0,4). Kini: batas 10–20° bertingkat (`SCAN_LEVELS`), pengukuran per frame tidak lagi bergantung kalibrasi tryon, lirikan ke layar diterima, bobot keandalan per frame. Bila progres macet 6 dtk toleransi naik satu tingkat; di tingkat terlonggar hasil sebagian (≥18 sampel) tetap diberikan, atau pilihan manual muncul. Daftar centang (Cahaya/Jarak/Di tengah/Lurus/Diam/Mata) dan derajat nyata ditampilkan.
@@ -16,6 +27,16 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 - **Hover kartu produk**: selalu foto dulu → 360° setelah 5 detik (model baru dimuat di tahap itu).
 - Tes baru `npm run test:scan` (25 uji); `test-size` disesuaikan.
 - **Belum terbukti dengan kamera nyata** (tidak bisa diuji di sini); model MediaPipe tidak punya telinga; garis rambut adalah heuristik warna, bukan ML; skor keandalan bukan jaminan ketepatan.
+
+---
+
+## Update 41 — Flash Sale ikut palet brand + beranda dipisah dua kartu (PR #21)
+
+- Catatan ini ditambahkan belakangan (di Update 43) karena entrinya terlewat.
+- Commit susulan Update 39 yang terlanjur di-push setelah PR #19 ter-merge diselamatkan lewat branch baru.
+- Warna Flash Sale mengikuti palet brand TryLens (tema `brand` jadi bawaan; admin PHP + Node + tes ikut diperbarui).
+- "Toko Optik Pilihan" dan "Koleksi Frame Terbaru" dipisah menjadi dua kartu putih rapi.
+- HANDOFF.md diperbarui (status, tugas hover 5 detik, konsistensi palet/gaya).
 
 ---
 

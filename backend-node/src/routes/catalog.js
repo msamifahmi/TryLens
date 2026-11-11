@@ -49,8 +49,9 @@ export function catalogRouter({ db, svc }) {
     for (const m of own.merchants) merchants.set(m.id, m);
     products.unshift(...own.products);
     hidden.push(...own.hidden);
+    for (const id of own.highlighted) highlighted.add(id);
     res.setHeader("Cache-Control", "public, max-age=30");
-    res.json({ products, merchants: [...merchants.values()], hidden, highlighted: [...highlighted], banners: publicBanners(db), flashSale: flashGet(db), generatedAt: new Date().toISOString() });
+    res.json({ products, merchants: [...merchants.values()], hidden, highlighted: [...highlighted], flashItems: own.flashItems, banners: publicBanners(db), flashSale: flashGet(db), generatedAt: new Date().toISOString() });
   });
   return r;
 }

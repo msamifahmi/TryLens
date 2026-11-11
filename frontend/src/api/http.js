@@ -1,6 +1,6 @@
 // Klien HTTP untuk backend TryLens (cookie sesi HttpOnly + header anti-CSRF).
 // Default same-origin: Vite meneruskan /api dan /media ke backend (vite.config.js). Lintas-origin: VITE_API_ORIGIN + CORS_ORIGINS di server.
-const ORIGIN = import.meta.env.VITE_API_ORIGIN || "";
+const ORIGIN = import.meta.env?.VITE_API_ORIGIN || ""; // ?. → bisa diimpor uji Node (tanpa Vite)
 
 export class ApiError extends Error {
   constructor(status, message) {

@@ -74,7 +74,12 @@ function db(): PDO {
       sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS admin_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS flash_items (product_id TEXT PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE, price INTEGER NOT NULL CHECK (price > 0),
+      quota INTEGER NOT NULL CHECK (quota > 0), sold INTEGER NOT NULL DEFAULT 0 CHECK (sold >= 0), active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS stats (day TEXT NOT NULL, kind TEXT NOT NULL, product_id TEXT NOT NULL DEFAULT '', n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind, product_id));
+    CREATE TABLE IF NOT EXISTS stat_rl (ip TEXT PRIMARY KEY, win INTEGER NOT NULL, n INTEGER NOT NULL);
     ");
+    migrate_v43($pdo);
     seed_if_empty($pdo);
     migrate_banners($pdo);
     seed_banners($pdo);
@@ -143,6 +148,15 @@ function apply_catalog_update(PDO $pdo): void {
         } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); }
     }
 }
+
+/** Update 43: kolom Highlighted Brand (tanggal terakhir tayang, zona WIB) di toko. Aman dijalankan berulang. */
+function migrate_v43(PDO $pdo): void {
+    $cols = array_column($pdo->query('PRAGMA table_info(merchants)')->fetchAll(), 'name');
+    if (!in_array('highlight_until', $cols, true)) $pdo->exec('ALTER TABLE merchants ADD COLUMN highlight_until TEXT');
+}
+/** Tanggal hari ini menurut WIB (UTC+7), format YYYY-MM-DD. */
+function today_wib(int $offsetDays = 0): string { return gmdate('Y-m-d', time() + 7 * 3600 + $offsetDays * 86400); }
+function valid_day(string $d): bool { return (bool)preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $d, $m) && checkdate((int)$m[2], (int)$m[3], (int)$m[1]); }
 
 const BANNER_ACTIONS = ['try', 'merchant', 'feed', 'promo', 'link', 'none'];
 const BANNER_KINDS = ['hero', 'topbar', 'login'];
@@ -231,11 +245,11 @@ function merchant_out(array $r): array {
     $links = [];
     foreach (['instagram', 'x', 'tokopedia', 'shopee'] as $k) if (!empty($r["link_$k"])) $links[$k] = $r["link_$k"];
     return ['id' => $r['id'], 'name' => $r['name'], 'city' => $r['city'], 'province' => $r['province'], 'initials' => $r['initials'], 'color' => $r['color'], 'whatsapp' => $r['whatsapp'], 'phone' => $r['phone'],
-        'links' => (object)$links, 'published' => (bool)$r['published'], 'createdAt' => $r['created_at'], 'updatedAt' => $r['updated_at']];
+        'links' => (object)$links, 'published' => (bool)$r['published'], 'highlightUntil' => $r['highlight_until'] ?? null, 'createdAt' => $r['created_at'], 'updatedAt' => $r['updated_at']];
 }
 function clean_merchant(array $b, ?array $prev): array {
     $o = $prev ?? ['color' => '#427AB5', 'published' => 1, 'city' => '', 'province' => '', 'whatsapp' => '', 'phone' => '', 'initials' => '', 'name' => '',
-        'link_instagram' => null, 'link_x' => null, 'link_tokopedia' => null, 'link_shopee' => null];
+        'link_instagram' => null, 'link_x' => null, 'link_tokopedia' => null, 'link_shopee' => null, 'highlight_until' => null];
     if (has($b, 'name')) $o['name'] = str($b['name'], 80);
     if (mb_strlen($o['name']) < 2) throw new HttpErr('Nama toko minimal 2 karakter.');
     foreach (['city' => 80, 'province' => 60, 'phone' => 30] as $k => $max) if (has($b, $k)) $o[$k] = str($b[$k], $max);
@@ -260,6 +274,11 @@ function clean_merchant(array $b, ?array $prev): array {
             if (!$u) throw new HttpErr("Tautan $k tidak valid (harus https dan domain yang sesuai).");
             $o["link_$k"] = $u;
         }
+    }
+    if (has($b, 'highlightUntil')) {
+        $h = trim((string)($b['highlightUntil'] ?? ''));
+        if ($h !== '' && !valid_day($h)) throw new HttpErr('Tanggal Highlighted Brand tidak valid (YYYY-MM-DD).');
+        $o['highlight_until'] = $h === '' ? null : $h;
     }
     if (has($b, 'published')) $o['published'] = b01($b['published']);
     return $o;
@@ -399,6 +418,98 @@ function flash_clean(array $b, array $prev): array {
     return $o;
 }
 
+/**
+ * Frame Flash Sale yang diatur admin (tabel flash_items). Setiap baris diberi status `live` + alasan bila tidak tayang,
+ * supaya admin tahu PERSIS kenapa sebuah frame tidak muncul. Urutan: kuota paling banyak terpakai dulu.
+ */
+function flash_rows(): array {
+    $cfg = flash_get();
+    $rows = db()->query('SELECT f.*, p.price AS regular, p.name, p.merchant_id, p.published AS ppub, m.published AS mpub FROM flash_items f
+        JOIN products p ON p.id=f.product_id JOIN merchants m ON m.id=p.merchant_id')->fetchAll();
+    usort($rows, fn($a, $b) => ($b['sold'] / $b['quota'] <=> $a['sold'] / $a['quota']) ?: strcmp($a['created_at'], $b['created_at']));
+    $perM = []; $out = [];
+    foreach ($rows as $r) {
+        $pct = $r['price'] < $r['regular'] ? (int)round((1 - $r['price'] / $r['regular']) * 100) : 0;
+        $why = null;
+        if (!$cfg['enabled']) $why = 'Flash Sale sedang dimatikan';
+        elseif (!$r['active']) $why = 'Dinonaktifkan';
+        elseif (!$r['ppub'] || !$r['mpub']) $why = 'Produk atau tokonya disembunyikan';
+        elseif ($r['price'] >= $r['regular']) $why = 'Harga kilat tidak lebih murah dari harga normal';
+        elseif ($pct < $cfg['minDiscount']) $why = "Diskon $pct% di bawah minimum {$cfg['minDiscount']}%";
+        elseif ($r['sold'] >= $r['quota']) $why = 'Kuota habis';
+        elseif (($perM[$r['merchant_id']] ?? 0) >= $cfg['maxPerMerchant']) $why = "Melebihi batas {$cfg['maxPerMerchant']} frame per toko";
+        if ($why === null) $perM[$r['merchant_id']] = ($perM[$r['merchant_id']] ?? 0) + 1;
+        $out[] = ['productId' => $r['product_id'], 'name' => $r['name'], 'merchantId' => $r['merchant_id'], 'price' => (int)$r['price'], 'regular' => (int)$r['regular'], 'pct' => $pct,
+            'quota' => (int)$r['quota'], 'sold' => (int)$r['sold'], 'active' => (bool)$r['active'], 'live' => $why === null, 'reason' => $why, 'updatedAt' => $r['updated_at']];
+    }
+    return $out;
+}
+function flash_item_clean(array $b, ?array $prev, int $regular): array {
+    $o = $prev ? ['price' => (int)$prev['price'], 'quota' => (int)$prev['quota'], 'sold' => (int)$prev['sold'], 'active' => (int)$prev['active']] : ['price' => 0, 'quota' => 20, 'sold' => 0, 'active' => 1];
+    $need = function (bool $c, string $m) { if (!$c) throw new HttpErr($m); };
+    if (has($b, 'price')) { $need(is_numeric($b['price']), 'Harga kilat tidak valid.'); $o['price'] = (int)round((float)$b['price']); }
+    $need($o['price'] >= 1000, 'Harga kilat minimal Rp1.000.');
+    $need($o['price'] * 10 >= $regular, 'Harga kilat terlalu murah (diskon lebih dari 90%). Periksa lagi jumlah angka nolnya.');
+    $need($o['price'] < $regular, 'Harga kilat harus lebih murah dari harga normal (Rp' . number_format($regular, 0, ',', '.') . ').');
+    if (has($b, 'quota')) { $need(is_numeric($b['quota']), 'Kuota tidak valid.'); $o['quota'] = (int)$b['quota']; }
+    $need($o['quota'] >= 1 && $o['quota'] <= 9999, 'Kuota 1–9.999.');
+    if (has($b, 'sold')) { $need(is_numeric($b['sold']), 'Jumlah terjual tidak valid.'); $o['sold'] = (int)$b['sold']; }
+    $need($o['sold'] >= 0 && $o['sold'] <= $o['quota'], 'Jumlah terjual harus 0 sampai kuota.');
+    if (has($b, 'active')) $o['active'] = b01($b['active']);
+    return $o;
+}
+
+/* ------------------------------------------------------------------ statistik pengunjung (angka harian teragregasi, tanpa data pribadi) */
+const EVENT_KINDS = ['visit', 'view', 'try', 'buy', 'contact'];
+/** Catat satu kejadian. Mengembalikan false bila diabaikan (bot, batas laju, produk tak dikenal). IP hanya disimpan sebagai hash sementara untuk batas laju. */
+function record_event(string $kind, string $pid, string $ip, string $ua): bool {
+    global $DATA;
+    if (preg_match('/bot|crawl|spider|slurp|headless|lighthouse|preview/i', $ua)) return false;
+    if ($kind === 'visit') $pid = '';
+    else { $q = db()->prepare('SELECT 1 FROM products WHERE id=?'); $q->execute([$pid]); if (!$q->fetch()) return false; }
+    $h = substr(hash('sha256', $ip . '|' . $DATA), 0, 32); $win = intdiv(time(), 60);
+    $pdo = db();
+    $pdo->prepare('INSERT INTO stat_rl(ip,win,n) VALUES(?,?,1) ON CONFLICT(ip) DO UPDATE SET n=CASE WHEN win=excluded.win THEN n+1 ELSE 1 END, win=excluded.win')->execute([$h, $win]);
+    $n = $pdo->prepare('SELECT n FROM stat_rl WHERE ip=?'); $n->execute([$h]);
+    if (random_int(1, 200) === 1) $pdo->prepare('DELETE FROM stat_rl WHERE win<?')->execute([$win - 10]);
+    if ((int)$n->fetchColumn() > 60) return false;
+    $pdo->prepare('INSERT INTO stats(day,kind,product_id,n) VALUES(?,?,?,1) ON CONFLICT(day,kind,product_id) DO UPDATE SET n=n+1')->execute([today_wib(), $kind, $pid]);
+    return true;
+}
+/** Ringkasan untuk tab Ringkasan di /admin: total periode + periode sebelumnya, deret harian, per produk, per toko. */
+function admin_stats(int $days): array {
+    $pdo = db();
+    $to = today_wib(); $from = today_wib(-($days - 1)); $pFrom = today_wib(-(2 * $days - 1)); $pTo = today_wib(-$days);
+    $zero = array_fill_keys(EVENT_KINDS, 0);
+    $tot = function (string $a, string $b) use ($pdo, $zero) {
+        $q = $pdo->prepare('SELECT kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? GROUP BY kind'); $q->execute([$a, $b]);
+        $o = $zero; foreach ($q->fetchAll() as $r) if (isset($o[$r['kind']])) $o[$r['kind']] = (int)$r['n']; return $o;
+    };
+    $series = [];
+    for ($i = $days - 1; $i >= 0; $i--) $series[today_wib(-$i)] = ['day' => today_wib(-$i)] + $zero;
+    $q = $pdo->prepare('SELECT day, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? GROUP BY day, kind'); $q->execute([$from, $to]);
+    foreach ($q->fetchAll() as $r) if (isset($series[$r['day']]) && isset($zero[$r['kind']])) $series[$r['day']][$r['kind']] = (int)$r['n'];
+    $names = []; foreach ($pdo->query('SELECT p.id, p.name, p.merchant_id, m.name mname FROM products p LEFT JOIN merchants m ON m.id=p.merchant_id')->fetchAll() as $r) $names[$r['id']] = $r;
+    $q = $pdo->prepare("SELECT product_id, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND product_id<>'' GROUP BY product_id, kind"); $q->execute([$from, $to]);
+    $prod = []; $mer = [];
+    foreach ($q->fetchAll() as $r) {
+        if (!isset($zero[$r['kind']])) continue;
+        $id = $r['product_id']; $p = $names[$id] ?? null;
+        $prod[$id] ??= ['id' => $id, 'name' => $p['name'] ?? "$id (dihapus)", 'merchantId' => $p['merchant_id'] ?? null] + $zero;
+        $prod[$id][$r['kind']] += (int)$r['n'];
+        if ($p && $p['merchant_id']) { $mid = $p['merchant_id']; $mer[$mid] ??= ['id' => $mid, 'name' => $p['mname'] ?? $mid] + $zero; $mer[$mid][$r['kind']] += (int)$r['n']; }
+    }
+    $score = fn($x) => $x['view'] + 2 * $x['try'] + 3 * $x['buy'] + 3 * $x['contact'];
+    $prod = array_values($prod); usort($prod, fn($a, $b) => $score($b) <=> $score($a));
+    $mer = array_values($mer); usort($mer, fn($a, $b) => $score($b) <=> $score($a));
+    $fl = flash_rows();
+    $hl = $pdo->prepare('SELECT COUNT(*) FROM merchants WHERE published=1 AND highlight_until>=?'); $hl->execute([$to]);
+    $first = $pdo->query('SELECT MIN(day) FROM stats')->fetchColumn();
+    return ['days' => $days, 'from' => $from, 'to' => $to, 'totals' => $tot($from, $to), 'prev' => $tot($pFrom, $pTo), 'series' => array_values($series),
+        'products' => array_slice($prod, 0, 20), 'merchants' => $mer, 'flashLive' => count(array_filter($fl, fn($x) => $x['live'])), 'flashTotal' => count($fl),
+        'highlighted' => (int)$hl->fetchColumn(), 'trackingSince' => $first ?: null];
+}
+
 /* ------------------------------------------------------------------ katalog publik */
 function public_banners(): array {
     $out = ['hero' => [], 'topbar' => [], 'login' => []];
@@ -432,7 +543,10 @@ function public_catalog(): array {
         $om[] = ['id' => $m['id'], 'name' => $o['name'], 'city' => $o['city'], 'province' => $o['province'], 'count' => ($count[$m['id']] ?? 0) . ' frame', 'rating' => '–', 'initials' => $o['initials'],
             'color' => $o['color'], 'whatsapp' => $o['whatsapp'], 'phone' => $o['phone'], 'links' => $o['links'], 'logo' => null];
     }
-    return ['products' => $products, 'merchants' => $om, 'hidden' => $hidden, 'highlighted' => [], 'banners' => public_banners(), 'flashSale' => flash_get(), 'generatedAt' => now()];
+    $hq = db()->prepare('SELECT id FROM merchants WHERE published=1 AND highlight_until>=?'); $hq->execute([today_wib()]);
+    $flash = [];
+    foreach (flash_rows() as $f) if ($f['live']) $flash[] = ['id' => $f['productId'], 'price' => $f['price'], 'regular' => $f['regular'], 'quota' => $f['quota'], 'sold' => $f['sold']];
+    return ['products' => $products, 'merchants' => $om, 'hidden' => $hidden, 'highlighted' => $hq->fetchAll(PDO::FETCH_COLUMN), 'flashItems' => $flash, 'banners' => public_banners(), 'flashSale' => flash_get(), 'generatedAt' => now()];
 }
 
 /* ------------------------------------------------------------------ auth admin */
@@ -488,6 +602,13 @@ try {
         header('X-Content-Type-Options: nosniff'); readfile($p); exit;
     }
 
+    if ($path === '/api/event' && $method === 'POST') {
+        if (($_SERVER['HTTP_X_TRYLENS'] ?? '') !== '1') fail('Header X-TryLens wajib ada', 403);
+        $kind = (string)($body['kind'] ?? '');
+        if (!in_array($kind, EVENT_KINDS, true)) fail('Jenis kejadian tidak dikenal.');
+        record_event($kind, str($body['productId'] ?? '', 40), (string)($_SERVER['REMOTE_ADDR'] ?? '?'), (string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        http_response_code(204); header('Cache-Control: no-store'); exit;
+    }
     if (!str_starts_with($path, '/api/admin')) fail('Endpoint tidak ditemukan', 404);
     // Anti-CSRF: permintaan yang mengubah data wajib membawa header kustom.
     if (!in_array($method, ['GET', 'HEAD'], true) && ($_SERVER['HTTP_X_TRYLENS'] ?? '') !== '1') fail('Header X-TryLens wajib ada', 403);
@@ -506,8 +627,8 @@ try {
         if (!$validId($id)) fail('ID toko tidak valid (huruf/angka/_/-, ≤ 40).');
         if ($getM($id)) fail('ID toko sudah ada.', 409);
         $o = clean_merchant($body, null); $t = now();
-        $pdo->prepare('INSERT INTO merchants(id,name,city,province,initials,color,whatsapp,phone,link_instagram,link_x,link_tokopedia,link_shopee,published,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-            ->execute([$id, $o['name'], $o['city'], $o['province'], $o['initials'], $o['color'], $o['whatsapp'], $o['phone'], $o['link_instagram'], $o['link_x'], $o['link_tokopedia'], $o['link_shopee'], $o['published'], $t, $t]);
+        $pdo->prepare('INSERT INTO merchants(id,name,city,province,initials,color,whatsapp,phone,link_instagram,link_x,link_tokopedia,link_shopee,published,highlight_until,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$id, $o['name'], $o['city'], $o['province'], $o['initials'], $o['color'], $o['whatsapp'], $o['phone'], $o['link_instagram'], $o['link_x'], $o['link_tokopedia'], $o['link_shopee'], $o['published'], $o['highlight_until'], $t, $t]);
         out(['merchant' => merchant_out($getM($id))], 201);
     }
     if (preg_match('~^/merchants/([^/]+)$~', $a, $m)) {
@@ -515,8 +636,8 @@ try {
         if (!$prev) fail('Toko tidak ditemukan.', 404);
         if ($method === 'PATCH') {
             $o = clean_merchant($body, $prev);
-            $pdo->prepare('UPDATE merchants SET name=?,city=?,province=?,initials=?,color=?,whatsapp=?,phone=?,link_instagram=?,link_x=?,link_tokopedia=?,link_shopee=?,published=?,updated_at=? WHERE id=?')
-                ->execute([$o['name'], $o['city'], $o['province'], $o['initials'], $o['color'], $o['whatsapp'], $o['phone'], $o['link_instagram'], $o['link_x'], $o['link_tokopedia'], $o['link_shopee'], $o['published'], now(), $m[1]]);
+            $pdo->prepare('UPDATE merchants SET name=?,city=?,province=?,initials=?,color=?,whatsapp=?,phone=?,link_instagram=?,link_x=?,link_tokopedia=?,link_shopee=?,published=?,highlight_until=?,updated_at=? WHERE id=?')
+                ->execute([$o['name'], $o['city'], $o['province'], $o['initials'], $o['color'], $o['whatsapp'], $o['phone'], $o['link_instagram'], $o['link_x'], $o['link_tokopedia'], $o['link_shopee'], $o['published'], $o['highlight_until'], now(), $m[1]]);
             out(['merchant' => merchant_out($getM($m[1]))]);
         }
         if ($method === 'DELETE') {
@@ -558,6 +679,7 @@ try {
             out(['product' => product_out($getP($m[1]))]);
         }
         if ($method === 'DELETE') {
+            $pdo->prepare('DELETE FROM flash_items WHERE product_id=?')->execute([$m[1]]);
             $pdo->prepare('DELETE FROM products WHERE id=?')->execute([$m[1]]);
             rrmdir(pdir($m[1]));
             out(['ok' => true]);
@@ -599,6 +721,22 @@ try {
         $pdo->prepare("INSERT INTO settings(k,v) VALUES('flash_sale',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([json_encode($o)]);
         out(['flashSale' => $o]);
     }
+    if ($a === '/stats' && $method === 'GET') { $d = (int)($_GET['days'] ?? 30); out(admin_stats(in_array($d, [7, 30, 90], true) ? $d : 30)); }
+    if ($a === '/flash-items' && $method === 'GET') out(['items' => flash_rows()]);
+    if (preg_match('~^/flash-items/([^/]+)$~', $a, $m)) {
+        $p = $getP($m[1]);
+        if (!$p) fail('Produk tidak ditemukan.', 404);
+        $q = $pdo->prepare('SELECT * FROM flash_items WHERE product_id=?'); $q->execute([$m[1]]); $prev = $q->fetch() ?: null;
+        if ($method === 'PUT') {
+            $o = flash_item_clean($body, $prev, (int)$p['price']); $t = now();
+            $pdo->prepare('INSERT INTO flash_items(product_id,price,quota,sold,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?)
+                ON CONFLICT(product_id) DO UPDATE SET price=excluded.price, quota=excluded.quota, sold=excluded.sold, active=excluded.active, updated_at=excluded.updated_at')
+                ->execute([$m[1], $o['price'], $o['quota'], $o['sold'], $o['active'], $t, $t]);
+            $it = array_values(array_filter(flash_rows(), fn($x) => $x['productId'] === $m[1]));
+            out(['item' => $it[0] ?? null], $prev ? 200 : 201);
+        }
+        if ($method === 'DELETE') { $pdo->prepare('DELETE FROM flash_items WHERE product_id=?')->execute([$m[1]]); out(['ok' => true]); }
+    }
     if ($a === '/banners' && $method === 'GET') out(['banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll())]);
     if ($a === '/banners' && $method === 'POST') {
         $o = clean_banner($body, null); $t = now();
@@ -636,7 +774,7 @@ try {
         }
         if ($method === 'DELETE') { foreach (['jpg', 'png', 'webp'] as $e) @unlink(banner_file((int)$m[1], $e)); $pdo->prepare('DELETE FROM banners WHERE id=?')->execute([(int)$m[1]]); out(['ok' => true]); }
     }
-    if ($a === '/export' && $method === 'GET') out(['exportedAt' => now(), 'merchants' => array_map('merchant_out', $pdo->query('SELECT * FROM merchants ORDER BY rowid')->fetchAll()), 'products' => array_map('product_out', $pdo->query('SELECT * FROM products ORDER BY rowid')->fetchAll()), 'banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll())]);
+    if ($a === '/export' && $method === 'GET') out(['exportedAt' => now(), 'merchants' => array_map('merchant_out', $pdo->query('SELECT * FROM merchants ORDER BY rowid')->fetchAll()), 'products' => array_map('product_out', $pdo->query('SELECT * FROM products ORDER BY rowid')->fetchAll()), 'banners' => array_map('banner_out', $pdo->query('SELECT * FROM banners ORDER BY kind, sort, id')->fetchAll()), 'flashItems' => flash_rows()]);
 
     fail('Endpoint tidak ditemukan', 404);
 } catch (HttpErr $e) {

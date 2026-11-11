@@ -10,6 +10,7 @@ import { partnerRouter } from "./routes/partner.js";
 import { billingRouter } from "./routes/billing.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { adminRouter } from "./routes/admin.js";
+import { eventRouter } from "./routes/event.js";
 import legacyRouter from "../routes/api.js";
 
 const MEDIA_FILES = new Set(["main.jpg", "side.jpg", "detail.jpg", "close.jpg", "model.glb"]);
@@ -57,6 +58,7 @@ export function createApp(overrides = {}) {
   app.use("/api/billing", billingRouter(ctx));
   app.use("/api/catalog", catalogRouter(ctx));
   app.use("/api/admin", adminRouter(ctx));
+  app.use("/api/event", eventRouter(ctx));
   app.use("/api", legacyRouter);
 
   // Halaman admin katalog (statis; token dimasukkan di browser, tidak pernah ditanam di berkas).

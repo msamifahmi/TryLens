@@ -4,6 +4,7 @@ import { PRODUCTS, MERCHANTS } from "../data/mockData.js";
 import { useWishlist } from "../store/useWishlist.js";
 import ProductImage from "../components/ProductImage.jsx";
 import ConnectMerchantModal from "../components/ConnectMerchantModal.jsx";
+import { track } from "../lib/track.js";
 import { useConsult } from "../store/useConsult.js";
 import { useRecommendations } from "../rec/useRecommendations.js";
 import RecommendedStrip from "../components/RecommendedStrip.jsx";
@@ -61,6 +62,11 @@ export default function TryOnPage() {
   useEffect(() => {
     if (activeId) markViewed(activeId);
   }, [activeId, markViewed]);
+
+  // Statistik admin: "coba virtual" = kamera menyala dengan frame ini (sekali per frame per sesi).
+  useEffect(() => {
+    if (cameraStatus === "granted" && activeId) track("try", activeId);
+  }, [cameraStatus, activeId]);
 
   useEffect(() => {
     return () => stopCamera();
