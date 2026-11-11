@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { formatRp } from "../data/mockData.js";
 import { buyLinks } from "../lib/ecommerce.js";
+import { track } from "../lib/track.js";
 import { ExternalIcon, ShopBagIcon } from "./icons/SocialIcons.jsx";
 import MerchantAvatar from "./MerchantAvatar.jsx";
 
@@ -83,7 +84,7 @@ export default function ConnectMerchantModal({ open, onClose, merchant, product,
             <p className="text-[12.5px] font-semibold text-ink-text m-0 mb-2">Beli lewat e-commerce</p>
             <div className="flex flex-col gap-2">
               {shops.map((s) => (
-                <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2.5 h-12 px-4 rounded-xl text-white font-bold text-sm hover:brightness-95" style={{ background: s.color }}>
+                <a key={s.key} href={s.url} onClick={() => track("buy", product.id)} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2.5 h-12 px-4 rounded-xl text-white font-bold text-sm hover:brightness-95" style={{ background: s.color }}>
                   <ShopBagIcon size={18} />
                   <span className="flex-1">Beli di {s.label}</span>
                   {s.scope === "toko" && <span className="text-[10.5px] font-medium opacity-85">halaman toko</span>}
@@ -98,6 +99,7 @@ export default function ConnectMerchantModal({ open, onClose, merchant, product,
         <div className="flex flex-col gap-2.5">
           <a
             href={waLink}
+            onClick={() => track("contact", product.id)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 h-12 rounded-xl bg-[#25D366] text-white font-bold text-sm hover:brightness-95"
@@ -106,6 +108,7 @@ export default function ConnectMerchantModal({ open, onClose, merchant, product,
           </a>
           <a
             href={telLink}
+            onClick={() => track("contact", product.id)}
             className="flex items-center justify-center gap-2 h-12 rounded-xl border-[1.5px] border-blue text-blue font-bold text-sm hover:bg-surface-blue"
           >
             <PhoneIcon /> Telepon {merchant.phone}

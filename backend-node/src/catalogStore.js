@@ -16,12 +16,12 @@ const bool = (v) => (v === true || v === 1 || v === "1" || v === "true" ? 1 : 0)
 export function merchantOut(r) {
   const links = {};
   for (const k of LINK_KEYS) if (r["link_" + k]) links[k] = r["link_" + k];
-  return { id: r.id, name: r.name, city: r.city, province: r.province, initials: r.initials, color: r.color, whatsapp: r.whatsapp, phone: r.phone, links, published: !!r.published, createdAt: r.created_at, updatedAt: r.updated_at };
+  return { id: r.id, name: r.name, city: r.city, province: r.province, initials: r.initials, color: r.color, whatsapp: r.whatsapp, phone: r.phone, links, published: !!r.published, highlightUntil: r.highlight_until ?? null, createdAt: r.created_at, updatedAt: r.updated_at };
 }
 
 /** b = isian mentah (sebagian), prev = baris lama (untuk PATCH). Mengembalikan kolom siap simpan. */
 export function cleanMerchant(b, prev) {
-  const o = prev ? { ...prev } : { color: "#427AB5", published: 1, city: "", province: "", whatsapp: "", phone: "", initials: "" };
+  const o = prev ? { ...prev } : { color: "#427AB5", published: 1, city: "", province: "", whatsapp: "", phone: "", initials: "", highlight_until: null };
   if ("name" in b) o.name = str(b.name, 80);
   if (!o.name || o.name.length < 2) throw err("Nama toko minimal 2 karakter.");
   for (const [k, max] of [["city", 80], ["province", 60], ["phone", 30]]) if (k in b) o[k] = str(b[k], max);
@@ -46,8 +46,21 @@ export function cleanMerchant(b, prev) {
       o["link_" + k] = u;
     }
   }
+  if ("highlightUntil" in b) {
+    const h = String(b.highlightUntil ?? "").trim();
+    if (h && !validDay(h)) throw err("Tanggal Highlighted Brand tidak valid (YYYY-MM-DD).");
+    o.highlight_until = h || null;
+  }
   if ("published" in b) o.published = bool(b.published);
   return o;
+}
+/** Tanggal WIB (UTC+7) hari ini ± offset hari, format YYYY-MM-DD — sama dengan today_wib() di PHP. */
+export const todayWib = (offsetDays = 0, now = Date.now()) => new Date(now + 7 * 3600e3 + offsetDays * DAY).toISOString().slice(0, 10);
+export function validDay(d) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  if (!m) return false;
+  const t = new Date(`${d}T00:00:00Z`);
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d;
 }
 function safeHttps(raw, hosts) {
   try {
@@ -145,7 +158,9 @@ export function publicCatalog(db) {
     const o = merchantOut(m);
     outMerchants.push({ id: m.id, name: o.name, city: [o.city].filter(Boolean).join(", ") || "", province: o.province, count: `${count.get(m.id) || 0} frame`, rating: "–", initials: o.initials, color: o.color, whatsapp: o.whatsapp, phone: o.phone, links: o.links, logo: null });
   }
-  return { products, merchants: outMerchants, hidden };
+  const highlighted = db.prepare("SELECT id FROM merchants WHERE published=1 AND highlight_until>=?").pluck().all(todayWib());
+  const flashItems = flashRows(db).filter((f) => f.live).map((f) => ({ id: f.productId, price: f.price, regular: f.regular, quota: f.quota, sold: f.sold }));
+  return { products, merchants: outMerchants, hidden, highlighted, flashItems };
 }
 
 /* ---------------------------------------------------------- iklan */
@@ -236,4 +251,95 @@ export function flashClean(b, prev) {
   if ("minDiscount" in b) { const v = Number(b.minDiscount); need(Number.isFinite(v) && v >= 0 && v <= 90, "Diskon minimum 0–90%."); o.minDiscount = Math.trunc(v); }
   if ("maxPerMerchant" in b) { const v = Number(b.maxPerMerchant); need(Number.isFinite(v) && v >= 1 && v <= 20, "Batas frame per toko 1–20."); o.maxPerMerchant = Math.trunc(v); }
   return o;
+}
+
+/* ---- frame Flash Sale yang diatur admin (tabel flash_items) — sama dengan flash_rows() di PHP */
+export function flashRows(db) {
+  const cfg = flashGet(db);
+  const rows = db.prepare(`SELECT f.*, p.price AS regular, p.name, p.merchant_id, p.published AS ppub, m.published AS mpub FROM flash_items f
+    JOIN products p ON p.id=f.product_id JOIN merchants m ON m.id=p.merchant_id`).all();
+  rows.sort((a, b) => b.sold / b.quota - a.sold / a.quota || a.created_at.localeCompare(b.created_at));
+  const perM = new Map();
+  return rows.map((r) => {
+    const pct = r.price < r.regular ? Math.round((1 - r.price / r.regular) * 100) : 0;
+    let why = null;
+    if (!cfg.enabled) why = "Flash Sale sedang dimatikan";
+    else if (!r.active) why = "Dinonaktifkan";
+    else if (!r.ppub || !r.mpub) why = "Produk atau tokonya disembunyikan";
+    else if (r.price >= r.regular) why = "Harga kilat tidak lebih murah dari harga normal";
+    else if (pct < cfg.minDiscount) why = `Diskon ${pct}% di bawah minimum ${cfg.minDiscount}%`;
+    else if (r.sold >= r.quota) why = "Kuota habis";
+    else if ((perM.get(r.merchant_id) || 0) >= cfg.maxPerMerchant) why = `Melebihi batas ${cfg.maxPerMerchant} frame per toko`;
+    if (why === null) perM.set(r.merchant_id, (perM.get(r.merchant_id) || 0) + 1);
+    return { productId: r.product_id, name: r.name, merchantId: r.merchant_id, price: r.price, regular: r.regular, pct, quota: r.quota, sold: r.sold, active: !!r.active, live: why === null, reason: why, updatedAt: r.updated_at };
+  });
+}
+export function flashItemClean(b, prev, regular) {
+  const o = prev ? { price: prev.price, quota: prev.quota, sold: prev.sold, active: prev.active } : { price: 0, quota: 20, sold: 0, active: 1 };
+  const need = (c, m) => { if (!c) throw err(m); };
+  const num = (v) => (v === "" || v === null || typeof v === "boolean" ? NaN : Number(v));
+  if ("price" in b) { const v = num(b.price); need(Number.isFinite(v), "Harga kilat tidak valid."); o.price = Math.round(v); }
+  need(o.price >= 1000, "Harga kilat minimal Rp1.000.");
+  need(o.price * 10 >= regular, "Harga kilat terlalu murah (diskon lebih dari 90%). Periksa lagi jumlah angka nolnya.");
+  need(o.price < regular, `Harga kilat harus lebih murah dari harga normal (Rp${regular.toLocaleString("id-ID")}).`);
+  if ("quota" in b) { const v = num(b.quota); need(Number.isFinite(v), "Kuota tidak valid."); o.quota = Math.trunc(v); }
+  need(o.quota >= 1 && o.quota <= 9999, "Kuota 1–9.999.");
+  if ("sold" in b) { const v = num(b.sold); need(Number.isFinite(v), "Jumlah terjual tidak valid."); o.sold = Math.trunc(v); }
+  need(o.sold >= 0 && o.sold <= o.quota, "Jumlah terjual harus 0 sampai kuota.");
+  if ("active" in b) o.active = bool(b.active);
+  return o;
+}
+
+/* ---- statistik pengunjung: angka harian teragregasi (tanpa data pribadi) — sama dengan record_event()/admin_stats() di PHP */
+export const EVENT_KINDS = ["visit", "view", "try", "buy", "contact"];
+const BOT = /bot|crawl|spider|slurp|headless|lighthouse|preview/i;
+
+/** productExists(id) → boolean. Mengembalikan false bila diabaikan (bot / produk tak dikenal). Batas laju diurus pemanggil. */
+export function recordEvent(db, { kind, productId, ua }, productExists) {
+  if (BOT.test(ua || "")) return false;
+  let pid = "";
+  if (kind !== "visit") {
+    pid = str(productId, 40);
+    if (!pid || !productExists(pid)) return false;
+  }
+  db.prepare("INSERT INTO stats(day,kind,product_id,n) VALUES(?,?,?,1) ON CONFLICT(day,kind,product_id) DO UPDATE SET n=n+1").run(todayWib(), kind, pid);
+  return true;
+}
+
+export function adminStats(db, days) {
+  const to = todayWib(), from = todayWib(-(days - 1)), pFrom = todayWib(-(2 * days - 1)), pTo = todayWib(-days);
+  const zero = () => Object.fromEntries(EVENT_KINDS.map((k) => [k, 0]));
+  const tot = (a, b) => {
+    const o = zero();
+    for (const r of db.prepare("SELECT kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? GROUP BY kind").all(a, b)) if (r.kind in o) o[r.kind] = r.n;
+    return o;
+  };
+  const series = new Map();
+  for (let i = days - 1; i >= 0; i--) series.set(todayWib(-i), { day: todayWib(-i), ...zero() });
+  for (const r of db.prepare("SELECT day, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? GROUP BY day, kind").all(from, to)) {
+    const s = series.get(r.day);
+    if (s && r.kind in s) s[r.kind] = r.n;
+  }
+  const names = new Map(db.prepare("SELECT p.id, p.name, p.merchant_id, m.name mname FROM products p LEFT JOIN merchants m ON m.id=p.merchant_id").all().map((r) => [r.id, r]));
+  const prod = new Map(), mer = new Map();
+  for (const r of db.prepare("SELECT product_id, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND product_id<>'' GROUP BY product_id, kind").all(from, to)) {
+    if (!EVENT_KINDS.includes(r.kind)) continue;
+    const p = names.get(r.product_id);
+    if (!prod.has(r.product_id)) prod.set(r.product_id, { id: r.product_id, name: p?.name ?? `${r.product_id} (dihapus)`, merchantId: p?.merchant_id ?? null, ...zero() });
+    prod.get(r.product_id)[r.kind] += r.n;
+    if (p?.merchant_id) {
+      if (!mer.has(p.merchant_id)) mer.set(p.merchant_id, { id: p.merchant_id, name: p.mname ?? p.merchant_id, ...zero() });
+      mer.get(p.merchant_id)[r.kind] += r.n;
+    }
+  }
+  const score = (x) => x.view + 2 * x.try + 3 * x.buy + 3 * x.contact;
+  const fl = flashRows(db);
+  return {
+    days, from, to, totals: tot(from, to), prev: tot(pFrom, pTo), series: [...series.values()],
+    products: [...prod.values()].sort((a, b) => score(b) - score(a)).slice(0, 20),
+    merchants: [...mer.values()].sort((a, b) => score(b) - score(a)),
+    flashLive: fl.filter((x) => x.live).length, flashTotal: fl.length,
+    highlighted: db.prepare("SELECT COUNT(*) FROM merchants WHERE published=1 AND highlight_until>=?").pluck().get(to),
+    trackingSince: db.prepare("SELECT MIN(day) FROM stats").pluck().get() || null
+  };
 }

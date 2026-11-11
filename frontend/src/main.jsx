@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { usePartner } from "./store/usePartner.js";
 import { loadCatalog } from "./lib/catalog.js";
+import { track } from "./lib/track.js";
 import { initTactile } from "./lib/tactile.js";
 import "./index.css";
 
@@ -12,6 +13,7 @@ initTactile();
 // 2) Gabungkan frame Mitra ke katalog publik SEBELUM App dimuat: banyak halaman menghitung dari PRODUCTS saat modul dimuat.
 await usePartner.getState().init();
 await loadCatalog();
+track("visit"); // sekali per sesi, hanya bila server hidup (statistik admin)
 const { default: App } = await import("./App.jsx");
 
 const splash = document.getElementById("tl-splash");

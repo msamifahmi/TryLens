@@ -13,7 +13,7 @@
     "test:stable": "node scripts/test-stable.mjs",
     "test:size": "node scripts/test-size.mjs",
     "test:rec": "node scripts/test-rec.mjs",
-    "test": "npm run test:ar && npm run test:scan && npm run test:magnet && npm run test:stable && npm run test:size && npm run test:rec && npm run test:glb && npm run test:notif && npm run test:modelfit && npm run test:models && npm run test:library && npm run test:session",
+    "test": "npm run test:ar && npm run test:scan && npm run test:magnet && npm run test:stable && npm run test:size && npm run test:rec && npm run test:glb && npm run test:notif && npm run test:modelfit && npm run test:models && npm run test:library && npm run test:session && npm run test:flash",
     "glb:rig": "node scripts/build-glb-rig.mjs",
     "glb:check": "node scripts/validate-glb.mjs",
     "test:glb": "node scripts/test-glb.mjs",
@@ -21,7 +21,8 @@
     "test:modelfit": "node scripts/test-modelfit.mjs",
     "test:models": "node scripts/test-models.mjs",
     "test:library": "node scripts/test-library.mjs",
-    "test:session": "node scripts/test-session.mjs"
+    "test:session": "node scripts/test-session.mjs",
+    "test:flash": "node scripts/test-flash.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

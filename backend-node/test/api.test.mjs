@@ -550,6 +550,54 @@ test("Admin: hapus produk menghapus berkasnya; ekspor memuat semua baris", async
   assert.equal(ex.body.merchants.length, 1);
 });
 
+test("Update 43: Flash Sale admin (validasi, status, batas per toko, katalog), Highlighted Brand, statistik pengunjung", async () => {
+  const c = new Client();
+  assert.equal((await c.req("POST", "/api/admin/merchants", { id: "mx", name: "Optik Uji Kilat", whatsapp: "081200000000" }, { headers: AH })).status, 201);
+  const mk = async (name, price) => (await c.req("POST", "/api/admin/products", { name, merchantId: "mx", style: "round", colorKey: "black", category: "Pria", price }, { headers: AH })).body.product.id;
+  const a = await mk("Kilat Satu", 300000), b = await mk("Kilat Dua", 200000);
+  assert.equal((await c.req("PUT", "/api/admin/flash-items/" + a, { price: 300000, quota: 5 }, { headers: AH })).status, 400, "tidak lebih murah");
+  assert.equal((await c.req("PUT", "/api/admin/flash-items/" + a, { price: 24000, quota: 5 }, { headers: AH })).status, 400, "diskon > 90% (salah ketik nol)");
+  assert.equal((await c.req("PUT", "/api/admin/flash-items/" + a, { price: 250000, quota: 0 }, { headers: AH })).status, 400, "kuota 0");
+  assert.equal((await c.req("PUT", "/api/admin/flash-items/" + a, { price: 250000, quota: 5, sold: 6 }, { headers: AH })).status, 400, "terjual > kuota");
+  assert.equal((await c.req("PUT", "/api/admin/flash-items/nope", { price: 1000 }, { headers: AH })).status, 404);
+  const ok = await c.req("PUT", "/api/admin/flash-items/" + a, { price: 240000, quota: 10, sold: 4 }, { headers: AH });
+  assert.equal(ok.status, 201); assert.equal(ok.body.item.live, true); assert.equal(ok.body.item.pct, 20);
+  await c.req("PUT", "/api/admin/flash-items/" + b, { price: 190000, quota: 10 }, { headers: AH });
+  assert.equal((await c.req("GET", "/api/admin/flash-items", undefined, { headers: AH })).body.items.find((x) => x.productId === b).reason, "Diskon 5% di bawah minimum 10%");
+  await c.req("PUT", "/api/admin/flash-sale", { maxPerMerchant: 1, minDiscount: 0 }, { headers: AH });
+  await c.req("PUT", "/api/admin/flash-items/" + b, { price: 150000 }, { headers: AH });
+  const items = (await c.req("GET", "/api/admin/flash-items", undefined, { headers: AH })).body.items;
+  assert.equal(items[0].productId, a, "kuota terpakai terbanyak dulu");
+  assert.match(items.find((x) => x.productId === b).reason, /batas 1 frame per toko/);
+  let cat = (await c.req("GET", "/api/catalog")).body;
+  assert.deepEqual(cat.flashItems.map((x) => x.id), [a]); assert.equal(cat.flashItems[0].regular, 300000);
+  await c.req("PUT", "/api/admin/flash-items/" + a, { sold: 10 }, { headers: AH });
+  cat = (await c.req("GET", "/api/catalog")).body;
+  assert.deepEqual(cat.flashItems.map((x) => x.id), [b], "kuota a habis → b naik");
+  await c.req("PUT", "/api/admin/flash-sale", { maxPerMerchant: 4, minDiscount: 10 }, { headers: AH });
+  assert.equal((await c.req("DELETE", "/api/admin/flash-items/" + b, undefined, { headers: AH })).status, 200);
+  assert.equal((await c.req("DELETE", "/api/admin/products/" + a, undefined, { headers: AH })).status, 200);
+  assert.equal((await c.req("GET", "/api/admin/flash-items", undefined, { headers: AH })).body.items.length, 0, "hapus produk ikut menghapus flash");
+  // Highlighted Brand
+  assert.equal((await c.req("PATCH", "/api/admin/merchants/mx", { highlightUntil: "2026-02-30" }, { headers: AH })).status, 400);
+  assert.equal((await c.req("PATCH", "/api/admin/merchants/mx", { highlightUntil: "2099-12-31" }, { headers: AH })).body.merchant.highlightUntil, "2099-12-31");
+  assert.ok((await c.req("GET", "/api/catalog")).body.highlighted.includes("mx"));
+  await c.req("PATCH", "/api/admin/merchants/mx", { highlightUntil: "2020-01-01" }, { headers: AH });
+  assert.ok(!(await c.req("GET", "/api/catalog")).body.highlighted.includes("mx"), "lewat tanggal → tidak tayang");
+  // Statistik
+  assert.equal((await fetch(base + "/api/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: '{"kind":"visit"}' })).status, 403, "tanpa X-TryLens");
+  assert.equal((await c.req("POST", "/api/event", { kind: "hack" })).status, 400);
+  for (const k of ["visit", "view", "view", "try", "buy", "contact"]) assert.equal((await c.req("POST", "/api/event", { kind: k, productId: b })).status, 204);
+  await c.req("POST", "/api/event", { kind: "view", productId: "tidak-ada" });
+  await c.req("POST", "/api/event", { kind: "view", productId: b }, { headers: { "User-Agent": "Googlebot/2.1" } });
+  const st = (await c.req("GET", "/api/admin/stats?days=7", undefined, { headers: AH })).body;
+  assert.equal(st.series.length, 7); assert.deepEqual(st.totals, { visit: 1, view: 2, try: 1, buy: 1, contact: 1 });
+  assert.equal(st.products[0].id, b); assert.equal(st.products[0].view, 2); assert.equal(st.merchants[0].id, "mx");
+  assert.equal(st.series.at(-1).view, 2); assert.ok(st.trackingSince);
+  assert.equal((await c.req("GET", "/api/admin/stats", undefined, { headers: AH })).body.days, 30);
+  assert.equal((await c.req("GET", "/api/admin/stats")).status, 401);
+});
+
 test("Admin nonaktif bila ADMIN_TOKEN kosong/pendek (503)", async () => {
   const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), "tl2-"));
   const a2 = createApp({ dbPath: ":memory:", uploadsDir: dir2, adminToken: "pendek" });

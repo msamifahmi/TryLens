@@ -50,7 +50,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .f{display:flex;flex-direction:column;gap:var(--space-1)}
 .f label,.lbl{font-size:14px;font-weight:600}
 .hint{font-size:13px;color:var(--text-mute)}
-input[type=text],input[type=number],input[type=password],input[type=search],input[type=url],input[type=color],select,textarea{width:100%;min-height:var(--input-h);padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm)}
+input[type=text],input[type=number],input[type=password],input[type=search],input[type=url],input[type=color],input[type=date],select,textarea{width:100%;min-height:var(--input-h);padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm)}
 input[type=color]{padding:4px}textarea{min-height:96px;resize:vertical}
 input:hover,select:hover,textarea:hover{border-color:var(--text-mute)}
 .chk{display:flex;align-items:center;gap:var(--space-3);min-height:var(--input-h);cursor:pointer;font-weight:500}
@@ -74,7 +74,7 @@ code{background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;bo
 .tabs{display:flex;gap:var(--space-1)}
 .tab{min-height:var(--btn-h);padding:0 var(--space-4);border:0;border-bottom:3px solid transparent;background:none;font-weight:600;color:var(--text-mute);cursor:pointer}
 .tab[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
-@media (max-width:560px){.top .in{gap:var(--space-2)}.top .brand span:not(.logo){display:none}.tabs{flex:1}.tab{flex:1;padding:0 var(--space-2)}}
+@media (max-width:560px){.top .in{gap:var(--space-2)}.top .brand span:not(.logo){display:none}.tabs{flex:1 1 100%;order:3;overflow-x:auto}.tab{flex:1 0 auto;padding:0 var(--space-3)}}
 main{max-width:1100px;margin:auto;padding:var(--space-4) var(--space-4) 96px;display:grid;gap:var(--space-4)}
 h2.t{font-size:20px}
 
@@ -168,6 +168,25 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
 .slot .btn{width:100%}
 .file{position:relative;overflow:hidden}.file input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
 
+/* ringkasan */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-3)}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);display:grid;gap:2px}
+.kpi span{font-size:14px;color:var(--text-mute);font-weight:600}.kpi b{font-size:28px;line-height:1.2}.kpi small{font-size:13px;color:var(--text-mute)}
+.seg{display:flex;gap:var(--space-1);flex-wrap:wrap}.seg button{min-height:36px;padding:0 var(--space-3);border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:14px;font-weight:600;cursor:pointer;color:var(--text-mute)}
+.seg button[aria-pressed=true]{background:var(--primary-soft);border-color:var(--primary);color:var(--text)}
+.chart{position:relative;margin-top:var(--space-3)}.chart svg{display:block;width:100%;height:auto}
+.chart .tip{position:absolute;pointer-events:none;background:var(--gray-900);color:#fff;font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);white-space:nowrap;transform:translate(-50%,-100%);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+@media (prefers-color-scheme:dark){.chart .tip{background:#e9eff6;color:#0d1520}}
+.tw{overflow-x:auto}table.t{width:100%;border-collapse:collapse;font-size:14px}table.t th,table.t td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child,table.t th.l,table.t td.l{text-align:left}table.t th{color:var(--text-mute);font-weight:600;font-size:13px}table.t td.l small{display:block;color:var(--text-mute);font-size:12px}
+.g2w{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-4)}
+.hl{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2)}.hl button{text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--space-3);cursor:pointer;min-height:var(--btn-h)}
+.hl button:hover{border-color:var(--primary)}.hl b{display:block;font-size:22px}.hl span{font-size:13px;color:var(--text-mute)}
+/* frame flash sale */
+.frow{display:grid;grid-template-columns:minmax(0,1fr) 130px 90px 90px auto auto;gap:var(--space-3);align-items:end;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3)}
+.frow.off .nm{opacity:.6}
+@media (max-width:760px){.frow{grid-template-columns:1fr 1fr 1fr}.frow>.nm{grid-column:1/-1}.frow>.sw,.frow>.btn{grid-column:span 1}}
+
 /* toast */
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--gray-900);color:#fff;padding:12px 18px;border-radius:var(--radius-md);max-width:92vw;font-weight:600;transition:opacity .2s,transform .2s;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,.3)}
 #toast.on{opacity:1;transform:translateX(-50%)}#toast.bad{background:var(--danger);color:#fff}
@@ -193,7 +212,7 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
 <div class="auth" id="login">
   <form class="card" id="lform" autocomplete="off">
     <div class="brand"><span class="logo"><svg class="i"><use href="#i-glasses"/></svg></span>TryLens Admin</div>
-    <p>Masuk untuk mengubah harga, nama, foto, dan model 3D produk.</p>
+    <p>Masuk untuk melihat statistik pengunjung dan mengatur produk, toko, iklan, serta Flash Sale.</p>
     <div class="f"><label for="tok">Kata sandi admin</label>
       <div class="pw"><input id="tok" type="password" autocomplete="off" placeholder="Tempel kata sandi admin"><button class="btn sec" type="button" id="eye" aria-label="Tampilkan kata sandi">Lihat</button></div>
       <span class="hint">Kata sandi ini kamu buat sendiri di server (bernama <code>ADMIN_TOKEN</code>).</span></div>
@@ -209,7 +228,8 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
   <header class="top"><div class="in">
     <div class="brand"><span class="logo"><svg class="i"><use href="#i-glasses"/></svg></span><span>TryLens Admin</span></div>
     <div class="tabs" role="tablist" aria-label="Bagian admin">
-      <button class="tab" role="tab" id="t-prod" aria-selected="true" aria-controls="p-prod">Produk</button>
+      <button class="tab" role="tab" id="t-sum" aria-selected="true" aria-controls="p-sum">Ringkasan</button>
+      <button class="tab" role="tab" id="t-prod" aria-selected="false" aria-controls="p-prod">Produk</button>
       <button class="tab" role="tab" id="t-mer" aria-selected="false" aria-controls="p-mer">Toko</button>
       <button class="tab" role="tab" id="t-ad" aria-selected="false" aria-controls="p-ad">Iklan</button>
       <button class="tab" role="tab" id="t-fl" aria-selected="false" aria-controls="p-fl">Flash Sale</button>
@@ -218,7 +238,26 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
   </div></header>
 
   <main>
-    <section id="p-prod" role="tabpanel" aria-labelledby="t-prod" style="display:grid;gap:var(--space-4)">
+    <section id="p-sum" role="tabpanel" aria-labelledby="t-sum" style="display:grid;gap:var(--space-4)">
+      <div class="bar"><h2 class="t" style="margin-right:auto">Ringkasan</h2>
+        <label class="sr" for="sdays">Periode</label><select id="sdays"><option value="7">7 hari terakhir</option><option value="30" selected>30 hari terakhir</option><option value="90">90 hari terakhir</option></select>
+        <button class="btn sec" id="sref" type="button">Muat ulang</button></div>
+      <p class="hint" id="snote" style="font-size:14px"></p>
+      <div class="kpis" id="kpis" aria-live="polite"></div>
+      <div class="card">
+        <div class="bar"><h3 id="chtitle" style="margin-right:auto;font-size:17px">Per hari</h3><div class="seg" id="smet" role="group" aria-label="Pilih angka grafik"></div></div>
+        <div class="chart" id="chart"></div>
+        <details class="help" style="margin-top:var(--space-3)"><summary>Lihat sebagai tabel</summary><div class="tw" id="ctable" style="margin-top:var(--space-2)"></div></details>
+      </div>
+      <div class="g2w">
+        <div class="card" style="display:grid;gap:var(--space-3)"><h3 style="font-size:17px">Kesehatan katalog</h3><div class="hl" id="health"></div></div>
+        <div class="card" style="display:grid;gap:var(--space-3)"><h3 style="font-size:17px">Promosi aktif</h3><div class="hl" id="promo"></div></div>
+      </div>
+      <div class="card" style="display:grid;gap:var(--space-3)"><h3 style="font-size:17px">Produk paling diminati</h3><div class="tw" id="tprod"></div></div>
+      <div class="card" style="display:grid;gap:var(--space-3)"><h3 style="font-size:17px">Per toko</h3><div class="tw" id="tmer"></div></div>
+    </section>
+
+    <section id="p-prod" role="tabpanel" aria-labelledby="t-prod" hidden style="display:grid;gap:var(--space-4)">
       <div class="stats" id="stats" role="group" aria-label="Ringkasan dan filter"></div>
       <div class="bar">
         <div class="grow"><svg class="i"><use href="#i-search"/></svg><label class="sr" for="q">Cari produk</label><input id="q" type="search" placeholder="Cari nama atau kode produk"></div>
@@ -248,7 +287,7 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
         <span class="hint">Gambar besar di sisi kiri halaman <b>Masuk/Daftar Mitra</b> (di HP tampil sebagai gambar di atas formulir). Kalau kosong, dipakai tampilan bawaan. Jika ada beberapa, yang paling atas dipakai.</span><ul class="list" id="lrows"></ul></div>
     </section>
     <section id="p-fl" role="tabpanel" aria-labelledby="t-fl" hidden style="display:grid;gap:var(--space-4)">
-      <p class="hint" style="font-size:14px">Atur acara Flash Sale di beranda. Toko (Mitra) sendiri yang mendaftarkan frame, harga kilat, dan kuota dari dasbornya — di sini Anda menentukan tampilan acara, waktu berakhir, dan aturannya.</p>
+      <p class="hint" style="font-size:14px">Atur acara Flash Sale di beranda: tampilan, waktu berakhir, aturan, dan frame yang ikut. Perubahan tayang di situs dalam ±30 detik.</p>
       <form class="card" id="flform" style="display:grid;gap:var(--space-4);max-width:640px" novalidate>
         <label style="display:flex;gap:var(--space-2);align-items:center;font-weight:600"><input type="checkbox" id="fl-on" style="width:20px;height:20px">Tampilkan Flash Sale di situs</label>
         <div class="f"><label for="fl-title">Judul acara</label><input id="fl-title" type="text" maxlength="40"></div>
@@ -259,6 +298,12 @@ legend{font-weight:700;padding:0 var(--space-2);font-size:16px}
         <div class="f"><label for="fl-max">Maksimum frame per toko</label><input id="fl-max" type="number" inputmode="numeric" min="1" max="20"></div>
         <div style="display:flex;gap:var(--space-2);flex-wrap:wrap"><button class="btn" type="submit" id="fl-save">Simpan pengaturan</button></div>
       </form>
+      <div class="card" style="display:grid;gap:var(--space-3)">
+        <div class="bar"><h3 style="margin-right:auto;font-size:17px">Frame yang ikut Flash Sale</h3><button class="btn" id="addFl" type="button"><svg class="i"><use href="#i-plus"/></svg>Tambah frame</button></div>
+        <span class="hint">Harga kilat harus lebih murah dari harga normal. Kolom <b>Terjual</b> kamu isi sendiri (transaksi terjadi di Shopee/Tokopedia/WhatsApp, bukan di TryLens); situs menampilkan bar terjual dan <b>Sisa</b> = kuota − terjual. Frame berhenti tayang otomatis bila kuota habis, diskonnya di bawah minimum, atau melebihi batas per toko.</span>
+        <div class="hint" id="flcount" aria-live="polite"></div>
+        <ul class="list" id="flrows"></ul>
+      </div>
     </section>
   </main>
 </div>
@@ -274,7 +319,10 @@ const STYLES={aviator:"Aviator",round:"Bulat (Round)",square:"Kotak (Square)",ca
 const COLORS={brown:"Cokelat",black:"Hitam",gold:"Emas",tort:"Tortoise (belang)",clear:"Bening",blue:"Biru",navy:"Biru tua",red:"Merah"};
 const CATS=["Pria","Wanita","Anak"];
 const PHOTO_LABEL=["Foto utama","Foto samping","Foto detail","Foto dekat"];
-let T=sessionStorage.getItem("tl_admin")||"",P=[],M=[],B=[],FLT="all";
+let T=sessionStorage.getItem("tl_admin")||"",P=[],M=[],B=[],FI=[],ST=null,MET="view",FLT="all";
+const todayWib=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
+const fmtDay=d=>new Date(d+"T00:00:00Z").toLocaleDateString("id-ID",{day:"numeric",month:"short",timeZone:"UTC"});
+const nf=n=>Number(n||0).toLocaleString("id-ID");
 const THEMES={blue:["#427AB5","#406AAF","Biru"],navy:["#406AAF","#2F5586","Biru tua"],sky:["#4C86BF","#427AB5","Biru muda"],gold:["#406AAF","#C9A24B","Biru–emas"]};
 const ACTIONS={try:"Buka Coba Virtual",merchant:"Ke daftar toko",feed:"Ke daftar frame",promo:"Ke bagian promo",link:"Buka tautan sendiri",none:"Tidak bisa diklik (hanya tampil)"};
 const ILLUS={face:"Wajah berkacamata",collection:"Koleksi frame",compare:"Perbandingan frame",promo:"Promo diskon"};
@@ -323,9 +371,9 @@ function draw(){
   $("#rows").innerHTML=v.length?v.map(rowHTML).join(""):`<li class="empty"><b>Tidak ada produk yang cocok</b>Coba ubah kata pencarian atau filter di atas.</li>`;
   $("#mrows").innerHTML=M.length?M.map(m=>{const n=P.filter(p=>p.merchantId===m.id).length;return `<li class="mrow" data-id="${esc(m.id)}">
     <div class="nm"><b>${esc(m.name)}</b><small>${esc(m.city||"Kota belum diisi")} · WhatsApp ${esc(m.whatsapp||"belum diisi")} · ${n} produk</small></div>
-    <span class="chip ${m.published?"ok":""}">${m.published?"Tampil":"Disembunyikan"}</span>
+    <span class="chips" style="margin:0"><span class="chip ${m.published?"ok":""}">${m.published?"Tampil":"Disembunyikan"}</span>${m.highlightUntil&&m.highlightUntil>=todayWib()?`<span class="chip ok">Highlighted s/d ${esc(fmtDay(m.highlightUntil))}</span>`:""}</span>
     <button class="btn sec sm" type="button" data-act="editM" aria-label="Ubah ${esc(m.name)}">${ico("edit")}Ubah</button></li>`}).join(""):`<li class="empty"><b>Belum ada toko</b>Tambahkan toko dulu sebelum menambah produk.</li>`}
-async function load(){const[a,b,c]=await Promise.all([api("GET","/products"),api("GET","/merchants"),api("GET","/banners")]);B=c.banners;api("GET","/flash-sale").then(r=>drawFlash(r.flashSale)).catch(()=>{});const old=new Map(P.map(p=>[p.id,p._st]));P=a.products;P.forEach(p=>{if(old.has(p.id))p._st=old.get(p.id)});M=b.merchants;draw();drawAds();probe()}
+async function load(){const[a,b,c]=await Promise.all([api("GET","/products"),api("GET","/merchants"),api("GET","/banners")]);B=c.banners;api("GET","/flash-sale").then(r=>drawFlash(r.flashSale)).catch(()=>{});loadFlashItems();loadStats();const old=new Map(P.map(p=>[p.id,p._st]));P=a.products;P.forEach(p=>{if(old.has(p.id))p._st=old.get(p.id)});M=b.merchants;draw();drawAds();probe()}
 /* foto bawaan situs (berkas statis di /products/<id>/main.jpg) dianggap sudah ada foto */
 async function probe(){const todo=P.filter(p=>!p.photos&&p._st===undefined);if(!todo.length)return;
   await Promise.all(todo.map(async p=>{try{const r=await fetch(`/products/${encodeURIComponent(p.id)}/main.jpg`,{method:"HEAD",cache:"no-store"});p._st=r.ok&&/image/.test(r.headers.get("content-type")||"")}catch{p._st=false}}));draw()}
@@ -406,11 +454,12 @@ function merForm(m){
     <div class="g2">${fld("WhatsApp","whatsapp",m.whatsapp,{ph:"6281234567890",h:"Awali dengan 62 atau 0."})}${fld("Telepon","phone",m.phone)}</div>
     <div class="f"><label for="f-color">Warna toko</label><input id="f-color" name="color" type="color" value="${esc(m.color)}"></div></fieldset>
    <fieldset><legend>Tautan toko</legend>${fld("Instagram","l_instagram",m.links?.instagram,{t:"url"})}${fld("X (Twitter)","l_x",m.links?.x,{t:"url"})}${fld("Tokopedia","l_tokopedia",m.links?.tokopedia,{t:"url"})}${fld("Shopee","l_shopee",m.links?.shopee,{t:"url"})}</fieldset>
+   <fieldset><legend>Highlighted Brand</legend>${fld("Tampil sebagai Highlighted Brand sampai tanggal","highlightUntil",m.highlightUntil,{t:"date",h:"Toko diberi lencana dan diprioritaskan di beranda serta daftar frame sampai akhir tanggal ini (WIB). Kosongkan untuk mematikan."})}</fieldset>
    <fieldset><legend>Pengaturan</legend><label class="chk"><input type="checkbox" name="published" ${m.published?"checked":""}>Tampil di situs</label></fieldset></div>
   <div class="sh-f"><span class="sp"></span><button class="btn sec" type="button" data-close>Batal</button><button class="btn" type="submit" id="sv">Simpan</button></div>`;
   $("#dlg").showModal();
   $("#form").onsubmit=async e=>{e.preventDefault();const f=new FormData($("#form")),g=k=>f.get(k);
-   const body={name:g("name"),city:g("city"),province:g("province"),whatsapp:g("whatsapp"),phone:g("phone"),color:g("color"),published:f.has("published"),links:{instagram:g("l_instagram"),x:g("l_x"),tokopedia:g("l_tokopedia"),shopee:g("l_shopee")}};
+   const body={name:g("name"),city:g("city"),province:g("province"),whatsapp:g("whatsapp"),phone:g("phone"),color:g("color"),published:f.has("published"),highlightUntil:g("highlightUntil")||"",links:{instagram:g("l_instagram"),x:g("l_x"),tokopedia:g("l_tokopedia"),shopee:g("l_shopee")}};
    const b=$("#sv");b.disabled=true;b.textContent="Menyimpan…";$("#ferr").hidden=true;
    try{await (n?api("POST","/merchants",body):api("PATCH","/merchants/"+m.id,body));toast("Tersimpan");$("#dlg").close();await load()}
    catch(x){const el=$("#ferr");el.textContent=x.message;el.hidden=false;b.disabled=false;b.textContent="Simpan"}}}
@@ -487,13 +536,13 @@ $("#addAd").onclick=()=>adForm(null,"hero");$("#addBar").onclick=()=>adForm(null
 
 /* ---------- menu & tab ---------- */
 $("#add").onclick=()=>prodForm();$("#addM").onclick=()=>merForm();
-function tab(k){["prod","mer","ad","fl"].forEach(x=>{$("#t-"+x).setAttribute("aria-selected",x===k);$("#p-"+x).hidden=x!==k})}
-$("#t-prod").onclick=()=>tab("prod");$("#t-mer").onclick=()=>tab("mer");$("#t-ad").onclick=()=>tab("ad");$("#t-fl").onclick=()=>tab("fl");
+function tab(k){["sum","prod","mer","ad","fl"].forEach(x=>{$("#t-"+x).setAttribute("aria-selected",x===k);$("#p-"+x).hidden=x!==k});if(k==="sum")loadStats()}
+$("#t-sum").onclick=()=>tab("sum");$("#t-prod").onclick=()=>tab("prod");$("#t-mer").onclick=()=>tab("mer");$("#t-ad").onclick=()=>tab("ad");$("#t-fl").onclick=()=>tab("fl");
 function localDT(iso){if(!iso)return"";const d=new Date(iso);if(isNaN(d))return"";const p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
 function drawFlash(f){$("#fl-on").checked=!!f.enabled;$("#fl-title").value=f.title;$("#fl-sub").value=f.subtitle;$("#fl-theme").value=f.theme;$("#fl-end").value=localDT(f.endsAt);$("#fl-min").value=f.minDiscount;$("#fl-max").value=f.maxPerMerchant}
 $("#flform").onsubmit=async e=>{e.preventDefault();const b=$("#fl-save");b.disabled=true;
   try{const v=$("#fl-end").value;const r=await api("PUT","/flash-sale",{enabled:$("#fl-on").checked,title:$("#fl-title").value,subtitle:$("#fl-sub").value,theme:$("#fl-theme").value,endsAt:v?new Date(v).toISOString():null,minDiscount:$("#fl-min").value,maxPerMerchant:$("#fl-max").value});drawFlash(r.flashSale);toast("Pengaturan Flash Sale disimpan")}
-  catch(x){toast(x.message,1)}b.disabled=false};
+  catch(x){toast(x.message,1)}b.disabled=false;loadFlashItems()};
 document.addEventListener("click",e=>{const d=$("#more");if(d.open&&!d.contains(e.target))d.open=false});
 $("#exp").onclick=async()=>{$("#more").open=false;try{const j=await api("GET","/export");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:"application/json"}));a.download="trylens-katalog-"+new Date().toISOString().slice(0,10)+".json";a.click();toast("Cadangan diunduh")}catch(x){toast(x.message,1)}};
 $("#imp").onclick=async()=>{$("#more").open=false;
@@ -501,6 +550,80 @@ $("#imp").onclick=async()=>{$("#more").open=false;
   if(!confirm("Timpa nama, kategori, gaya, warna, tautan beli (dan harga/ukuran bila ada) untuk "+d.products.length+" produk? Stok dan harga lain tidak diubah."))return;
   let ok=0,bad=[];for(const p of d.products){const{id,...body}=p;try{await api("PATCH","/products/"+encodeURIComponent(id),body);ok++}catch(x){bad.push(id+": "+x.message)}}
   await load();toast(ok+" produk diperbarui"+(bad.length?" · gagal: "+bad.join("; "):""),bad.length>0)};
+
+/* ---------- ringkasan (statistik pengunjung nyata dari server) ---------- */
+const METS=[["visit","Kunjungan","Sesi yang membuka situs"],["view","Produk dilihat","Halaman detail frame dibuka"],["try","Coba virtual","Kamera menyala dengan sebuah frame"],["buy","Klik beli","Tombol Shopee/Tokopedia/dll. ditekan"],["contact","Hubungi toko","Tombol WhatsApp/telepon ditekan"]];
+async function loadStats(){try{ST=await api("GET","/stats?days="+$("#sdays").value);drawStats()}catch(x){$("#snote").textContent="Statistik belum bisa dimuat: "+x.message}}
+function delta(a,b){if(!b)return a?"baru ada data di periode ini":"belum ada data";const d=Math.round((a-b)/b*100);return (d>0?"▲ naik ":d<0?"▼ turun ":"= sama, ")+(d?Math.abs(d)+"% ":"")+"dari periode sebelumnya"}
+function drawStats(){if(!ST)return;const t=ST.totals,pv=ST.prev;
+  $("#snote").textContent=`${fmtDay(ST.from)} – ${fmtDay(ST.to)} (WIB). `+(ST.trackingSince?`Pencatatan dimulai ${fmtDay(ST.trackingSince)}. `:"Belum ada kunjungan tercatat — angka mulai terisi setelah versi ini tayang. ")+"Hanya angka harian (tanpa cookie, tanpa data pribadi); bot dan klik beruntun dari satu alamat diabaikan.";
+  const conv=t.try?Math.round((t.buy+t.contact)/t.try*100):null;
+  $("#kpis").innerHTML=METS.map(([k,l])=>`<div class="kpi"><span>${l}</span><b>${nf(t[k])}</b><small>${delta(t[k],pv[k])}</small></div>`).join("")+
+    `<div class="kpi"><span>Coba → beli/hubungi</span><b>${conv==null?"–":conv+"%"}</b><small>dari yang mencoba virtual, menekan beli atau hubungi</small></div>`;
+  $("#smet").innerHTML=METS.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${MET===k}">${l}</button>`).join("");
+  drawChart();
+  $("#ctable").innerHTML=`<table class="t"><thead><tr><th>Tanggal</th>${METS.map(m=>`<th>${m[1]}</th>`).join("")}</tr></thead><tbody>${ST.series.slice().reverse().map(r=>`<tr><td>${esc(fmtDay(r.day))}</td>${METS.map(([k])=>`<td>${nf(r[k])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  const mName=id=>(M.find(m=>m.id===id)||{}).name||id||"–";
+  const head=`<th>Dilihat</th><th>Coba</th><th>Klik beli</th><th>Hubungi</th>`,cells=r=>`<td>${nf(r.view)}</td><td>${nf(r.try)}</td><td>${nf(r.buy)}</td><td>${nf(r.contact)}</td>`;
+  $("#tprod").innerHTML=ST.products.length?`<table class="t"><thead><tr><th>Produk</th>${head}</tr></thead><tbody>${ST.products.map(r=>`<tr><td class="l">${esc(r.name)}<small>${esc(r.id)} · ${esc(mName(r.merchantId))}</small></td>${cells(r)}</tr>`).join("")}</tbody></table>`:`<p class="empty"><b>Belum ada data</b>Produk yang dilihat, dicoba, atau diklik beli akan muncul di sini.</p>`;
+  $("#tmer").innerHTML=ST.merchants.length?`<table class="t"><thead><tr><th>Toko</th>${head}</tr></thead><tbody>${ST.merchants.map(r=>`<tr><td class="l">${esc(r.name)}</td>${cells(r)}</tr>`).join("")}</tbody></table>`:`<p class="empty"><b>Belum ada data</b>Angka per toko dihitung dari produk masing-masing.</p>`;
+  drawHealth()}
+function drawHealth(){const live=P.filter(p=>p.published).length,todo=P.filter(p=>issues(p).length).length,out=P.filter(p=>p.stock===0).length,m3=P.filter(p=>p.hasModel||p.vto).length;
+  $("#health").innerHTML=[["live",live,"Produk tampil di situs"],["todo",todo,"Perlu dilengkapi"],["out",out,"Stok habis"],["all",m3,"Bisa Coba Virtual"]].map(([f,n,l])=>`<button type="button" data-goto="${f}"><b>${nf(n)}</b><span>${l}</span></button>`).join("");
+  const today=todayWib(),hl=M.filter(m=>m.published&&m.highlightUntil&&m.highlightUntil>=today).length,ads=B.filter(b=>b.published&&b.kind==="hero").length;
+  $("#promo").innerHTML=[["fl",ST?`${ST.flashLive}/${ST.flashTotal}`:"–","Frame Flash Sale tayang"],["mer",hl,"Highlighted Brand aktif"],["ad",ads,"Slide beranda tayang"],["mer",M.filter(m=>m.published).length,"Toko tampil"]].map(([t,n,l])=>`<button type="button" data-tab="${t}"><b>${n}</b><span>${l}</span></button>`).join("")}
+$("#health").addEventListener("click",e=>{const b=e.target.closest("[data-goto]");if(!b)return;FLT=b.dataset.goto;tab("prod");draw()});
+$("#promo").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b)tab(b.dataset.tab)});
+$("#smet").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;MET=b.dataset.m;drawStats()});
+let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(ST&&!$("#p-sum").hidden)drawChart()},150)});
+$("#sdays").onchange=loadStats;$("#sref").onclick=loadStats;
+function drawChart(){const s=ST.series,lab=METS.find(m=>m[0]===MET)[1],W=Math.max(300,Math.min(1100,$("#chart").clientWidth||640)),H=W<500?200:220,L=40,R=8,TP=12,BT=26,n=s.length;
+  $("#chtitle").textContent=lab+" per hari";
+  const max=Math.max(1,...s.map(r=>r[MET])),nice=max<=5?5:Math.ceil(max/(10**Math.floor(Math.log10(max))))*(10**Math.floor(Math.log10(max)));
+  const cw=(W-L-R)/n,bw=Math.max(2,cw-2),y=v=>TP+(H-TP-BT)*(1-v/nice);
+  let g="";for(const f of nice%2?[0,1]:[0,.5,1]){const v=Math.round(nice*f),yy=y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${yy+4}" text-anchor="end" font-size="11" fill="var(--text-mute)">${nf(v)}</text>`}
+  const bars=s.map((r,i)=>{const x=L+i*cw+(cw-bw)/2,v=r[MET],h=Math.max(0,y(0)-y(v)),rr=Math.min(4,bw/2,h);
+    const path=h<=0?"":`M${x},${y(0)} v${-(h-rr)} q0,${-rr} ${rr},${-rr} h${bw-2*rr} q${rr},0 ${rr},${rr} v${h-rr} z`;
+    return `<path d="${path}" fill="var(--primary)"/><rect x="${L+i*cw}" y="${TP}" width="${cw}" height="${H-TP-BT}" fill="transparent" data-i="${i}"/>`}).join("");
+  const ticks=[0,Math.floor((n-1)/2),n-1].map((i,j)=>`<text x="${j===0?L:j===2?W-R:L+i*cw+cw/2}" y="${H-8}" text-anchor="${["start","middle","end"][j]}" font-size="11" fill="var(--text-mute)">${esc(fmtDay(s[i].day))}</text>`).join("");
+  $("#chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik ${esc(lab)} per hari, ${fmtDay(ST.from)} sampai ${fmtDay(ST.to)}. Total ${nf(ST.totals[MET])}.">${g}${bars}${ticks}</svg><div class="tip" hidden></div>`;
+  const svg=$("#chart svg"),tip=$("#chart .tip");
+  svg.addEventListener("mousemove",e=>{const r=e.target.closest("rect[data-i]");if(!r){tip.hidden=true;return}const d=s[+r.dataset.i],bb=svg.getBoundingClientRect(),k=bb.width/W;
+    tip.textContent=`${fmtDay(d.day)} · ${nf(d[MET])} ${lab.toLowerCase()}`;tip.style.left=((+r.getAttribute("x")+cw/2)*k)+"px";tip.style.top=(y(d[MET])*k-6)+"px";tip.hidden=false});
+  svg.addEventListener("mouseleave",()=>tip.hidden=true)}
+
+/* ---------- frame flash sale (dipilih admin, tersimpan di server) ---------- */
+async function loadFlashItems(){try{FI=(await api("GET","/flash-items")).items;drawFlashItems()}catch(x){$("#flcount").textContent=x.message}}
+function drawFlashItems(){const live=FI.filter(x=>x.live).length;$("#flcount").textContent=FI.length?`${live} dari ${FI.length} frame sedang tayang di situs.`:"";
+  $("#flrows").innerHTML=FI.length?FI.map(f=>{const m=(M.find(x=>x.id===f.merchantId)||{}).name||f.merchantId,id=esc(f.productId);
+   return `<li class="frow ${f.live?"":"off"}" data-id="${id}"><div class="nm"><b title="${esc(f.name)}">${esc(f.name)}</b><small>${id} · ${esc(m)} · harga normal ${rp(f.regular)} · diskon ${f.pct}%</small>
+     <div class="chips">${f.live?`<span class="chip ok">Tayang</span>`:`<span class="chip warn">Tidak tayang: ${esc(f.reason)}</span>`}</div></div>
+    <div class="mini"><label for="fp-${id}">Harga kilat (Rp)</label><input id="fp-${id}" data-fk="price" type="number" inputmode="numeric" min="1000" value="${f.price}"></div>
+    <div class="mini"><label for="fq-${id}">Kuota</label><input id="fq-${id}" data-fk="quota" type="number" inputmode="numeric" min="1" value="${f.quota}"></div>
+    <div class="mini"><label for="fs-${id}">Terjual</label><input id="fs-${id}" data-fk="sold" type="number" inputmode="numeric" min="0" value="${f.sold}"></div>
+    <label class="sw"><input type="checkbox" data-fk="active" ${f.active?"checked":""} aria-label="Aktifkan ${esc(f.name)} di Flash Sale"><i></i><span>${f.active?"Aktif":"Nonaktif"}</span></label>
+    <button class="btn danger sm" type="button" data-fdel aria-label="Keluarkan ${esc(f.name)} dari Flash Sale">Keluarkan</button></li>`}).join(""):`<li class="empty"><b>Belum ada frame</b>Tekan “Tambah frame” untuk memilih frame, harga kilat, dan kuotanya. Selama kosong, Flash Sale tidak tampil di situs.</li>`}
+$("#flrows").addEventListener("change",async e=>{const k=e.target.dataset.fk,li=e.target.closest("li.frow");if(!k||!li)return;const v=e.target.type==="checkbox"?e.target.checked:e.target.value;
+  try{await api("PUT","/flash-items/"+encodeURIComponent(li.dataset.id),{[k]:v});toast("Tersimpan");await loadFlashItems()}catch(x){toast(x.message,1);loadFlashItems()}});
+$("#flrows").addEventListener("click",async e=>{if(!e.target.closest("[data-fdel]"))return;const id=e.target.closest("li").dataset.id;if(!confirm("Keluarkan frame ini dari Flash Sale? Produknya sendiri tidak terhapus."))return;
+  try{await api("DELETE","/flash-items/"+encodeURIComponent(id));toast("Dikeluarkan dari Flash Sale");loadFlashItems()}catch(x){toast(x.message,1)}});
+$("#addFl").onclick=()=>{const used=new Set(FI.map(f=>f.productId)),opts=P.filter(p=>!used.has(p.id)&&p.published);
+  if(!opts.length)return toast("Semua produk yang tampil sudah ikut Flash Sale.",1);
+  $("#form").innerHTML=`<div class="sh-h"><h3 id="dtitle">Tambah frame ke Flash Sale</h3><button class="btn sec sm" type="button" data-close aria-label="Tutup">${ico("x")}</button></div>
+  <div class="sh-b"><div class="ferr" id="ferr" role="alert" hidden></div><fieldset><legend>Frame dan harga</legend>
+   ${sel("Frame","pid",opts.map(p=>[p.id,`${p.name} — ${rp(p.price)}`]),opts[0].id)}
+   ${fld("Harga kilat (Rp)","price","",{t:"number",req:1,min:1000,h:" "})}
+   <div class="g2">${fld("Kuota","quota",20,{t:"number",min:1,max:9999,h:"Jumlah unit dengan harga kilat."})}${fld("Sudah terjual","sold",0,{t:"number",min:0})}</div>
+  </fieldset></div>
+  <div class="sh-f"><span class="sp"></span><button class="btn sec" type="button" data-close>Batal</button><button class="btn" type="submit" id="sv">Tambahkan</button></div>`;
+  $("#dlg").showModal();
+  const hint=()=>{const p=P.find(x=>x.id===$("#f-pid").value),v=Number($("#f-price").value),pct=p&&v>0&&v<p.price?Math.round((1-v/p.price)*100):0;
+    const h=$("#f-price").parentElement.querySelector(".hint");
+    h.textContent=`Harga normal ${rp(p.price)}.`+(pct?` Diskon ${pct}%.`:" Isi harga yang lebih murah.")};
+  hint();$("#form").oninput=hint;$("#form").onchange=null;
+  $("#form").onsubmit=async e=>{e.preventDefault();const f=new FormData($("#form")),b=$("#sv");b.disabled=true;$("#ferr").hidden=true;
+    try{await api("PUT","/flash-items/"+encodeURIComponent(f.get("pid")),{price:f.get("price"),quota:f.get("quota"),sold:f.get("sold")||0,active:true});$("#dlg").close();toast("Frame ditambahkan ke Flash Sale");loadFlashItems();if(ST)loadStats()}
+    catch(x){const el=$("#ferr");el.textContent=x.message;el.hidden=false;b.disabled=false}}};
 
 /* ---------- masuk / keluar ---------- */
 $("#eye").onclick=()=>{const i=$("#tok"),s=i.type==="password";i.type=s?"text":"password";$("#eye").textContent=s?"Sembunyikan":"Lihat"};

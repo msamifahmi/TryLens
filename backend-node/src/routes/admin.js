@@ -7,7 +7,7 @@ import { Router } from "express";
 import express from "express";
 import { inspectGlb, isJpeg } from "../glb.js";
 import { bad } from "./util.js";
-import { BANNER_IMAGE_MAX, bannerOut, cleanBanner, flashClean, flashGet, imageExt, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
+import { BANNER_IMAGE_MAX, adminStats, bannerOut, cleanBanner, flashClean, flashGet, flashItemClean, flashRows, imageExt, cleanMerchant, cleanProduct, merchantOut, productOut, validId } from "../catalogStore.js";
 
 const VARIANTS = ["main", "side", "detail", "close"];
 const sha = (s) => crypto.createHash("sha256").update(s).digest();
@@ -47,8 +47,8 @@ export function adminRouter({ config, db }) {
     if (getM(id)) return bad(res, "ID toko sudah ada.", 409);
     const o = cleanMerchant(req.body || {});
     const t = now();
-    db.prepare(`INSERT INTO merchants(id,name,city,province,initials,color,whatsapp,phone,link_instagram,link_x,link_tokopedia,link_shopee,published,created_at,updated_at)
-      VALUES(@id,@name,@city,@province,@initials,@color,@whatsapp,@phone,@link_instagram,@link_x,@link_tokopedia,@link_shopee,@published,@t,@t)`)
+    db.prepare(`INSERT INTO merchants(id,name,city,province,initials,color,whatsapp,phone,link_instagram,link_x,link_tokopedia,link_shopee,published,highlight_until,created_at,updated_at)
+      VALUES(@id,@name,@city,@province,@initials,@color,@whatsapp,@phone,@link_instagram,@link_x,@link_tokopedia,@link_shopee,@published,@highlight_until,@t,@t)`)
       .run({ link_instagram: null, link_x: null, link_tokopedia: null, link_shopee: null, ...o, id, t });
     res.status(201).json({ merchant: merchantOut(getM(id)) });
   });
@@ -57,7 +57,7 @@ export function adminRouter({ config, db }) {
     if (!prev) return bad(res, "Toko tidak ditemukan.", 404);
     const o = cleanMerchant(req.body || {}, prev);
     db.prepare(`UPDATE merchants SET name=@name,city=@city,province=@province,initials=@initials,color=@color,whatsapp=@whatsapp,phone=@phone,
-      link_instagram=@link_instagram,link_x=@link_x,link_tokopedia=@link_tokopedia,link_shopee=@link_shopee,published=@published,updated_at=@t WHERE id=@id`).run({ ...o, t: now() });
+      link_instagram=@link_instagram,link_x=@link_x,link_tokopedia=@link_tokopedia,link_shopee=@link_shopee,published=@published,highlight_until=@highlight_until,updated_at=@t WHERE id=@id`).run({ ...o, t: now() });
     res.json({ merchant: merchantOut(getM(prev.id)) });
   });
   r.delete("/merchants/:id", (req, res) => {
@@ -104,6 +104,7 @@ export function adminRouter({ config, db }) {
   });
   r.delete("/products/:id", (req, res) => {
     if (!getP(req.params.id)) return bad(res, "Produk tidak ditemukan.", 404);
+    db.prepare("DELETE FROM flash_items WHERE product_id=?").run(req.params.id);
     db.prepare("DELETE FROM products WHERE id=?").run(req.params.id);
     fs.rmSync(dirOf(req.params.id), { recursive: true, force: true });
     res.json({ ok: true });
@@ -162,6 +163,29 @@ export function adminRouter({ config, db }) {
     db.prepare("INSERT INTO settings(k,v) VALUES('flash_sale',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v").run(JSON.stringify(o));
     res.json({ flashSale: o });
   });
+  /* ---- frame Flash Sale (dipilih admin) */
+  r.get("/flash-items", (req, res) => res.json({ items: flashRows(db) }));
+  r.put("/flash-items/:id", (req, res) => {
+    const p = getP(req.params.id);
+    if (!p) return bad(res, "Produk tidak ditemukan.", 404);
+    const prev = db.prepare("SELECT * FROM flash_items WHERE product_id=?").get(p.id);
+    const o = flashItemClean(req.body || {}, prev, p.price);
+    const t = now();
+    db.prepare(`INSERT INTO flash_items(product_id,price,quota,sold,active,created_at,updated_at) VALUES(@id,@price,@quota,@sold,@active,@t,@t)
+      ON CONFLICT(product_id) DO UPDATE SET price=excluded.price, quota=excluded.quota, sold=excluded.sold, active=excluded.active, updated_at=excluded.updated_at`).run({ ...o, id: p.id, t });
+    res.status(prev ? 200 : 201).json({ item: flashRows(db).find((x) => x.productId === p.id) || null });
+  });
+  r.delete("/flash-items/:id", (req, res) => {
+    if (!getP(req.params.id)) return bad(res, "Produk tidak ditemukan.", 404);
+    db.prepare("DELETE FROM flash_items WHERE product_id=?").run(req.params.id);
+    res.json({ ok: true });
+  });
+
+  /* ---- ringkasan & statistik pengunjung */
+  r.get("/stats", (req, res) => {
+    const d = Number(req.query.days);
+    res.json(adminStats(db, [7, 30, 90].includes(d) ? d : 30));
+  });
 
   /* ---- iklan */
   const getB = (id) => db.prepare("SELECT * FROM banners WHERE id=?").get(id);
@@ -216,7 +240,8 @@ export function adminRouter({ config, db }) {
     exportedAt: now(),
     merchants: db.prepare("SELECT * FROM merchants ORDER BY rowid").all().map(merchantOut),
     products: db.prepare("SELECT * FROM products ORDER BY rowid").all().map(productOut),
-    banners: db.prepare("SELECT * FROM banners ORDER BY kind, sort, id").all().map(bannerOut)
+    banners: db.prepare("SELECT * FROM banners ORDER BY kind, sort, id").all().map(bannerOut),
+    flashItems: flashRows(db)
   }));
 
   // Galat validasi (cleanMerchant/cleanProduct) membawa `status` → balas JSON, bukan 500.

@@ -5,7 +5,7 @@ import { api, apiUrl, backend } from "../api/http.js";
 import { usePartner } from "../store/usePartner.js";
 import { activeHighlight, dayStr } from "../data/partnerMock.js";
 
-export const catalogInfo = { source: "static", loadedAt: null, highlighted: [], banners: null, flashSale: null };
+export const catalogInfo = { source: "static", loadedAt: null, highlighted: [], banners: null, flashSale: null, flashItems: null };
 
 /** Alamat aset frame: unggahan Mitra (/media/<id>) bila ada, jika tidak berkas bawaan /products/<id>. */
 export function assetBase(productId) {
@@ -58,6 +58,9 @@ export function mergeCatalog(data) {
   // Iklan dari admin ({ hero: [...], topbar: [...] }); null = server lama / tanpa fitur iklan → pakai bawaan.
   catalogInfo.banners = data.banners && typeof data.banners === "object" ? data.banners : null;
   catalogInfo.flashSale = data.flashSale && typeof data.flashSale === "object" ? data.flashSale : null;
+  // Frame Flash Sale yang diatur admin (Update 43). null = server lama → tetap memakai tanda flash bawaan.
+  catalogInfo.flashItems = Array.isArray(data.flashItems) ? data.flashItems : null;
+  const flashIds = catalogInfo.flashItems ? new Set(catalogInfo.flashItems.map((f) => f.id)) : null;
   const hidden = new Set(data.hidden || []);
   for (let i = PRODUCTS.length - 1; i >= 0; i--) if (hidden.has(PRODUCTS[i].id)) PRODUCTS.splice(i, 1);
   for (const p of data.products) {
@@ -68,10 +71,11 @@ export function mergeCatalog(data) {
       const disc = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
       PRODUCTS[i] = {
         ...cur, name: p.name, style: p.style, colorKey: p.colorKey, cat: p.cat, description: p.description, buy: p.buy, price: p.price, oldPrice: p.oldPrice, stock: p.stock, vto: p.vto, size: p.size || null, assets: p.assets,
-        flash: cur.flash && !!p.oldPrice, badge: disc ? `-${disc}%` : cur.isNew ? "BARU" : null
+        flash: flashIds ? flashIds.has(p.id) : cur.flash && !!p.oldPrice, badge: disc ? `-${disc}%` : cur.isNew ? "BARU" : null
       };
-    } else PRODUCTS.push(p);
+    } else PRODUCTS.push(flashIds ? { ...p, flash: flashIds.has(p.id) } : p);
   }
+  if (flashIds) for (const p of PRODUCTS) p.flash = flashIds.has(p.id);
   for (const m of data.merchants) {
     if (m.logo && m.logo.startsWith("/media/")) m.logo = apiUrl(m.logo);
     const i = MERCHANTS.findIndex((x) => x.id === m.id);

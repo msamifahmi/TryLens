@@ -47,6 +47,8 @@ export function flashItems() {
   if (!cfg.enabled) return [];
   let accounts = {};
   try { accounts = usePartner.getState().accounts || {}; } catch { /* tanpa data Mitra */ }
+  // Mode server: daftar dari admin (sudah disaring server: aktif, diskon ≥ minimum, kuota tersisa, batas per toko).
+  if (catalogInfo.source === "server" && Array.isArray(catalogInfo.flashItems)) return serverFlashItems(catalogInfo.flashItems);
   const accs = catalogInfo.source === "server" ? [] : Object.values(accounts).filter((a) => a?.store?.merchantId);
   const partnerMode = accs.some((a) => (a.frames || []).some((f) => f.flash));
   if (!partnerMode) return PRODUCTS.filter((p) => p.flash).sort((a, b) => b.flashSold - a.flashSold);
@@ -61,6 +63,18 @@ export function flashItems() {
       out.push({ ...p, price: fr.flash.price, oldPrice: fr.price, flash: true, badge: `-${pct}%`, flashSold: Math.round((fr.flash.sold / fr.flash.quota) * 100), flashLeft: fr.flash.quota - fr.flash.sold });
       n++;
     }
+  }
+  return out.sort((a, b) => b.flashSold - a.flashSold);
+}
+
+/** Bentuk kartu Flash Sale dari daftar server [{ id, price, regular, quota, sold }]. Produk yang tidak ada di katalog dilewati. */
+export function serverFlashItems(list, products = PRODUCTS) {
+  const out = [];
+  for (const f of list) {
+    const p = products.find((x) => x.id === f.id);
+    if (!p || !(f.quota > 0) || !(f.price < f.regular)) continue;
+    const pct = flashPct(f.regular, f.price);
+    out.push({ ...p, price: f.price, oldPrice: f.regular, flash: true, badge: `-${pct}%`, flashSold: Math.min(100, Math.round((f.sold / f.quota) * 100)), flashLeft: Math.max(0, f.quota - f.sold) });
   }
   return out.sort((a, b) => b.flashSold - a.flashSold);
 }

@@ -96,6 +96,13 @@ export function openDb(file) {
       sort INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     );
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS flash_items (product_id TEXT PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE, price INTEGER NOT NULL CHECK (price > 0),
+      quota INTEGER NOT NULL CHECK (quota > 0), sold INTEGER NOT NULL DEFAULT 0 CHECK (sold >= 0), active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS stats (day TEXT NOT NULL, kind TEXT NOT NULL, product_id TEXT NOT NULL DEFAULT '', n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind, product_id));
+  `);
+  // Update 43: Highlighted Brand diatur admin (tanggal terakhir tayang, WIB).
+  if (!db.prepare("PRAGMA table_info(merchants)").all().some((c) => c.name === "highlight_until")) db.exec("ALTER TABLE merchants ADD COLUMN highlight_until TEXT");
   migrateBanners(db);
   seedBanners(db);
   return db;

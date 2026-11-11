@@ -10,6 +10,7 @@ import ProductGallery from "../components/product/ProductGallery.jsx";
 import ProductSection from "../components/product/ProductSection.jsx";
 import ConnectMerchantModal from "../components/ConnectMerchantModal.jsx";
 import { useConsult } from "../store/useConsult.js";
+import { track } from "../lib/track.js";
 import { highlightedMerchantIds } from "../lib/catalog.js";
 
 function describeStyle(style) {
@@ -49,7 +50,7 @@ export default function ProductDetailPage() {
   // Catat frame yang dilihat (tanpa login) agar ikut disebut di pesan WhatsApp saat berkonsultasi.
   const markViewed = useConsult((s) => s.markViewed);
   useEffect(() => {
-    if (product) markViewed(product.id);
+    if (product) { markViewed(product.id); track("view", product.id); }
   }, [product, markViewed]);
   useEffect(() => { setQty(1); setRandomCount(RANDOM_STEP); }, [id]);
 
