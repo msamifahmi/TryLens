@@ -1,37 +1,33 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Glasses, MessageCircle, MousePointerClick, Store } from "lucide-react";
+import { Glasses, MessageCircle, MousePointerClick, Store } from "lucide-react";
 import { Btn, Card, CardHeader, EmptyState, IconBox, Segmented, Tile } from "../../components/partner/ui.jsx";
-import LineChart from "../../components/partner/LineChart.jsx";
 import PlanCard from "../../components/partner/PlanCard.jsx";
 import { useAccount } from "../../store/usePartner.js";
-import { PERIODS, activeHighlight, activeOrders, buildAnalytics, fmtDate, fmtNum, kpiFor } from "../../data/partnerMock.js";
+import { activeHighlight, activeOrders, fmtDate, fmtNum } from "../../data/partnerMock.js";
+import { RANGES, rangeOf, useStoreStats } from "../../lib/storeStats.js";
+import { BarList, CountUp, Change, TrendChart } from "../../components/partner/StatCharts.jsx";
+import { SourceNote } from "./AnalyticsTabs.jsx";
 
 const KPIS = [
-  { label: "Kunjungan Toko", field: "storeViews", icon: Store },
-  { label: "Sesi Try-On", field: "vto", icon: Glasses },
-  { label: "Klik Frame", field: "productViews", icon: MousePointerClick },
-  { label: "Hubungi Toko", field: "contacts", icon: MessageCircle }
+  { label: "Kunjungan Toko", field: "store", icon: Store },
+  { label: "Sesi Try-On", field: "try", icon: Glasses },
+  { label: "Frame Dilihat", field: "view", icon: MousePointerClick },
+  { label: "Hubungi Toko", field: "contact", icon: MessageCircle }
 ];
+const PERIODS = RANGES.map((r) => ({ key: String(r.days), label: r.label }));
 
-function KpiCard({ label, value, delta, icon }) {
-  const up = delta >= 0;
+function KpiCard({ label, value, prev, icon, unit }) {
   return (
     <div className="rounded-2xl border border-[#DDE8F4] bg-surface-blue/70 overflow-hidden">
       <div className="rounded-2xl border-b border-[#DDE8F4] bg-white p-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-[13px] text-ink-text m-0 mb-2">{label}</p>
-          <p className="text-[26px] leading-none font-semibold text-ink tracking-tight m-0">{fmtNum(value)}</p>
+          <p className="text-[26px] leading-none font-semibold text-ink tracking-tight m-0"><CountUp value={value} /></p>
         </div>
         <IconBox icon={icon} />
       </div>
-      <p className="px-4 py-2.5 m-0 text-[12px] text-ink-muted">
-        <span className={`font-medium ${up ? "text-success" : "text-red-500"}`}>
-          {up ? "+" : ""}
-          {delta.toFixed(1).replace(".", ",")}%
-        </span>{" "}
-        dari periode sebelumnya
-      </p>
+      <p className="px-4 py-2.5 m-0"><Change cur={value} prev={prev} unit={unit} /></p>
     </div>
   );
 }
@@ -39,12 +35,10 @@ function KpiCard({ label, value, delta, icon }) {
 /** Dashboard Mitra — tata letak mengikuti referensi (KPI, grafik, permintaan, promosi aktif). */
 export default function DashboardPage() {
   const acc = useAccount();
-  const plan = acc.subscription.plan;
-  const [period, setPeriod] = useState("month");
-
-  const data = useMemo(() => buildAnalytics(acc.email, acc.frames, plan), [acc.email, acc.frames, plan]);
-  const days = PERIODS.find((p) => p.key === period).days;
-  const range = `${data.months[0].label} – ${data.months[data.months.length - 1].label} ${new Date().getFullYear()}`;
+  const [period, setPeriod] = useState("7");
+  const days = Number(period);
+  const { model: m, status, refresh } = useStoreStats(acc, days);
+  const unit = days === 1 ? "kemarin" : `${rangeOf(days).label} sebelumnya`;
 
   const hl = activeHighlight(acc);
   const promos = [
@@ -61,9 +55,10 @@ export default function DashboardPage() {
           subtitle="Pantau performa toko dan virtual try-on Anda sekilas"
           right={<Segmented options={PERIODS} value={period} onChange={setPeriod} ariaLabel="Periode" />}
         />
+        <div className="mb-3"><SourceNote status={status} model={m} refresh={refresh} /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
           {KPIS.map((k) => (
-            <KpiCard key={k.field} label={k.label} icon={k.icon} {...kpiFor(data.daily, days, k.field)} />
+            <KpiCard key={k.field} label={k.label} icon={k.icon} value={m?.totals[k.field] || 0} prev={m?.prev[k.field] || 0} unit={unit} />
           ))}
         </div>
       </Card>
@@ -71,27 +66,15 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <div className="flex flex-col gap-5 min-w-0">
           <Card>
-            <CardHeader
-              title="Ikhtisar Kunjungan"
-              subtitle="Kunjungan toko dari waktu ke waktu"
-              right={
-                <span className="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-[#DDE8F4] bg-white text-[12.5px] font-medium text-ink-text">
-                  <CalendarDays size={15} strokeWidth={1.8} /> {range}
-                </span>
-              }
-            />
-            <LineChart data={data.months} title="Kunjungan" currentLabel="Bulan ini" previousLabel="Bulan lalu" />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4">
-              {data.topFrames.slice(0, 4).map((f) => (
-                <Tile key={f.id} className="p-3.5">
-                  <p className="text-[20px] font-semibold text-ink tracking-tight m-0 mb-2">{fmtNum(f.vto)}</p>
-                  <div className="flex items-center justify-between gap-2 text-[11.5px] text-ink-muted">
-                    <span className="truncate" title={f.name}>{f.name}</span>
-                    <span className="font-medium text-ink flex-shrink-0">{f.contacts}</span>
-                  </div>
-                </Tile>
-              ))}
-            </div>
+            <CardHeader title="Ikhtisar Kunjungan" subtitle={`Halaman toko dibuka ${days === 1 ? "per jam" : "per hari"}, ${rangeOf(days).long}`}
+              right={<Btn as={Link} to="/partner/analytics/overview" size="sm" variant="outline">Analitik lengkap</Btn>} />
+            {m ? <TrendChart series={m.series} metric="store" label="Kunjungan toko" /> : <div className="h-48 rounded-xl bg-surface-blue/60 animate-pulse" />}
+            {m && (
+              <div className="mt-4">
+                <p className="text-[13px] font-semibold text-ink m-0 mb-2">Frame paling sering dicoba</p>
+                <BarList unit=" sesi" rows={[...m.products].sort((a, b) => b.try - a.try).slice(0, 4).map((f) => ({ id: f.id, label: f.name, frame: f.frame, value: f.try, sub: `${fmtNum(f.contact)} hubungi` }))} empty="Belum ada frame yang dicoba pada periode ini." />
+              </div>
+            )}
           </Card>
 
           <Card>

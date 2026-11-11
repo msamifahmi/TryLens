@@ -78,6 +78,7 @@ function db(): PDO {
       quota INTEGER NOT NULL CHECK (quota > 0), sold INTEGER NOT NULL DEFAULT 0 CHECK (sold >= 0), active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS stats (day TEXT NOT NULL, kind TEXT NOT NULL, product_id TEXT NOT NULL DEFAULT '', n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind, product_id));
     CREATE TABLE IF NOT EXISTS stat_rl (ip TEXT PRIMARY KEY, win INTEGER NOT NULL, n INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS stats_hour (day TEXT NOT NULL, hour INTEGER NOT NULL, kind TEXT NOT NULL, product_id TEXT NOT NULL DEFAULT '', n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, hour, kind, product_id));
     ");
     migrate_v43($pdo);
     seed_if_empty($pdo);
@@ -486,11 +487,16 @@ function flash_item_clean(array $b, ?array $prev, int $regular): array {
 
 /* ------------------------------------------------------------------ statistik pengunjung (angka harian teragregasi, tanpa data pribadi) */
 const EVENT_KINDS = ['visit', 'view', 'try', 'buy', 'contact'];
+/** Update 45: kejadian tambahan untuk analitik Mitra. 'store' = halaman toko dibuka (product_id berisi id toko). */
+const EXTRA_KINDS = ['store', 'capture', 'wish'];
+const ALL_KINDS = ['visit', 'view', 'try', 'buy', 'contact', 'store', 'capture', 'wish'];
+const STAT_DAYS = [1, 3, 7, 30, 90];
 /** Catat satu kejadian. Mengembalikan false bila diabaikan (bot, batas laju, produk tak dikenal). IP hanya disimpan sebagai hash sementara untuk batas laju. */
 function record_event(string $kind, string $pid, string $ip, string $ua): bool {
     global $DATA;
     if (preg_match('/bot|crawl|spider|slurp|headless|lighthouse|preview/i', $ua)) return false;
     if ($kind === 'visit') $pid = '';
+    elseif ($kind === 'store') { $q = db()->prepare('SELECT 1 FROM merchants WHERE id=?'); $q->execute([$pid]); if (!$q->fetch()) return false; }
     else { $q = db()->prepare('SELECT 1 FROM products WHERE id=?'); $q->execute([$pid]); if (!$q->fetch()) return false; }
     $h = substr(hash('sha256', $ip . '|' . $DATA), 0, 32); $win = intdiv(time(), 60);
     $pdo = db();
@@ -499,7 +505,47 @@ function record_event(string $kind, string $pid, string $ip, string $ua): bool {
     if (random_int(1, 200) === 1) $pdo->prepare('DELETE FROM stat_rl WHERE win<?')->execute([$win - 10]);
     if ((int)$n->fetchColumn() > 60) return false;
     $pdo->prepare('INSERT INTO stats(day,kind,product_id,n) VALUES(?,?,?,1) ON CONFLICT(day,kind,product_id) DO UPDATE SET n=n+1')->execute([today_wib(), $kind, $pid]);
+    // per jam (WIB) untuk grafik "1 hari" & jam ramai; disimpan 95 hari
+    $pdo->prepare('INSERT INTO stats_hour(day,hour,kind,product_id,n) VALUES(?,?,?,?,1) ON CONFLICT(day,hour,kind,product_id) DO UPDATE SET n=n+1')->execute([today_wib(), (int)gmdate('G', time() + 7 * 3600), $kind, $pid]);
+    if (random_int(1, 500) === 1) $pdo->prepare('DELETE FROM stats_hour WHERE day<?')->execute([today_wib(-95)]);
     return true;
+}
+/**
+ * Statistik NYATA satu toko untuk dasbor Mitra (Update 45): total periode + periode sebelumnya, deret harian,
+ * 24 jam (WIB) untuk rentang itu, dan angka per frame. Hanya angka teragregasi (tanpa data pribadi).
+ */
+function merchant_stats(string $mid, int $days): array {
+    $pdo = db();
+    $q = $pdo->prepare('SELECT id FROM products WHERE merchant_id=?'); $q->execute([$mid]);
+    $pids = $q->fetchAll(PDO::FETCH_COLUMN);
+    $to = today_wib(); $from = today_wib(-($days - 1)); $pFrom = today_wib(-(2 * $days - 1)); $pTo = today_wib(-$days);
+    $in = $pids ? implode(',', array_fill(0, count($pids), '?')) : "''";
+    $own = "((kind<>'store' AND kind<>'visit' AND product_id IN ($in)) OR (kind='store' AND product_id=?))";
+    $args = fn(array $pre) => array_merge($pre, $pids, [$mid]);
+    $zero = array_fill_keys(ALL_KINDS, 0); unset($zero['visit']);
+    $tot = function (string $a, string $b) use ($pdo, $own, $args, $zero) {
+        $q = $pdo->prepare("SELECT kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND $own GROUP BY kind"); $q->execute($args([$a, $b]));
+        $o = $zero; foreach ($q->fetchAll() as $r) if (isset($o[$r['kind']])) $o[$r['kind']] = (int)$r['n']; return $o;
+    };
+    $series = [];
+    for ($i = $days - 1; $i >= 0; $i--) $series[today_wib(-$i)] = ['day' => today_wib(-$i)] + $zero;
+    $q = $pdo->prepare("SELECT day, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND $own GROUP BY day, kind"); $q->execute($args([$from, $to]));
+    foreach ($q->fetchAll() as $r) if (isset($series[$r['day']][$r['kind']])) $series[$r['day']][$r['kind']] = (int)$r['n'];
+    $hours = []; for ($h = 0; $h < 24; $h++) $hours[$h] = ['hour' => $h] + $zero;
+    $q = $pdo->prepare("SELECT hour, kind, SUM(n) n FROM stats_hour WHERE day BETWEEN ? AND ? AND $own GROUP BY hour, kind"); $q->execute($args([$from, $to]));
+    foreach ($q->fetchAll() as $r) if (isset($hours[(int)$r['hour']][$r['kind']])) $hours[(int)$r['hour']][$r['kind']] = (int)$r['n'];
+    $prod = [];
+    foreach ([[$from, $to, ''], [$pFrom, $pTo, 'prev_']] as [$a, $b, $pre]) {
+        $q = $pdo->prepare("SELECT product_id, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND kind<>'store' AND kind<>'visit' AND product_id IN ($in) GROUP BY product_id, kind"); $q->execute(array_merge([$a, $b], $pids));
+        foreach ($q->fetchAll() as $r) {
+            $prod[$r['product_id']] ??= ['id' => $r['product_id']] + $zero + ['prev_view' => 0, 'prev_try' => 0];
+            if ($pre === '') $prod[$r['product_id']][$r['kind']] = (int)$r['n'];
+            elseif (in_array($r['kind'], ['view', 'try'], true)) $prod[$r['product_id']]['prev_' . $r['kind']] = (int)$r['n'];
+        }
+    }
+    $first = $pdo->prepare("SELECT MIN(day) FROM stats WHERE $own"); $first->execute($args([]));
+    return ['merchantId' => $mid, 'days' => $days, 'from' => $from, 'to' => $to, 'totals' => $tot($from, $to), 'prev' => $tot($pFrom, $pTo),
+        'series' => array_values($series), 'hours' => array_values($hours), 'products' => array_values($prod), 'trackingSince' => $first->fetchColumn() ?: null, 'generatedAt' => now()];
 }
 /** Ringkasan untuk tab Ringkasan di /admin: total periode + periode sebelumnya, deret harian, per produk, per toko. */
 function admin_stats(int $days): array {
@@ -630,9 +676,15 @@ try {
     if ($path === '/api/event' && $method === 'POST') {
         if (($_SERVER['HTTP_X_TRYLENS'] ?? '') !== '1') fail('Header X-TryLens wajib ada', 403);
         $kind = (string)($body['kind'] ?? '');
-        if (!in_array($kind, EVENT_KINDS, true)) fail('Jenis kejadian tidak dikenal.');
+        if (!in_array($kind, ALL_KINDS, true)) fail('Jenis kejadian tidak dikenal.');
         record_event($kind, str($body['productId'] ?? '', 40), (string)($_SERVER['REMOTE_ADDR'] ?? '?'), (string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
         http_response_code(204); header('Cache-Control: no-store'); exit;
+    }
+    if (preg_match('~^/api/stats/merchant/([A-Za-z0-9_-]{1,40})$~', $path, $m) && $method === 'GET') {
+        $q = db()->prepare('SELECT 1 FROM merchants WHERE id=?'); $q->execute([$m[1]]);
+        if (!$q->fetch()) fail('Toko tidak ditemukan.', 404);
+        $d = (int)($_GET['days'] ?? 30);
+        out(merchant_stats($m[1], in_array($d, STAT_DAYS, true) ? $d : 30), 200, ['Cache-Control' => 'no-store']);
     }
     if (!str_starts_with($path, '/api/admin')) fail('Endpoint tidak ditemukan', 404);
     // Anti-CSRF: permintaan yang mengubah data wajib membawa header kustom.
@@ -746,7 +798,7 @@ try {
         $pdo->prepare("INSERT INTO settings(k,v) VALUES('flash_sale',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([json_encode($o)]);
         out(['flashSale' => $o]);
     }
-    if ($a === '/stats' && $method === 'GET') { $d = (int)($_GET['days'] ?? 30); out(admin_stats(in_array($d, [7, 30, 90], true) ? $d : 30)); }
+    if ($a === '/stats' && $method === 'GET') { $d = (int)($_GET['days'] ?? 30); out(admin_stats(in_array($d, STAT_DAYS, true) ? $d : 30)); }
     if ($a === '/flash-items' && $method === 'GET') out(['items' => flash_rows()]);
     if (preg_match('~^/flash-items/([^/]+)$~', $a, $m)) {
         $p = $getP($m[1]);

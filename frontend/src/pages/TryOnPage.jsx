@@ -63,7 +63,7 @@ export default function TryOnPage() {
     if (activeId) markViewed(activeId);
   }, [activeId, markViewed]);
 
-  // Statistik admin: "coba virtual" = kamera menyala dengan frame ini (sekali per frame per sesi).
+  // Statistik: "coba virtual" = kamera menyala dengan frame ini — dihitung SETIAP kali (ganti frame saat kamera menyala juga dihitung).
   useEffect(() => {
     if (cameraStatus === "granted" && activeId) track("try", activeId);
   }, [cameraStatus, activeId]);

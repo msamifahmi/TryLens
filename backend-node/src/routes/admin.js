@@ -184,7 +184,7 @@ export function adminRouter({ config, db }) {
   /* ---- ringkasan & statistik pengunjung */
   r.get("/stats", (req, res) => {
     const d = Number(req.query.days);
-    res.json(adminStats(db, [7, 30, 90].includes(d) ? d : 30));
+    res.json(adminStats(db, [1, 3, 7, 30, 90].includes(d) ? d : 30));
   });
 
   /* ---- iklan */

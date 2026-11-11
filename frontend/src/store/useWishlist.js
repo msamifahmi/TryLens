@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { track } from "../lib/track.js";
 
 const STORAGE_KEY = "trylens_wishlist";
 
@@ -33,6 +34,7 @@ export const useWishlist = create((set, get) => ({
       delete items[product.id];
     } else {
       items[product.id] = true;
+      track("wish", product.id); // statistik toko: frame ditambahkan ke wishlist
     }
     set({ items });
     persist(items);
