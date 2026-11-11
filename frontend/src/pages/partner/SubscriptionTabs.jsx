@@ -4,7 +4,8 @@ import { Badge, Btn, Card, CardHeader, Flash, Meter, Tile, Toggle, useFlash } fr
 import DowngradeModal from "../../components/partner/DowngradeModal.jsx";
 import { useState } from "react";
 import { usePartner, useAccount } from "../../store/usePartner.js";
-import { INTERVALS, PLANS, fmtDate, fmtRp, planLabel, planPrice } from "../../data/partnerMock.js";
+import { INTERVALS, PLANS, fmtDate, fmtRp, planLabel, planPrice, vtoLimitOf } from "../../data/partnerMock.js";
+import VtoSlotShop from "../../components/partner/VtoSlotShop.jsx";
 
 /* ------------------------------------------------------------ Current Plan */
 export function CurrentPlanTab() {
@@ -22,8 +23,10 @@ export function CurrentPlanTab() {
           <CardHeader title="Penggunaan paket" subtitle={`Kuota paket ${plan.name}`} />
           <div className="flex flex-col gap-4 max-w-[420px]">
             <Meter label="Frame di katalog" value={acc.frames.length} max={plan.limits.frames} />
-            <Meter label="Frame Virtual Try-On" value={acc.frames.filter((f) => f.vto).length} max={plan.limits.vto} />
+            <Meter label={`Frame Virtual Try-On (${plan.limits.vto} paket${acc.vtoExtraSlots ? ` + ${acc.vtoExtraSlots} slot tambahan` : ""})`} value={acc.frames.filter((f) => f.vto).length} max={vtoLimitOf(acc)} />
             <p className="text-[12.5px] text-ink-muted m-0">Iklan (banner, Highlighted Brand, Sponsored Frame) dibeli per minggu di menu Promosi, terpisah dari langganan.</p>
+          </div>
+          <div className="mt-4"><VtoSlotShop acc={acc} backTo="/partner/subscription" compact />
           </div>
         </Card>
         <Card>

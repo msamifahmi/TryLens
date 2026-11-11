@@ -166,6 +166,16 @@ test("Iklan gambar PHP: unggah PNG, tolak non-gambar/terlalu besar, tayang di ka
   assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.banners.login.length, 0);
 });
 
+test("Update 44 PHP: Flash Sale terisi otomatis sekali dari seed.json (section tidak hilang), batas per toko", async () => {
+  const seed = JSON.parse(fs.readFileSync(path.join(here, "../../frontend/public/api/seed.json"), "utf8"));
+  const items = (await call("GET", "/api/admin/flash-items")).body.items;
+  assert.ok(seed.flash.length >= 4); assert.equal(items.length, seed.flash.length);
+  const c = (await call("GET", "/api/catalog", undefined, { headers: {} })).body;
+  assert.ok(c.flashItems.length >= 4, "Flash Sale tampil di katalog");
+  for (const f of c.flashItems) assert.ok(f.price < f.regular && f.sold < f.quota);
+  for (const f of items) await call("DELETE", "/api/admin/flash-items/" + f.productId);
+  assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.flashItems.length, 0, "dikosongkan admin → tidak muncul lagi");
+});
 test("Update 43 PHP: Flash Sale admin + katalog, Highlighted Brand, statistik pengunjung (paritas Node)", async () => {
   await call("PUT", "/api/admin/flash-sale", { enabled: true, minDiscount: 10, maxPerMerchant: 4 });
   assert.equal((await call("PUT", "/api/admin/flash-items/f1", { price: 99999999, quota: 5 })).status, 400);

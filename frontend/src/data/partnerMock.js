@@ -15,11 +15,11 @@ export const PLANS = {
     priceMonth: 299000,
     priceYear: 2990000,
     tagline: "Untuk toko yang baru mulai tampil di TryLens",
-    limits: { frames: Infinity, vto: 20 },
+    limits: { frames: Infinity, vto: 5 },
     features: { advancedAnalytics: false, featuredStore: false, sponsoredFrame: false },
     perks: [
       "Profil toko & etalase dengan frame tanpa batas",
-      "Virtual Try-On untuk hingga 20 model frame",
+      "Virtual Try-On untuk 5 model frame (bisa tambah slot)",
       "Konsultasi pelanggan langsung ke WhatsApp toko (bisa disertai hasil scan wajah)",
       "Analitik dasar (ikhtisar)",
       "Bisa memesan slot iklan banner (per minggu)"
@@ -31,11 +31,11 @@ export const PLANS = {
     priceMonth: 799000,
     priceYear: 7990000,
     tagline: "Untuk toko yang ingin tumbuh lebih cepat",
-    limits: { frames: Infinity, vto: Infinity },
+    limits: { frames: Infinity, vto: 15 },
     features: { advancedAnalytics: true, featuredStore: true, sponsoredFrame: true },
     perks: [
       "Semua fitur Basic",
-      "Virtual Try-On untuk model frame tanpa batas",
+      "Virtual Try-On untuk 15 model frame (bisa tambah slot)",
       "Analitik Lanjutan (pengunjung, produk, try-on)",
       "Bisa memesan Highlighted Brand (per minggu)",
       "Bisa memesan Sponsored Frame (per minggu)"
@@ -60,6 +60,15 @@ export const LOCKED_FEATURES = [
 ];
 
 export const can = (planCode, feature) => !!PLANS[planCode]?.features[feature];
+
+/* ------------------------------------------- slot Virtual Try-On tambahan (sekali bayar, permanen) */
+// Keputusan bisnis: katalog tanpa batas di kedua paket; VTO Basic 5 & Pro 15 frame.
+// Tambah slot Rp30.000/slot, atau promo 5 slot Rp145.000. Harus sama dengan backend-node/src/pricing.js (diuji).
+export const VTO_SLOT = { unit: 30000, packQty: 5, packPrice: 145000, maxPerOrder: 50 };
+/** Harga termurah untuk qty slot: paket 5 dipakai sebanyak mungkin, sisanya satuan. */
+export const vtoSlotPrice = (qty) => Math.floor(qty / VTO_SLOT.packQty) * VTO_SLOT.packPrice + (qty % VTO_SLOT.packQty) * VTO_SLOT.unit;
+/** Kuota VTO efektif akun = kuota paket + slot tambahan yang sudah dibeli. */
+export const vtoLimitOf = (acc, plan = acc?.subscription?.plan) => (PLANS[plan] ? PLANS[plan].limits.vto + Math.max(0, Math.trunc(acc?.vtoExtraSlots || 0)) : 0);
 
 /* ------------------------------------------------- Iklan & Premium (per minggu) */
 // Angka awal dari keputusan bisnis: banner mulai Rp500.000/mgg, Highlighted Brand Rp350.000/mgg per slot,

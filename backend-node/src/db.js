@@ -105,6 +105,7 @@ export function openDb(file) {
   if (!db.prepare("PRAGMA table_info(merchants)").all().some((c) => c.name === "highlight_until")) db.exec("ALTER TABLE merchants ADD COLUMN highlight_until TEXT");
   migrateBanners(db);
   seedBanners(db);
+  seedFlash(db);
   return db;
 }
 
@@ -113,6 +114,29 @@ export const nextCounter = (db, name) => {
   db.prepare("UPDATE counters SET value=value+1 WHERE name=?").run(name);
   return db.prepare("SELECT value FROM counters WHERE name=?").get(name).value;
 };
+
+/** Isi awal Flash Sale (Update 44) — sama dengan seed_flash() di PHP: SEKALI, hanya bila daftar kosong dan katalog sudah ada. */
+export function seedFlash(db, file = path.join(path.dirname(new URL(import.meta.url).pathname), "../../frontend/public/api/seed.json")) {
+  if (db.prepare("SELECT 1 FROM counters WHERE name='flash_seeded'").get()) return;
+  if (!db.prepare("SELECT 1 FROM products LIMIT 1").get()) return; // katalog belum diimpor → coba lagi nanti
+  let seed = null;
+  try { seed = JSON.parse(fs.readFileSync(file, "utf8")); } catch { seed = null; }
+  const t = new Date().toISOString();
+  db.transaction(() => {
+    if (!db.prepare("SELECT 1 FROM flash_items LIMIT 1").get() && Array.isArray(seed?.flash)) {
+      const get = db.prepare("SELECT price FROM products WHERE id=?").pluck();
+      const ins = db.prepare("INSERT OR IGNORE INTO flash_items(product_id,price,quota,sold,active,created_at,updated_at) VALUES(?,?,?,?,1,?,?)");
+      for (const x of seed.flash) {
+        const reg = get.get(String(x.id)) || 0, pct = Math.min(90, Math.max(1, Math.trunc(x.pct || 20)));
+        const price = Math.round((reg * (100 - pct)) / 100 / 1000) * 1000;
+        if (reg <= 0 || price < 1000 || price >= reg) continue;
+        const quota = Math.max(1, Math.trunc(x.quota || 40)), sold = Math.min(quota - 1, Math.max(0, Math.trunc(x.sold || 0)));
+        ins.run(String(x.id), price, quota, sold, t, t);
+      }
+    }
+    db.prepare("INSERT OR IGNORE INTO counters(name,value) VALUES('flash_seeded',1)").run();
+  })();
+}
 
 /** Iklan bawaan (4 slide beranda + 1 teks atas) dimasukkan SEKALI; menghapus semuanya lewat admin tidak memunculkannya lagi. */
 function seedBanners(db) {

@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import { PLANS } from "../pricing.js";
+import { PLANS, vtoLimitOf } from "../pricing.js";
 import { CATEGORIES, COLORS, STYLES } from "../service.js";
 import { inspectGlb, isJpeg } from "../glb.js";
 import { PLATFORMS, cleanBuyUrl } from "../ecommerce.js";
@@ -106,7 +106,8 @@ export function partnerRouter(ctx) {
         else {
           const mine = new Set(svc.q.framesOf.all(req.accountId).map((f) => f.id));
           const ids = Array.isArray(s.pendingVtoFrameIds) ? [...new Set(s.pendingVtoFrameIds.filter((x) => mine.has(x)))] : null;
-          if (!ids || ids.length > PLANS.basic.vtoLimit) return bad(res, `Pilih maksimal ${PLANS.basic.vtoLimit} frame untuk VTO.`, 400);
+          const lim = vtoLimitOf("basic", doc.vtoExtraSlots);
+          if (!ids || ids.length > lim) return bad(res, `Pilih maksimal ${lim} frame untuk VTO.`, 400);
           doc.subscription.pendingVtoFrameIds = ids;
         }
       }
@@ -173,11 +174,12 @@ export function partnerRouter(ctx) {
     } catch (e) {
       return bad(res, e.message, e.status || 400);
     }
-    // Katalog tak terbatas, tetapi frame ber-VTO dibatasi per paket (Basic 20, Pro tanpa batas).
+    // Katalog tak terbatas, tetapi frame ber-VTO dibatasi: Basic 5, Pro 15, + slot tambahan yang dibeli.
     if (data.vto && !(row && JSON.parse(row.data).vto)) {
-      const lim = PLANS[svc.docOf(svc.q.accById.get(req.accountId)).subscription.plan].vtoLimit;
+      const d0 = svc.docOf(svc.q.accById.get(req.accountId));
+      const lim = vtoLimitOf(d0.subscription.plan, d0.vtoExtraSlots);
       const used = svc.q.framesOf.all(req.accountId).filter((f) => f.id !== id && JSON.parse(f.data).vto).length;
-      if (used >= lim) return bad(res, `Kuota Virtual Try-On paket ${PLANS[doc.subscription.plan].name} (${lim} frame) penuh. Matikan VTO di frame lain atau upgrade ke Pro.`, 402);
+      if (used >= lim) return bad(res, `Kuota Virtual Try-On paket ${PLANS[doc.subscription.plan].name} (${lim} frame) penuh. Matikan VTO di frame lain, beli slot tambahan, atau upgrade ke Pro.`, 402);
     }
     const now = new Date().toISOString();
     const { published, ...stored } = data;

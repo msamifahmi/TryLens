@@ -14,7 +14,8 @@ export default function PaymentSuccessPage() {
 
   if (!invoice) return <Navigate to={STAGE_PATH[stageOf(acc)]} replace />;
 
-  const isAd = invoice.kind === "ad";
+  const isSlot = invoice.kind === "vtoSlots";
+  const isAd = invoice.kind === "ad" || isSlot;
   const needsSetup = stageOf(acc) === "setup";
   const rows = [
     ["No. invoice", invoice.id],
@@ -23,11 +24,11 @@ export default function PaymentSuccessPage() {
     ["Total dibayar", fmtRp(invoice.amount)],
     ...(isAd ? [] : [["Tagihan berikutnya", fmtDate(acc.subscription.nextBillingAt)]])
   ];
-  const cta = isAd ? "Kembali ke Promosi" : needsSetup ? "Lanjut Setup Toko" : "Ke Dashboard";
-  const dest = isAd ? `/partner/promotion/${invoice.tab}` : needsSetup ? "/partner/setup" : "/partner";
+  const cta = isSlot ? "Ke Pustaka Frame" : isAd ? "Kembali ke Promosi" : needsSetup ? "Lanjut Setup Toko" : "Ke Dashboard";
+  const dest = isSlot ? "/partner/vto/library" : isAd ? `/partner/promotion/${invoice.tab}` : needsSetup ? "/partner/setup" : "/partner";
 
   return (
-    <PartnerFlowShell step={2} title="Pembayaran berhasil" subtitle={isAd ? "Pesanan iklan Anda sudah tercatat." : "Langganan Anda sudah aktif."} width="max-w-[560px]">
+    <PartnerFlowShell step={2} title="Pembayaran berhasil" subtitle={isSlot ? `${invoice.qty} slot Virtual Try-On sudah ditambahkan ke kuota Anda.` : isAd ? "Pesanan iklan Anda sudah tercatat." : "Langganan Anda sudah aktif."} width="max-w-[560px]">
       <Tile className="p-6">
         <div className="flex justify-center mb-5"><CircleCheck size={56} className="text-success" strokeWidth={1.6} /></div>
         <dl className="m-0 mb-6">

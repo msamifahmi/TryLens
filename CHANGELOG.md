@@ -6,6 +6,18 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 44 — Flash Sale kembali tampil, paket VTO baru (Basic 5 / Pro 15) + slot tambahan, Flash Sale dari Mitra, foto tidak "tersangkut" SVG
+
+- **Flash Sale kembali tampil di situs live.** Setelah Update 43 daftar Flash Sale diatur admin dan masih kosong, sehingga section-nya hilang. Server kini mengisi daftar awal **sekali** (`seed_flash` PHP / `seedFlash` Node, dari `seed.json` → `flash`): 12 frame bertanda flash di data bawaan, harga kilat 20% di bawah harga jual saat itu, kuota 40. Bila admin mengosongkan daftar setelahnya, isi awal tidak muncul lagi.
+- **Paket baru (keputusan bisnis):** katalog tanpa batas di kedua paket; frame Virtual Try-On **Basic 5**, **Pro 15** (sebelumnya Basic 20 / Pro tanpa batas). **Slot VTO tambahan: Rp30.000/slot, promo 5 slot Rp145.000**, sekali bayar dan permanen selama langganan aktif. Harga termurah dihitung otomatis (mis. 7 slot = Rp145.000 + 2 × Rp30.000). Kuota efektif = kuota paket + slot dibeli (`vtoLimitOf`), dipakai saat menambah frame, di Pustaka Frame, halaman Langganan, dan saat turun paket.
+  - Pembelian: kartu "Tambah slot Virtual Try-On" di Virtual Try-On → Pustaka Frame dan Langganan → checkout (pesanan `vtoSlots`, harga dihitung server, invoice tercatat). Node: `POST /api/billing/checkout { kind: "vtoSlots", qty }`; klien tidak bisa menambah slot lewat `PATCH /api/partner/me`.
+  - Akun lama dengan frame ber-VTO di atas kuota baru otomatis dimatikan VTO-nya dari yang terbaru (frame tetap di katalog), dengan pemberitahuan di Pustaka Frame.
+- **Flash Sale dari Mitra:** frame yang didaftarkan Mitra di Promosi → Flash Sale langsung tayang bila memenuhi aturan admin (diskon minimum, kuota, batas per toko), tanpa menunggu persetujuan. Karena akun Mitra di situs live masih tersimpan di perangkat (server PHP belum punya akun Mitra), pendaftaran ini baru terlihat dari perangkat Mitra itu sendiri. Tertulis jelas di tab Flash Sale Mitra. Akun Mitra di server = Update 45.
+- **Foto produk tidak lagi tersangkut di ilustrasi SVG:** bila foto gagal dimuat (mis. sesaat ketika Hostinger sedang menarik versi baru), `ProductImage` mencoba lagi 2× (2 dtk & 8 dtk, alamat anti-cache). Pratinjau hover menyembunyikan gambar rusak. Dicek: semua foto & GLB f0–f23 ada di server live dan identik dengan repo; zip yang dikirim user cocok dengan repo (GLB f10 & f13 di repo adalah versi yang sudah dirapikan sebelumnya).
+- Tes: Node 38 (kuota baru, harga & pembayaran slot, idempoten), PHP 11 (isi awal Flash Sale), frontend `test:flash` 6 (gabung Flash Sale Mitra, paket & slot). Paritas harga slot server = front-end diuji.
+
+---
+
 ## Update 43 — /admin dinamis: Ringkasan & statistik pengunjung nyata, Flash Sale diatur admin, Highlighted Brand
 
 - **Tab baru "Ringkasan"** (tab pertama di `/admin`): angka *nyata* dari server untuk 7/30/90 hari (WIB) — Kunjungan, Produk dilihat, Coba virtual, Klik beli, Hubungi toko (WhatsApp/telepon), rasio coba → beli/hubungi, dan perbandingan dengan periode sebelumnya. Grafik batang per hari (pilih angka, tooltip saat disorot, "Lihat sebagai tabel"), tabel produk paling diminati dan per toko, kartu Kesehatan katalog (klik → tab Produk terfilter) dan Promosi aktif.

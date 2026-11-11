@@ -1,5 +1,5 @@
 // Aturan kuota Virtual Try-On (VTO) — fungsi murni. SALINAN IDENTIK ada di frontend/src/data/quota.js (diperiksa test parity).
-// Katalog tidak dibatasi; hanya jumlah frame ber-VTO yang dibatasi per paket (Basic 20, Pro tanpa batas).
+// Katalog tidak dibatasi; hanya jumlah frame ber-VTO yang dibatasi per paket (Basic 5, Pro 15, + slot tambahan yang dibeli).
 /**
  * frames : [{ id, vto }] diurutkan dari yang TERTUA (urutan unggah) · limit : angka atau Infinity
  * preferIds : pilihan Mitra (opsional). Hasil: Set id yang tetap ber-VTO.

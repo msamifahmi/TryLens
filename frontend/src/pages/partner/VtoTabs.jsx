@@ -5,14 +5,15 @@ import { Badge, Btn, Card, CardHeader, EmptyState, Field, Tile, Toggle, inputCls
 import { usePartner, useAccount } from "../../store/usePartner.js";
 import { Meter, UpgradeLink } from "../../components/partner/ui.jsx";
 import { STYLE_LABELS } from "../../data/mockData.js";
-import { PLANS, buildAnalytics, fmtNum, kpiFor } from "../../data/partnerMock.js";
+import { PLANS, buildAnalytics, fmtNum, kpiFor, vtoLimitOf } from "../../data/partnerMock.js";
+import VtoSlotShop from "../../components/partner/VtoSlotShop.jsx";
 
 /* ------------------------------------------------------------ Pustaka Frame */
 export function VtoLibraryTab() {
   const acc = useAccount();
   const patch = usePartner((s) => s.patch);
   const active = acc.frames.filter((f) => f.vto).length;
-  const limit = PLANS[acc.subscription.plan].limits.vto;
+  const limit = vtoLimitOf(acc);
   const full = active >= limit;
   const setVto = (id, v) => patch((a) => (v && a.frames.filter((f) => f.vto).length >= limit ? a : { ...a, frames: a.frames.map((f) => (f.id === id ? { ...f, vto: v } : f)) }));
   // "Aktifkan semua" mengisi kuota yang tersisa secara berurutan dari frame tertua (daftar: terbaru di atas).
@@ -36,13 +37,14 @@ export function VtoLibraryTab() {
           </div>
         }
       />
-      <div className="max-w-[360px] mb-4"><Meter label={`Kuota Virtual Try-On paket ${PLANS[acc.subscription.plan].name}`} value={active} max={limit} /></div>
-      {full && Number.isFinite(limit) && (
+      <div className="max-w-[360px] mb-4"><Meter label={`Kuota Virtual Try-On paket ${PLANS[acc.subscription.plan].name}${acc.vtoExtraSlots ? ` + ${acc.vtoExtraSlots} slot` : ""}`} value={active} max={limit} /></div>
+      {full && (
         <div className="rounded-xl border border-accent-yellow bg-surface-cream px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[13px] text-ink-text m-0">Kuota {limit} frame try-on terpakai. Nonaktifkan salah satu untuk mengaktifkan frame lain, atau upgrade ke Pro.</p>
-          <UpgradeLink size="sm" />
+          <p className="text-[13px] text-ink-text m-0">Kuota {limit} frame try-on terpakai. Nonaktifkan salah satu, tambah slot di bawah{acc.subscription.plan === "basic" ? ", atau upgrade ke Pro (15 frame)" : ""}.</p>
+          {acc.subscription.plan === "basic" && <UpgradeLink size="sm" />}
         </div>
       )}
+      <div className="mb-4"><VtoSlotShop acc={acc} /></div>
       {acc.vtoNotice && (
         <div className="rounded-xl border border-[#C5D6EA] bg-surface-blue/60 px-4 py-3 mb-4 text-[13px] text-ink-text">
           Setelah turun paket, {acc.vtoNotice.disabled} frame dinonaktifkan try-on-nya agar sesuai kuota. Frame tetap tampil di katalog.

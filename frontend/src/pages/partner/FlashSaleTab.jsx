@@ -5,6 +5,8 @@ import { Badge, Card, CardHeader, EmptyState, Toggle, inputCls } from "../../com
 import { usePartner, useAccount } from "../../store/usePartner.js";
 import { fmtRp } from "../../data/partnerMock.js";
 import { flashConfig, flashEligible, flashEndMs, flashPct } from "../../lib/flashSale.js";
+import { catalogInfo } from "../../lib/catalog.js";
+import { backend } from "../../api/http.js";
 
 /* Mitra mendaftarkan frame ke acara Flash Sale yang diatur admin TryLens: harga kilat + kuota. Tayang otomatis di beranda. */
 
@@ -31,6 +33,10 @@ export function FlashSaleTab() {
           <Info label="Diskon minimum" value={`${cfg.minDiscount}%`} />
           <Info label="Maks. frame / toko" value={`${enrolled} / ${cfg.maxPerMerchant} terdaftar`} />
         </div>
+        <p className="text-[12.5px] text-ink-muted m-0 mt-3">
+          Frame yang memenuhi aturan (diskon ≥ {cfg.minDiscount}%, kuota tersisa) langsung tayang di bagian Flash Sale beranda dan halaman toko Anda.
+          {catalogInfo.source === "server" && !backend.partner && " Catatan: akun Mitra masih tersimpan di perangkat ini, jadi pendaftaran Anda baru terlihat dari perangkat ini. Begitu akun Mitra pindah ke server TryLens, pendaftaran langsung terlihat oleh semua pengunjung."}
+        </p>
       </Card>
 
       <Card>

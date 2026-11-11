@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ApiError, api, apiUrl, backend, probe } from "../api/http.js";
-import { AD_TYPES, INTERVALS, PLANS, addMonths, endsOn, planLabel, planPrice, seedAccounts } from "../data/partnerMock.js";
+import { AD_TYPES, INTERVALS, PLANS, addMonths, endsOn, planLabel, planPrice, seedAccounts, vtoLimitOf, vtoSlotPrice } from "../data/partnerMock.js";
 import { vtoToDisable } from "../data/quota.js";
 import { isExpired, newSession, touched } from "../lib/partnerSession.js";
 
@@ -14,7 +14,7 @@ export function settleAcc(acc) {
     prefer = s.pendingVtoFrameIds || null;
     sub = { ...s, plan: s.pendingPlan, pendingPlan: null, pendingVtoFrameIds: null };
   }
-  const off = new Set(vtoToDisable([...acc.frames].reverse(), PLANS[sub.plan].limits.vto, prefer));
+  const off = new Set(vtoToDisable([...acc.frames].reverse(), vtoLimitOf(acc, sub.plan), prefer));
   if (sub === s && !off.size) return acc;
   return { ...acc, subscription: sub, frames: acc.frames.map((f) => (off.has(f.id) ? { ...f, vto: false } : f)), vtoNotice: off.size ? { at: new Date().toISOString(), disabled: off.size } : acc.vtoNotice };
 }
@@ -268,7 +268,11 @@ export const usePartner = create(
         let next;
         let invoice;
 
-        if (checkout.kind === "ad") {
+        if (checkout.kind === "vtoSlots") {
+          const qty = checkout.qty;
+          invoice = { id: invNo, date: iso.slice(0, 10), kind: "vtoSlots", label: `Slot Virtual Try-On tambahan × ${qty}`, qty, amount: vtoSlotPrice(qty), status: "paid", method, tab: "vto" };
+          next = { ...acc, vtoExtraSlots: (acc.vtoExtraSlots || 0) + qty, invoices: [invoice, ...acc.invoices] };
+        } else if (checkout.kind === "ad") {
           const c = checkout;
           const order = {
             id: `AO-${stamp}-${String(n).padStart(4, "0")}`,
