@@ -240,7 +240,8 @@ table.t th:first-child,table.t td:first-child,table.t th.l,table.t td.l{text-ali
   <main>
     <section id="p-sum" role="tabpanel" aria-labelledby="t-sum" style="display:grid;gap:var(--space-4)">
       <div class="bar"><h2 class="t" style="margin-right:auto">Ringkasan</h2>
-        <label class="sr" for="sdays">Periode</label><select id="sdays"><option value="7">7 hari terakhir</option><option value="30" selected>30 hari terakhir</option><option value="90">90 hari terakhir</option></select>
+        <label class="sr" for="sdays">Periode</label><select id="sdays"><option value="1">Hari ini</option><option value="7">7 hari terakhir</option><option value="30" selected>30 hari terakhir</option><option value="60">60 hari terakhir</option><option value="90">90 hari terakhir</option></select>
+        <label class="sw" title="Data contoh dihitung otomatis dan dijumlahkan ke data nyata. Matikan untuk melihat data nyata saja."><input type="checkbox" id="sdemo" aria-label="Tambahkan data contoh untuk presentasi"><i></i><span>Data contoh presentasi</span></label>
         <button class="btn sec" id="sref" type="button">Muat ulang</button></div>
       <p class="hint" id="snote" style="font-size:14px"></p>
       <div class="kpis" id="kpis" aria-live="polite"></div>
@@ -553,10 +554,10 @@ $("#imp").onclick=async()=>{$("#more").open=false;
 
 /* ---------- ringkasan (statistik pengunjung nyata dari server) ---------- */
 const METS=[["visit","Kunjungan","Sesi yang membuka situs"],["view","Produk dilihat","Halaman detail frame dibuka"],["try","Coba virtual","Kamera menyala dengan sebuah frame"],["buy","Klik beli","Tombol Shopee/Tokopedia/dll. ditekan"],["contact","Hubungi toko","Tombol WhatsApp/telepon ditekan"]];
-async function loadStats(){try{ST=await api("GET","/stats?days="+$("#sdays").value);drawStats()}catch(x){$("#snote").textContent="Statistik belum bisa dimuat: "+x.message}}
+async function loadStats(){try{ST=await api("GET","/stats?days="+$("#sdays").value);$("#sdemo").checked=!!ST.demo;$("#sdemo").nextElementSibling.nextElementSibling.textContent=ST.demo?"Data contoh: nyala":"Data contoh: mati";drawStats()}catch(x){$("#snote").textContent="Statistik belum bisa dimuat: "+x.message}}
 function delta(a,b){if(!b)return a?"baru ada data di periode ini":"belum ada data";const d=Math.round((a-b)/b*100);return (d>0?"▲ naik ":d<0?"▼ turun ":"= sama, ")+(d?Math.abs(d)+"% ":"")+"dari periode sebelumnya"}
 function drawStats(){if(!ST)return;const t=ST.totals,pv=ST.prev;
-  $("#snote").textContent=`${fmtDay(ST.from)} – ${fmtDay(ST.to)} (WIB). `+(ST.trackingSince?`Pencatatan dimulai ${fmtDay(ST.trackingSince)}. `:"Belum ada kunjungan tercatat — angka mulai terisi setelah versi ini tayang. ")+"Hanya angka harian (tanpa cookie, tanpa data pribadi); bot dan klik beruntun dari satu alamat diabaikan.";
+  $("#snote").textContent=`${fmtDay(ST.from)} – ${fmtDay(ST.to)} (WIB). `+(ST.trackingSince?`Pencatatan dimulai ${fmtDay(ST.trackingSince)}. `:"Belum ada kunjungan tercatat — angka mulai terisi setelah versi ini tayang. ")+"Hanya angka harian (tanpa cookie, tanpa data pribadi); bot dan klik beruntun dari satu alamat diabaikan."+(ST.demo?" Data contoh presentasi SEDANG DITAMBAHKAN ke angka di bawah (juga di dasbor Mitra) — matikan saklar untuk melihat data nyata saja.":"");
   const conv=t.try?Math.round((t.buy+t.contact)/t.try*100):null;
   $("#kpis").innerHTML=METS.map(([k,l])=>`<div class="kpi"><span>${l}</span><b>${nf(t[k])}</b><small>${delta(t[k],pv[k])}</small></div>`).join("")+
     `<div class="kpi"><span>Coba → beli/hubungi</span><b>${conv==null?"–":conv+"%"}</b><small>dari yang mencoba virtual, menekan beli atau hubungi</small></div>`;
@@ -576,7 +577,8 @@ $("#health").addEventListener("click",e=>{const b=e.target.closest("[data-goto]"
 $("#promo").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b)tab(b.dataset.tab)});
 $("#smet").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;MET=b.dataset.m;drawStats()});
 let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(ST&&!$("#p-sum").hidden)drawChart()},150)});
-$("#sdays").onchange=loadStats;$("#sref").onclick=loadStats;
+$("#sdays").onchange=loadStats;
+$("#sdemo").onchange=async e=>{const on=e.target.checked;try{await api("PUT","/demo-stats",{enabled:on});toast(on?"Data contoh presentasi dinyalakan (ditambahkan ke data nyata, juga di dasbor Mitra)":"Data contoh dimatikan — sekarang hanya data nyata");loadStats()}catch(x){toast(x.message,1);e.target.checked=!on}};$("#sref").onclick=loadStats;
 function drawChart(){const s=ST.series,lab=METS.find(m=>m[0]===MET)[1],W=Math.max(300,Math.min(1100,$("#chart").clientWidth||640)),H=W<500?200:220,L=40,R=8,TP=12,BT=26,n=s.length;
   $("#chtitle").textContent=lab+" per hari";
   const max=Math.max(1,...s.map(r=>r[MET])),nice=max<=5?5:Math.ceil(max/(10**Math.floor(Math.log10(max))))*(10**Math.floor(Math.log10(max)));

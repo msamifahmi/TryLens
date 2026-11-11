@@ -288,3 +288,175 @@ export function useWeekday(series, field) {
     return ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((label, i) => ({ label, value: cnt[i] ? Math.round(sum[i] / cnt[i]) : 0 }));
   }, [series, field]);
 }
+
+/* ======================================================= Overview bergaya dasbor (Update 46) */
+
+/** Kelompokkan deret agar grafik kapsul tetap terbaca: 1 hari → 12 × 2 jam, 1 minggu → 7 hari, 1 bulan → 10 × 3 hari, 60 hari → per minggu. */
+export function bucketize(series, days, kinds) {
+  const size = days === 1 ? 2 : days <= 7 ? 1 : days <= 30 ? 3 : 7;
+  const out = [];
+  for (let i = 0; i < series.length; i += size) {
+    const part = series.slice(i, i + size);
+    const v = Object.fromEntries(kinds.map((k) => [k, part.reduce((a, s) => a + (s[k] || 0), 0)]));
+    const first = part[0], last = part[part.length - 1];
+    let label, title;
+    if (days === 1) { label = first.label.slice(0, 2); title = `${first.label}–${String((Number(first.label.slice(0, 2)) + size) % 24).padStart(2, "0")}.00 WIB`; }
+    else if (size === 1) {
+      const d = new Date(first.date + "T00:00:00Z");
+      label = d.toLocaleDateString("id-ID", { weekday: "short", timeZone: "UTC" });
+      title = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    } else { label = first.label; title = `${first.label} – ${last.label}`; }
+    out.push({ key: first.key, label, title, ...v });
+  }
+  return out;
+}
+
+/** Kartu angka utama bergradasi brand (seperti kartu "Offline Store" di referensi). */
+export function HeroCard({ title, sub, value, prev, unit, children, tone = "brand" }) {
+  const d = prev ? Math.round(((value - prev) / prev) * 100) : null;
+  const brand = tone === "brand";
+  return (
+    <div className={`rounded-2xl p-5 relative overflow-hidden ${brand ? "text-white shadow-[0_10px_30px_-12px_rgba(47,85,154,.7)]" : "bg-white border border-[#DDE8F4] text-ink"}`}
+      style={brand ? { background: "linear-gradient(135deg,#2F559A 0%,#427AB5 100%)" } : undefined}>
+      {brand && <span aria-hidden="true" className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-white/10" />}
+      <p className={`text-[15px] font-semibold m-0 ${brand ? "text-white" : "text-ink"}`}>{title}</p>
+      {sub && <p className={`text-[12px] m-0 ${brand ? "text-white/80" : "text-ink-muted"}`}>{sub}</p>}
+      <p className="text-[34px] leading-tight font-bold tracking-tight m-0 mt-3"><CountUp value={value} /></p>
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[12px] font-semibold ${brand ? "bg-white/20 text-white" : d == null || d >= 0 ? "bg-emerald-50 text-success" : "bg-red-50 text-error"}`}>
+          {d == null ? "baru" : <>{d >= 0 ? <ArrowUpRight size={12} aria-hidden="true" /> : <ArrowDownRight size={12} aria-hidden="true" />}{Math.abs(d)}%</>}
+        </span>
+        <span className={`text-[12px] ${brand ? "text-white/85" : "text-ink-muted"}`}>{d == null ? "belum ada pembanding" : `${d >= 0 ? "naik" : "turun"} dari ${unit}`}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** Area kecil di dalam kartu (seperti "Chat Performance" di referensi). */
+export function MiniArea({ values, height = 120 }) {
+  const reduce = useReducedMotion();
+  const gid = useId().replace(/:/g, "");
+  const W = 300, H = height, max = Math.max(1, ...values), n = values.length;
+  const pts = values.map((v, i) => [n === 1 ? W / 2 : (i / (n - 1)) * W, H - 8 - (v / max) * (H - 24)]);
+  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const area = `${line} L${W},${H} L0,${H} Z`;
+  const step = Math.max(1, Math.ceil(n / 6));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" aria-hidden="true">
+      <defs><linearGradient id={`m${gid}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#427AB5" stopOpacity=".25" /><stop offset="100%" stopColor="#427AB5" stopOpacity="0" /></linearGradient></defs>
+      <motion.path d={area} fill={`url(#m${gid})`} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.3 }} />
+      <motion.path d={line} fill="none" stroke="#406AAF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1, ease: EASE }} />
+      {pts.map(([x, y], i) => (i % step === 0 || i === n - 1 ? <circle key={i} cx={x} cy={y} r="3.5" fill="#406AAF" stroke="#fff" strokeWidth="1.5" /> : null))}
+    </svg>
+  );
+}
+
+/** Grafik batang kapsul bergaris (seperti "Sales Overview" di referensi), dengan tooltip. */
+export function CapsuleBars({ buckets, metric, label, height = 230 }) {
+  const reduce = useReducedMotion();
+  const [hover, setHover] = useState(null);
+  const vals = buckets.map((b) => b[metric] || 0);
+  const top = nice(Math.max(1, ...vals));
+  const ticks = [1, 0.75, 0.5, 0.25, 0].map((f) => Math.round(top * f));
+  const peak = vals.indexOf(Math.max(...vals));
+  return (
+    <div className="flex gap-2 sm:gap-3">
+      <div className="flex flex-col justify-between text-[11px] text-ink-muted text-right pb-6" style={{ height }} aria-hidden="true">
+        {ticks.map((t, i) => <span key={i}>{fmtNum(t)}</span>)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="relative flex items-end gap-1.5 sm:gap-3" style={{ height: height - 24 }} role="img" aria-label={`${label}: ${buckets.map((b, i) => `${b.title} ${vals[i]}`).join(", ")}`}
+          onPointerLeave={() => setHover(null)}>
+          {buckets.map((b, i) => {
+            const h = (vals[i] / top) * 100;
+            const on = hover === i;
+            return (
+              <div key={b.key} className="relative flex-1 h-full flex items-end justify-center" onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} aria-label={`${b.title}: ${fmtNum(vals[i])}`}>
+                <div className="absolute inset-x-0 mx-auto bottom-0 top-0 rounded-full max-w-[46px]"
+                  style={{ background: "repeating-linear-gradient(135deg,#E6EEF8 0 5px,#F4F8FC 5px 10px)" }} />
+                <motion.div className={`relative w-full max-w-[46px] rounded-full ${on || (hover == null && i === peak) ? "" : "opacity-90"}`}
+                  style={{ background: on ? "linear-gradient(180deg,#5B8FD0 0%,#2F559A 100%)" : "linear-gradient(180deg,#5583C3 0%,#406AAF 100%)", minHeight: vals[i] ? 10 : 0 }}
+                  initial={reduce ? false : { height: 0 }} animate={{ height: `${h}%` }} transition={{ duration: 0.8, ease: EASE, delay: reduce ? 0 : i * 0.04 }} />
+                {on && (
+                  <div className="absolute z-10 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 rounded-xl bg-white border border-[#DDE8F4] shadow-lg px-3 py-2 whitespace-nowrap pointer-events-none"
+                    style={{ bottom: `calc(${h}% + 10px)` }}>
+                    <p className="text-[12.5px] font-semibold text-ink m-0">{b.title}</p>
+                    <p className="text-[12px] text-ink-muted m-0 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border-2 border-blue-deep" aria-hidden="true" />{label} <b className="text-ink text-[13px]">{fmtNum(vals[i])}</b></p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-1.5 sm:gap-3 mt-2">
+          {buckets.map((b) => <span key={b.key} className="flex-1 text-center text-[11px] text-ink-muted truncate">{b.label}</span>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const GAUGE_COLORS = ["#2F559A", "#5583C3", "#A9C4E6", "#F7DD7D"];
+/** Gauge setengah lingkaran bersegmen (seperti "Sales Categories" di referensi). */
+export function HalfGauge({ parts, total, unit = "sesi" }) {
+  const reduce = useReducedMotion();
+  const sum = parts.reduce((a, p) => a + p.value, 0);
+  const cx = 150, cy = 140, r = 104, sw = 38, gap = 0.035;
+  let start = Math.PI;
+  const arcs = parts.map((p, i) => {
+    const frac = sum ? p.value / sum : 1 / parts.length;
+    const a0 = start + (i ? gap / 2 : 0), a1 = start + frac * Math.PI - (i < parts.length - 1 ? gap / 2 : 0);
+    start += frac * Math.PI;
+    const P = (a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const [x0, y0] = P(a0), [x1, y1] = P(Math.max(a0 + 0.001, a1));
+    return { d: `M${x0.toFixed(1)},${y0.toFixed(1)} A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${x1.toFixed(1)},${y1.toFixed(1)}`, color: GAUGE_COLORS[i % GAUGE_COLORS.length], p };
+  });
+  return (
+    <div>
+      <svg viewBox="0 0 300 160" className="w-full max-w-[340px] mx-auto block" role="img" aria-label={parts.map((p) => `${p.label} ${p.value}`).join(", ")}>
+        {arcs.map((a, i) => (
+          <motion.path key={a.p.label} d={a.d} fill="none" stroke={a.color} strokeWidth={sw} strokeLinecap="round"
+            initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, ease: EASE, delay: reduce ? 0 : 0.15 + i * 0.18 }} />
+        ))}
+        <text x={cx} y={cy - 34} textAnchor="middle" fontSize="13" fill="#6B7280">Total</text>
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="26" fontWeight="700" fill="#111827">{fmtNum(total ?? sum)} {unit}</text>
+      </svg>
+      <ul className="list-none m-0 p-0 mt-3 flex flex-col gap-2.5">
+        {arcs.map((a) => (
+          <li key={a.p.label} className="flex items-center gap-2.5 text-[13px]">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: a.color }} aria-hidden="true" />
+            <span className="flex-1 text-ink-text">{a.p.label}</span>
+            <span className="font-semibold text-ink">{fmtNum(a.p.value)} {unit}</span>
+            <span className="w-11 text-right text-[12px] text-ink-muted">{sum ? Math.round((a.p.value / sum) * 100) : 0}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const STATUS = {
+  laris: ["Laris", "bg-emerald-50 text-emerald-700 border-emerald-200"],
+  naik: ["Naik", "bg-surface-blue text-blue-deep border-[#C9DAF0]"],
+  perhatian: ["Perlu perhatian", "bg-amber-50 text-amber-700 border-amber-200"],
+  belum: ["Belum dicoba", "bg-red-50 text-error border-red-200"],
+  stabil: ["Stabil", "bg-slate-50 text-ink-muted border-slate-200"]
+};
+/** Status sederhana tiap frame (dibaca orang awam). */
+export function frameStatus(f, all) {
+  if (!f.try && !f.view) return "belum";
+  if (f.try >= 3 && f.buy + f.contact === 0) return "perhatian";
+  const sorted = [...all].map((x) => x.try).sort((a, b) => b - a);
+  const cut = sorted[Math.max(0, Math.ceil(sorted.length * 0.25) - 1)] || 0;
+  if (f.try > 0 && f.try >= cut) return "laris";
+  if (f.prevView && f.view >= f.prevView * 1.2) return "naik";
+  if (!f.try) return "belum";
+  return "stabil";
+}
+export function StatusBadge({ code }) {
+  const [label, cls] = STATUS[code] || STATUS.stabil;
+  return <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap ${cls}`}><span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />{label}</span>;
+}
+export const STATUS_OPTIONS = Object.entries(STATUS).map(([k, [l]]) => ({ key: k, label: l }));

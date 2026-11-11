@@ -6,6 +6,23 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 46 — Overview baru bergaya dasbor, data contoh presentasi (bisa dimatikan), rentang 1 hari / 1 minggu / 1 bulan / 60 hari
+
+- **"Ikhtisar" → "Overview"** dan didesain ulang mengikuti referensi dasbor, disesuaikan untuk TryLens:
+  - Kartu utama bergradasi brand **Sesi Try-On** + **Kunjungan Toko**, keduanya dengan persentase naik/turun.
+  - Kartu **Klik Beli & Hubungi** dengan grafik area.
+  - **Ringkasan Aktivitas**: grafik batang kapsul bergaris dengan tooltip tanggal dan nilai. Bisa memilih Coba virtual, Frame dilihat, Kunjungan, Klik beli, Hubungi, atau Wishlist. Batang dikelompokkan supaya tetap terbaca: 1 hari = per 2 jam, 1 minggu = per hari, 1 bulan = per 3 hari, 60 hari = per minggu.
+  - Angka kecil Frame dilihat + Wishlist dengan garis tren, dan cincin "Lihat → coba" serta "Coba → beli/hubungi".
+  - **Gauge setengah lingkaran "Try-On per Kategori"** (Pria/Wanita/Anak).
+  - **Tabel "Aktivitas Frame"**: cari, filter status (Laris / Naik / Perlu perhatian / Belum dicoba / Stabil), ekspor CSV, tombol ubah & lihat di situs.
+  - Ditambah Insight, Perjalanan Pengunjung, dan Jam Ramai.
+- **Rentang waktu Mitra:** 1 hari, 1 minggu, 1 bulan, **60 hari** (3 hari dihapus). Ringkasan `/admin` juga punya "Hari ini" dan "60 hari".
+- **Data contoh untuk presentasi (agar tidak mulai dari 0):** dihitung server secara deterministik per frame/toko/hari (pola akhir pekan, gelombang, pertumbuhan pelan; per jam ramai pukul 12 & 20; hari ini dihitung sebagian sesuai jam) dan **dijumlahkan** ke data nyata. Tidak disimpan di database, jadi data nyata tetap murni dan angka tetap bertambah +1 saat ada pengunjung. Saklar **"Data contoh presentasi"** ada di `/admin` → Ringkasan (bawaan: nyala). Label di dasbor Mitra: "Data nyata + data contoh untuk presentasi". Rumus PHP (`demo_*`) = Node (`src/demoStats.js`), diuji paritas.
+- Mode demo tanpa server: data simulasi diperpanjang ke 120 hari agar rentang 60 hari punya pembanding.
+- Tes: Node 40 (data contoh: jumlah, +1 nyata, saklar, paritas PHP), PHP 12, frontend lolos.
+
+---
+
 ## Update 45 — Analitik Mitra memakai data NYATA, grafis + insight, rentang 1 hari / 3 hari / 1 minggu / 1 bulan
 
 - **Masalah:** angka di dasbor Mitra (mis. "Cat Eye Slim Red 425 sesi") dibuat oleh rumus simulasi (`buildAnalytics`), jadi tidak pernah berubah walau frame dicoba berulang kali. Selain itu "coba virtual" sengaja hanya dihitung sekali per tab per frame.

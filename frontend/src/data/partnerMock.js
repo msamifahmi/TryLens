@@ -301,12 +301,12 @@ export const PERIODS = [
   { key: "month", label: "Bulan ini", days: 30 }
 ];
 
-/** Data analitik deterministik per toko (mock). 60 hari harian + 6 bulan untuk grafik. */
+/** Data analitik deterministik per toko (mock). 120 hari harian + 6 bulan untuk grafik. */
 export function buildAnalytics(key, frames = [], plan = "basic") {
   const r = rng(hash(key));
   const scale = plan === "pro" ? 1.45 : 1;
 
-  const daily = Array.from({ length: 60 }, (_, i) => {
+  const daily = Array.from({ length: 120 }, (_, i) => {
     const wave = 1 + 0.18 * Math.sin(i / 3.2);
     const trend = 1 + i / 220;
     const views = (330 + r() * 140) * wave * trend * scale;

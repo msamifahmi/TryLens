@@ -2,6 +2,7 @@
 import { STYLES, COLORS, CATEGORIES } from "./service.js";
 import { PLATFORMS, cleanBuyUrl } from "./ecommerce.js";
 import { SIZE_FIELDS, cleanSize } from "./frameSize.js";
+import { daysBetween, demoOn, demoProduct, demoStore, demoVisit, hourWeights, spread } from "./demoStats.js";
 
 const DAY = 86400e3;
 const ID = /^[A-Za-z0-9_-]{1,40}$/;
@@ -294,7 +295,7 @@ export function flashItemClean(b, prev, regular) {
 export const EVENT_KINDS = ["visit", "view", "try", "buy", "contact"];
 /** Update 45: kejadian tambahan untuk analitik Mitra. "store" = halaman toko dibuka (product_id berisi id toko). */
 export const ALL_KINDS = [...EVENT_KINDS, "store", "capture", "wish"];
-export const STAT_DAYS = [1, 3, 7, 30, 90];
+export const STAT_DAYS = [1, 3, 7, 30, 60, 90];
 const BOT = /bot|crawl|spider|slurp|headless|lighthouse|preview/i;
 
 /** productExists(id) → boolean. Mengembalikan false bila diabaikan (bot / produk tak dikenal). Batas laju diurus pemanggil. */
@@ -347,8 +348,24 @@ export function merchantStats(db, mid, days) {
       else if (r.kind === "view" || r.kind === "try") p["prev_" + r.kind] = r.n;
     }
   }
+  const T = tot(from, to), P = tot(pFrom, pTo), demo = demoOn(db);
+  if (demo) {
+    const add = zero();
+    for (const pid of pids) if (!prod.has(pid)) prod.set(pid, { id: pid, ...zero(), prev_view: 0, prev_try: 0 });
+    for (const d of daysBetween(from, to)) {
+      const s = series.get(d);
+      for (const pid of pids) for (const [k, v] of Object.entries(demoProduct(d, pid))) { s[k] += v; T[k] += v; add[k] += v; prod.get(pid)[k] += v; }
+      const v = demoStore(d, mid); s.store += v; T.store += v; add.store += v;
+    }
+    for (const d of daysBetween(pFrom, pTo)) {
+      for (const pid of pids) for (const [k, v] of Object.entries(demoProduct(d, pid))) { P[k] += v; if (k === "view" || k === "try") prod.get(pid)["prev_" + k] += v; }
+      P.store += demoStore(d, mid);
+    }
+    const w = hourWeights(days === 1 ? new Date(Date.now() + 7 * 3600e3).getUTCHours() : 23);
+    for (const [k, v] of Object.entries(add)) spread(v, w).forEach((x, h) => { hours[h][k] += x; });
+  }
   return {
-    merchantId: mid, days, from, to, totals: tot(from, to), prev: tot(pFrom, pTo), series: [...series.values()], hours, products: [...prod.values()],
+    merchantId: mid, days, from, to, totals: T, prev: P, demo, series: [...series.values()], hours, products: [...prod.values()],
     trackingSince: db.prepare(`SELECT MIN(day) FROM stats WHERE ${own}`).pluck().get(...args([])) || null, generatedAt: new Date().toISOString()
   };
 }
@@ -379,10 +396,28 @@ export function adminStats(db, days) {
       mer.get(p.merchant_id)[r.kind] += r.n;
     }
   }
+  const T = tot(from, to), P = tot(pFrom, pTo), demo = demoOn(db);
+  if (demo) {
+    for (const [a, b, cur] of [[from, to, true], [pFrom, pTo, false]]) for (const d of daysBetween(a, b)) {
+      const v = demoVisit(d);
+      if (cur) { series.get(d).visit += v; T.visit += v; } else P.visit += v;
+      for (const [id, p] of names) for (const [k, v2] of Object.entries(demoProduct(d, id))) {
+        if (!EVENT_KINDS.includes(k)) continue;
+        if (!cur) { P[k] += v2; continue; }
+        series.get(d)[k] += v2; T[k] += v2;
+        if (!prod.has(id)) prod.set(id, { id, name: p.name, merchantId: p.merchant_id, ...zero() });
+        prod.get(id)[k] += v2;
+        if (p.merchant_id) {
+          if (!mer.has(p.merchant_id)) mer.set(p.merchant_id, { id: p.merchant_id, name: p.mname ?? p.merchant_id, ...zero() });
+          mer.get(p.merchant_id)[k] += v2;
+        }
+      }
+    }
+  }
   const score = (x) => x.view + 2 * x.try + 3 * x.buy + 3 * x.contact;
   const fl = flashRows(db);
   return {
-    days, from, to, totals: tot(from, to), prev: tot(pFrom, pTo), series: [...series.values()],
+    days, from, to, totals: T, prev: P, demo, series: [...series.values()],
     products: [...prod.values()].sort((a, b) => score(b) - score(a)).slice(0, 20),
     merchants: [...mer.values()].sort((a, b) => score(b) - score(a)),
     flashLive: fl.filter((x) => x.live).length, flashTotal: fl.length,

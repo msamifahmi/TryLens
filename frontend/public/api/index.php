@@ -490,7 +490,52 @@ const EVENT_KINDS = ['visit', 'view', 'try', 'buy', 'contact'];
 /** Update 45: kejadian tambahan untuk analitik Mitra. 'store' = halaman toko dibuka (product_id berisi id toko). */
 const EXTRA_KINDS = ['store', 'capture', 'wish'];
 const ALL_KINDS = ['visit', 'view', 'try', 'buy', 'contact', 'store', 'capture', 'wish'];
-const STAT_DAYS = [1, 3, 7, 30, 90];
+const STAT_DAYS = [1, 3, 7, 30, 60, 90];
+
+/* ---- data contoh presentasi (Update 46) ----------------------------------------------------------------------
+ * TIDAK disimpan di database: dihitung deterministik dari (tanggal, id frame/toko) setiap kali diminta, lalu
+ * DIJUMLAHKAN ke angka nyata. Jadi angka selalu "bergulir" mengikuti hari ini dan tetap bertambah +1 saat ada pengunjung.
+ * Dimatikan/dinyalakan di /admin → Ringkasan (settings.demo_stats, bawaan: nyala). Rumus identik dengan
+ * backend-node/src/demoStats.js (diuji paritas). */
+function demo_on(): bool { $v = db()->query("SELECT v FROM settings WHERE k='demo_stats'")->fetchColumn(); return $v === false ? true : $v === '1'; }
+function h32(string $s): int { $h = 0x811c9dc5; $n = strlen($s); for ($i = 0; $i < $n; $i++) { $h ^= ord($s[$i]); $h = ($h * 0x01000193) & 0xFFFFFFFF; } return $h; }
+function rnd(string $s): float { return h32($s) / 4294967296; }
+function day_num(string $d): int { return intdiv(strtotime($d . 'T00:00:00Z'), 86400); }
+/** Pengali umum hari itu: akhir pekan ramai, gelombang mingguan, pertumbuhan pelan, dan bagian hari yang sudah lewat (hari ini). */
+function demo_day_factor(string $day, string $key): float {
+    $n = day_num($day); $dow = ($n + 4) % 7; // 0 = Minggu
+    $wk = ($dow === 0 || $dow === 6) ? 1.18 : (($dow === 2 || $dow === 3) ? 0.92 : 1.0);
+    $wave = 1 + 0.14 * sin($n / 6.5 + rnd("ph|$key") * 6.283);
+    $grow = 1 + 0.0035 * (($n % 400) / 4);
+    $noise = 0.78 + 0.44 * rnd("d|$day|$key");
+    $f = $day === today_wib() ? demo_today_part() : 1.0;
+    return $wk * $wave * $grow * $noise * $f;
+}
+function demo_today_part(): float { $m = intdiv((time() + 7 * 3600) % 86400, 60); return max(0.04, $m / 1440); }
+/** Angka contoh satu frame pada satu hari: [view, try, buy, contact, wish]. */
+function demo_product(string $day, string $pid): array {
+    $pop = 0.35 + 1.3 * rnd("pop|$pid");
+    $view = (int)round(16 * $pop * demo_day_factor($day, $pid));
+    $try = (int)round($view * (0.26 + 0.18 * rnd("t|$day|$pid")));
+    $buy = (int)round($try * (0.07 + 0.09 * rnd("b|$day|$pid")));
+    $contact = (int)round($try * (0.09 + 0.09 * rnd("c|$day|$pid")));
+    $wish = (int)round($view * (0.04 + 0.06 * rnd("w|$day|$pid")));
+    return ['view' => $view, 'try' => $try, 'buy' => $buy, 'contact' => $contact, 'wish' => $wish];
+}
+function demo_store(string $day, string $mid): int { return (int)round(34 * (0.55 + 0.9 * rnd("s|$mid")) * demo_day_factor($day, "store|$mid")); }
+function demo_visit(string $day): int { return (int)round(260 * demo_day_factor($day, 'visit')); }
+/** Bobot per jam (WIB): ramai siang (12) dan malam (20). */
+function demo_hour_weights(int $upto = 23): array {
+    $w = []; for ($h = 0; $h < 24; $h++) $w[$h] = $h > $upto ? 0.0 : 0.22 + exp(-(($h - 20) / 3.2) ** 2) + 0.6 * exp(-(($h - 12) / 2.4) ** 2);
+    $s = array_sum($w) ?: 1; return array_map(fn($x) => $x / $s, $w);
+}
+/** Sebar total per jenis ke 24 jam (pembulatan sisa ke jam terberat). */
+function demo_spread(int $total, array $w): array {
+    $o = array_map(fn($x) => (int)floor($total * $x), $w); $rest = $total - array_sum($o);
+    if ($rest > 0) { arsort($w); foreach (array_keys($w) as $h) { if ($rest-- <= 0) break; $o[$h]++; } }
+    return $o;
+}
+function days_between(string $from, string $to): array { $o = []; for ($n = day_num($from); $n <= day_num($to); $n++) $o[] = gmdate('Y-m-d', $n * 86400); return $o; }
 /** Catat satu kejadian. Mengembalikan false bila diabaikan (bot, batas laju, produk tak dikenal). IP hanya disimpan sebagai hash sementara untuk batas laju. */
 function record_event(string $kind, string $pid, string $ip, string $ua): bool {
     global $DATA;
@@ -544,7 +589,22 @@ function merchant_stats(string $mid, int $days): array {
         }
     }
     $first = $pdo->prepare("SELECT MIN(day) FROM stats WHERE $own"); $first->execute($args([]));
-    return ['merchantId' => $mid, 'days' => $days, 'from' => $from, 'to' => $to, 'totals' => $tot($from, $to), 'prev' => $tot($pFrom, $pTo),
+    $T = $tot($from, $to); $P = $tot($pFrom, $pTo); $demo = demo_on();
+    if ($demo) {
+        $add = []; foreach (array_keys($zero) as $k) $add[$k] = 0;
+        foreach ($pids as $pid) $prod[$pid] ??= ['id' => $pid] + $zero + ['prev_view' => 0, 'prev_try' => 0];
+        foreach (days_between($from, $to) as $d) {
+            foreach ($pids as $pid) foreach (demo_product($d, $pid) as $k => $v) { $series[$d][$k] += $v; $T[$k] += $v; $add[$k] += $v; $prod[$pid][$k] += $v; }
+            $v = demo_store($d, $mid); $series[$d]['store'] += $v; $T['store'] += $v; $add['store'] += $v;
+        }
+        foreach (days_between($pFrom, $pTo) as $d) {
+            foreach ($pids as $pid) foreach (demo_product($d, $pid) as $k => $v) { $P[$k] += $v; if ($k === 'view' || $k === 'try') $prod[$pid]["prev_$k"] += $v; }
+            $P['store'] += demo_store($d, $mid);
+        }
+        $w = demo_hour_weights($days === 1 ? (int)gmdate('G', time() + 7 * 3600) : 23);
+        foreach ($add as $k => $v) foreach (demo_spread($v, $w) as $h => $x) $hours[$h][$k] += $x;
+    }
+    return ['merchantId' => $mid, 'days' => $days, 'from' => $from, 'to' => $to, 'totals' => $T, 'prev' => $P, 'demo' => $demo,
         'series' => array_values($series), 'hours' => array_values($hours), 'products' => array_values($prod), 'trackingSince' => $first->fetchColumn() ?: null, 'generatedAt' => now()];
 }
 /** Ringkasan untuk tab Ringkasan di /admin: total periode + periode sebelumnya, deret harian, per produk, per toko. */
@@ -570,13 +630,26 @@ function admin_stats(int $days): array {
         $prod[$id][$r['kind']] += (int)$r['n'];
         if ($p && $p['merchant_id']) { $mid = $p['merchant_id']; $mer[$mid] ??= ['id' => $mid, 'name' => $p['mname'] ?? $mid] + $zero; $mer[$mid][$r['kind']] += (int)$r['n']; }
     }
+    $T = $tot($from, $to); $P = $tot($pFrom, $pTo); $demo = demo_on();
+    if ($demo) {
+        foreach ([[$from, $to, true], [$pFrom, $pTo, false]] as [$a, $b, $cur]) foreach (days_between($a, $b) as $d) {
+            $v = demo_visit($d); if ($cur) { $series[$d]['visit'] += $v; $T['visit'] += $v; } else $P['visit'] += $v;
+            foreach ($names as $id => $p) foreach (demo_product($d, $id) as $k => $v) {
+                if (!isset($zero[$k])) continue;
+                if (!$cur) { $P[$k] += $v; continue; }
+                $series[$d][$k] += $v; $T[$k] += $v;
+                $prod[$id] ??= ['id' => $id, 'name' => $p['name'], 'merchantId' => $p['merchant_id']] + $zero; $prod[$id][$k] += $v;
+                if ($p['merchant_id']) { $m = $p['merchant_id']; $mer[$m] ??= ['id' => $m, 'name' => $p['mname'] ?? $m] + $zero; $mer[$m][$k] += $v; }
+            }
+        }
+    }
     $score = fn($x) => $x['view'] + 2 * $x['try'] + 3 * $x['buy'] + 3 * $x['contact'];
     $prod = array_values($prod); usort($prod, fn($a, $b) => $score($b) <=> $score($a));
     $mer = array_values($mer); usort($mer, fn($a, $b) => $score($b) <=> $score($a));
     $fl = flash_rows();
     $hl = $pdo->prepare('SELECT COUNT(*) FROM merchants WHERE published=1 AND highlight_until>=?'); $hl->execute([$to]);
     $first = $pdo->query('SELECT MIN(day) FROM stats')->fetchColumn();
-    return ['days' => $days, 'from' => $from, 'to' => $to, 'totals' => $tot($from, $to), 'prev' => $tot($pFrom, $pTo), 'series' => array_values($series),
+    return ['days' => $days, 'from' => $from, 'to' => $to, 'totals' => $T, 'prev' => $P, 'demo' => $demo, 'series' => array_values($series),
         'products' => array_slice($prod, 0, 20), 'merchants' => $mer, 'flashLive' => count(array_filter($fl, fn($x) => $x['live'])), 'flashTotal' => count($fl),
         'highlighted' => (int)$hl->fetchColumn(), 'trackingSince' => $first ?: null];
 }
@@ -800,6 +873,12 @@ try {
     }
     if ($a === '/stats' && $method === 'GET') { $d = (int)($_GET['days'] ?? 30); out(admin_stats(in_array($d, STAT_DAYS, true) ? $d : 30)); }
     if ($a === '/flash-items' && $method === 'GET') out(['items' => flash_rows()]);
+    if ($a === '/demo-stats' && $method === 'GET') out(['enabled' => demo_on()]);
+    if ($a === '/demo-stats' && $method === 'PUT') {
+        $on = b01($body['enabled'] ?? false);
+        $pdo->prepare("INSERT INTO settings(k,v) VALUES('demo_stats',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([(string)$on]);
+        out(['enabled' => (bool)$on]);
+    }
     if (preg_match('~^/flash-items/([^/]+)$~', $a, $m)) {
         $p = $getP($m[1]);
         if (!$p) fail('Produk tidak ditemukan.', 404);
