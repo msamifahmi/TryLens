@@ -617,6 +617,19 @@ test("Update 43: Flash Sale admin (validasi, status, batas per toko, katalog), H
   assert.equal((await c.req("GET", "/api/admin/stats")).status, 401);
 });
 
+test("Update 45: statistik nyata per toko (Node = PHP)", async () => {
+  const c = new Client();
+  await c.req("POST", "/api/admin/merchants", { id: "ms", name: "Optik Statistik" }, { headers: AH });
+  const p = (await c.req("POST", "/api/admin/products", { name: "Frame Statistik", merchantId: "ms", style: "round", colorKey: "black", category: "Pria", price: 150000 }, { headers: AH })).body.product.id;
+  for (const k of ["try", "try", "view", "wish", "buy"]) await c.req("POST", "/api/event", { kind: k, productId: p });
+  await c.req("POST", "/api/event", { kind: "store", productId: "ms" });
+  const s = (await c.req("GET", "/api/stats/merchant/ms?days=3")).body;
+  assert.equal(s.series.length, 3); assert.equal(s.hours.length, 24);
+  assert.deepEqual(s.totals, { view: 1, try: 2, buy: 1, contact: 0, store: 1, capture: 0, wish: 1 });
+  assert.equal(s.products[0].id, p); assert.equal(s.products[0].try, 2);
+  assert.equal((await c.req("GET", "/api/stats/merchant/zzz")).status, 404);
+});
+
 test("Admin nonaktif bila ADMIN_TOKEN kosong/pendek (503)", async () => {
   const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), "tl2-"));
   const a2 = createApp({ dbPath: ":memory:", uploadsDir: dir2, adminToken: "pendek" });

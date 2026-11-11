@@ -176,6 +176,31 @@ test("Update 44 PHP: Flash Sale terisi otomatis sekali dari seed.json (section t
   for (const f of items) await call("DELETE", "/api/admin/flash-items/" + f.productId);
   assert.equal((await call("GET", "/api/catalog", undefined, { headers: {} })).body.flashItems.length, 0, "dikosongkan admin → tidak muncul lagi");
 });
+test("Update 45 PHP: statistik nyata per toko (coba berulang dihitung, kunjungan toko, wishlist, per jam, rentang 1/3/7/30 hari)", async () => {
+  const X = { "X-TryLens": "1" };
+  const m6 = (await call("GET", "/api/admin/products")).body.products.filter((p) => p.merchantId === "m6").map((p) => p.id);
+  const [a, b] = m6;
+  assert.ok(a && b);
+  for (let i = 0; i < 3; i++) assert.equal((await call("POST", "/api/event", { kind: "try", productId: a }, { headers: X })).status, 204);
+  await call("POST", "/api/event", { kind: "view", productId: a }, { headers: X });
+  await call("POST", "/api/event", { kind: "wish", productId: b }, { headers: X });
+  await call("POST", "/api/event", { kind: "contact", productId: a }, { headers: X });
+  assert.equal((await call("POST", "/api/event", { kind: "store", productId: "m6" }, { headers: X })).status, 204);
+  await call("POST", "/api/event", { kind: "store", productId: "toko-palsu" }, { headers: X });
+  await call("POST", "/api/event", { kind: "try", productId: "f0" }, { headers: X }); // toko lain
+  const s1 = (await call("GET", "/api/stats/merchant/m6?days=1", undefined, { headers: {} })).body;
+  assert.equal(s1.days, 1); assert.equal(s1.series.length, 1); assert.equal(s1.hours.length, 24);
+  assert.equal(s1.totals.try, 3, "coba berulang tetap dihitung"); assert.equal(s1.totals.store, 1); assert.equal(s1.totals.wish, 1); assert.equal(s1.totals.contact, 1);
+  assert.equal(s1.hours.reduce((x, h) => x + h.try, 0), 3, "per jam tercatat");
+  const pa = s1.products.find((p) => p.id === a);
+  assert.equal(pa.try, 3); assert.equal(pa.view, 1);
+  assert.ok(!s1.products.some((p) => p.id === "f0"), "frame toko lain tidak ikut");
+  for (const d of [3, 7, 30]) assert.equal((await call("GET", `/api/stats/merchant/m6?days=${d}`, undefined, { headers: {} })).body.series.length, d);
+  assert.equal((await call("GET", "/api/stats/merchant/m6?days=5", undefined, { headers: {} })).body.days, 30);
+  assert.equal((await call("GET", "/api/stats/merchant/nope", undefined, { headers: {} })).status, 404);
+  const ad = (await call("GET", "/api/admin/stats?days=1")).body;
+  assert.equal(ad.days, 1); assert.ok(!("store" in ad.totals), "ringkasan admin tetap 5 angka utama");
+});
 test("Update 43 PHP: Flash Sale admin + katalog, Highlighted Brand, statistik pengunjung (paritas Node)", async () => {
   await call("PUT", "/api/admin/flash-sale", { enabled: true, minDiscount: 10, maxPerMerchant: 4 });
   assert.equal((await call("PUT", "/api/admin/flash-items/f1", { price: 99999999, quota: 5 })).status, 400);
@@ -204,12 +229,15 @@ test("Update 43 PHP: Flash Sale admin + katalog, Highlighted Brand, statistik pe
   // Statistik
   assert.equal((await call("POST", "/api/event", { kind: "visit" }, { headers: {} })).status, 403);
   assert.equal((await call("POST", "/api/event", { kind: "x" }, { headers: { "X-TryLens": "1" } })).status, 400);
+  const before = (await call("GET", "/api/admin/stats?days=7")).body.totals;
+  const prodBefore = (await call("GET", "/api/admin/stats?days=7")).body.products.find((p) => p.id === "f1")?.try || 0;
   for (const k of ["visit", "view", "try", "try", "buy", "contact"]) assert.equal((await call("POST", "/api/event", { kind: k, productId: "f1" }, { headers: { "X-TryLens": "1" } })).status, 204);
   await call("POST", "/api/event", { kind: "view", productId: "nggak-ada" }, { headers: { "X-TryLens": "1" } });
   await call("POST", "/api/event", { kind: "view", productId: "f1" }, { headers: { "X-TryLens": "1", "User-Agent": "bingbot" } });
   const st = (await call("GET", "/api/admin/stats?days=7")).body;
-  assert.equal(st.series.length, 7); assert.deepEqual(st.totals, { visit: 1, view: 1, try: 2, buy: 1, contact: 1 });
-  assert.equal(st.products[0].id, "f1"); assert.equal(st.products[0].try, 2); assert.equal(st.merchants[0].id, f1.merchantId);
+  assert.equal(st.series.length, 7);
+  assert.deepEqual(Object.fromEntries(Object.entries(st.totals).map(([k, v]) => [k, v - before[k]])), { visit: 1, view: 1, try: 2, buy: 1, contact: 1 });
+  assert.equal(st.products.find((p) => p.id === "f1").try - prodBefore, 2); assert.ok(st.merchants.some((m) => m.id === f1.merchantId));
   assert.equal(st.flashLive, 1); assert.equal((await call("GET", "/api/admin/stats?days=999")).body.days, 30);
   // batas laju: >60 kejadian/menit dari satu alamat diabaikan
   for (let i = 0; i < 70; i++) await call("POST", "/api/event", { kind: "visit" }, { headers: { "X-TryLens": "1" } });
@@ -217,6 +245,7 @@ test("Update 43 PHP: Flash Sale admin + katalog, Highlighted Brand, statistik pe
   const html = (await call("GET", "/admin", undefined, { headers: {} })).body.toString();
   assert.match(html, /Ringkasan/); assert.match(html, /Frame yang ikut Flash Sale/); assert.match(html, /Highlighted Brand/);
 });
+
 
 let fail = 0;
 for (const [n, f] of tests) { try { await f(); console.log("✓", n); } catch (e) { fail++; console.log("✗", n, "\n  ", e.message); } }

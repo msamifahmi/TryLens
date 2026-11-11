@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { track } from "../lib/track.js";
 import MerchantAvatar from "../components/MerchantAvatar.jsx";
 import { Link, useParams, useOutletContext } from "react-router-dom";
 import { MERCHANTS, PRODUCTS } from "../data/mockData.js";
@@ -84,6 +85,7 @@ export default function MerchantPage() {
   // jadi filter dari toko sebelumnya harus dibersihkan.
   useEffect(() => {
     reset();
+    track("store", id); // statistik toko: halaman toko dibuka
   }, [id]);
 
   function handleToggle(key) {

@@ -292,18 +292,65 @@ export function flashItemClean(b, prev, regular) {
 
 /* ---- statistik pengunjung: angka harian teragregasi (tanpa data pribadi) — sama dengan record_event()/admin_stats() di PHP */
 export const EVENT_KINDS = ["visit", "view", "try", "buy", "contact"];
+/** Update 45: kejadian tambahan untuk analitik Mitra. "store" = halaman toko dibuka (product_id berisi id toko). */
+export const ALL_KINDS = [...EVENT_KINDS, "store", "capture", "wish"];
+export const STAT_DAYS = [1, 3, 7, 30, 90];
 const BOT = /bot|crawl|spider|slurp|headless|lighthouse|preview/i;
 
 /** productExists(id) → boolean. Mengembalikan false bila diabaikan (bot / produk tak dikenal). Batas laju diurus pemanggil. */
-export function recordEvent(db, { kind, productId, ua }, productExists) {
+export function recordEvent(db, { kind, productId, ua }, productExists, now = Date.now()) {
   if (BOT.test(ua || "")) return false;
   let pid = "";
-  if (kind !== "visit") {
+  if (kind === "store") {
+    pid = str(productId, 40);
+    if (!pid || !db.prepare("SELECT 1 FROM merchants WHERE id=?").get(pid)) return false;
+  } else if (kind !== "visit") {
     pid = str(productId, 40);
     if (!pid || !productExists(pid)) return false;
   }
-  db.prepare("INSERT INTO stats(day,kind,product_id,n) VALUES(?,?,?,1) ON CONFLICT(day,kind,product_id) DO UPDATE SET n=n+1").run(todayWib(), kind, pid);
+  const day = todayWib(0, now), hour = new Date(now + 7 * 3600e3).getUTCHours();
+  db.prepare("INSERT INTO stats(day,kind,product_id,n) VALUES(?,?,?,1) ON CONFLICT(day,kind,product_id) DO UPDATE SET n=n+1").run(day, kind, pid);
+  db.prepare("INSERT INTO stats_hour(day,hour,kind,product_id,n) VALUES(?,?,?,?,1) ON CONFLICT(day,hour,kind,product_id) DO UPDATE SET n=n+1").run(day, hour, kind, pid);
   return true;
+}
+
+/** Statistik NYATA satu toko untuk dasbor Mitra — sama dengan merchant_stats() di PHP. */
+export function merchantStats(db, mid, days) {
+  const pids = db.prepare("SELECT id FROM products WHERE merchant_id=?").pluck().all(mid);
+  const to = todayWib(), from = todayWib(-(days - 1)), pFrom = todayWib(-(2 * days - 1)), pTo = todayWib(-days);
+  const inq = pids.length ? pids.map(() => "?").join(",") : "''";
+  const own = `((kind<>'store' AND kind<>'visit' AND product_id IN (${inq})) OR (kind='store' AND product_id=?))`;
+  const args = (pre) => [...pre, ...pids, mid];
+  const kinds = ALL_KINDS.filter((k) => k !== "visit");
+  const zero = () => Object.fromEntries(kinds.map((k) => [k, 0]));
+  const tot = (a, b) => {
+    const o = zero();
+    for (const r of db.prepare(`SELECT kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND ${own} GROUP BY kind`).all(...args([a, b]))) if (r.kind in o) o[r.kind] = r.n;
+    return o;
+  };
+  const series = new Map();
+  for (let i = days - 1; i >= 0; i--) series.set(todayWib(-i), { day: todayWib(-i), ...zero() });
+  for (const r of db.prepare(`SELECT day, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND ${own} GROUP BY day, kind`).all(...args([from, to]))) {
+    const s = series.get(r.day);
+    if (s && r.kind in s) s[r.kind] = r.n;
+  }
+  const hours = Array.from({ length: 24 }, (_, h) => ({ hour: h, ...zero() }));
+  for (const r of db.prepare(`SELECT hour, kind, SUM(n) n FROM stats_hour WHERE day BETWEEN ? AND ? AND ${own} GROUP BY hour, kind`).all(...args([from, to]))) {
+    if (hours[r.hour] && r.kind in hours[r.hour]) hours[r.hour][r.kind] = r.n;
+  }
+  const prod = new Map();
+  for (const [a, b, pre] of [[from, to, ""], [pFrom, pTo, "prev_"]]) {
+    for (const r of db.prepare(`SELECT product_id, kind, SUM(n) n FROM stats WHERE day BETWEEN ? AND ? AND kind<>'store' AND kind<>'visit' AND product_id IN (${inq}) GROUP BY product_id, kind`).all(a, b, ...pids)) {
+      if (!prod.has(r.product_id)) prod.set(r.product_id, { id: r.product_id, ...zero(), prev_view: 0, prev_try: 0 });
+      const p = prod.get(r.product_id);
+      if (!pre) p[r.kind] = r.n;
+      else if (r.kind === "view" || r.kind === "try") p["prev_" + r.kind] = r.n;
+    }
+  }
+  return {
+    merchantId: mid, days, from, to, totals: tot(from, to), prev: tot(pFrom, pTo), series: [...series.values()], hours, products: [...prod.values()],
+    trackingSince: db.prepare(`SELECT MIN(day) FROM stats WHERE ${own}`).pluck().get(...args([])) || null, generatedAt: new Date().toISOString()
+  };
 }
 
 export function adminStats(db, days) {

@@ -1,4 +1,4 @@
-# HANDOFF TryLens — per Rabu 11 Nov 2026 (Update 44)
+# HANDOFF TryLens — per Rabu 11 Nov 2026 (Update 45)
 
 Tempel seluruh isi file ini sebagai pesan pertama di session baru.
 
@@ -27,14 +27,15 @@ Tempel seluruh isi file ini sebagai pesan pertama di session baru.
 - Flash Sale Mitra **langsung tayang** bila memenuhi aturan admin (tanpa antrean persetujuan); admin tetap bisa menonaktifkan.
 - Flash Sale diisi awal sekali dari `seed.json` → `flash` (counter `flash_seeded`).
 
-### A. Update 45 — Dasbor Mitra memakai server PHP (disetujui user)
+### A. Update 46 — Dasbor Mitra memakai server PHP (disetujui user)
+- Setelah akun Mitra ada di server: kunci `GET /api/stats/merchant/:id` ke sesi Mitra pemilik toko (sekarang publik, hanya angka teragregasi). Analitik Mitra (`lib/storeStats.js`, `components/partner/StatCharts.jsx`) sudah memakai data nyata sejak Update 45.
 Saat ini server PHP (`frontend/public/api/index.php`) tidak punya akun Mitra → area `/partner` selalu mode demo (localStorage, `store/usePartner.js`). Rencana:
 1. Akun Mitra di PHP: tabel akun (password `password_hash`), sesi cookie HttpOnly + SameSite, batas percobaan login, `/api/auth/*` sesuai kontrak Node (`backend-node/src/routes/auth.js`) sehingga `usePartner.init()` otomatis memakai mode server.
 2. Akun dikaitkan ke toko (`merchants.id`); frame Mitra = baris `products` toko itu (bukan tabel terpisah), unggah foto/GLB lewat validasi yang sama dengan admin.
 3. Mitra mendaftarkan frame ke Flash Sale → baris `flash_items` (langsung tayang bila memenuhi aturan; kolom pemilik/asal agar admin bisa membedakan). Kini masih lokal di perangkat Mitra (`mergeOwnFlash` di `lib/flashSale.js`).
 3b. Pembelian slot VTO (`kind: "vtoSlots"`) + kuota efektif di PHP, sama dengan Node `routes/billing.js`.
 4. Banner/iklan Mitra → antrean persetujuan di tab Iklan admin (ganti tombol "Setujui (simulasi admin)" di `PromotionTabs.jsx`).
-5. Analitik Mitra (`AnalyticsTabs.jsx`, kini "Data masih simulasi") membaca tabel `stats` milik produk tokonya.
+5. (Selesai di Update 45) Analitik Mitra membaca `stats`/`stats_hour` lewat `/api/stats/merchant/:id`.
 6. Admin: tab/daftar akun Mitra (aktif/nonaktif, reset password).
 Langganan & pembayaran tetap sandbox sampai ada payment gateway.
 

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 const { serverFlashItems } = await import("../src/lib/flashSale.js");
 const { mergeCatalog, catalogInfo } = await import("../src/lib/catalog.js");
-const { onceKey } = await import("../src/lib/track.js");
+const { onceKey, deduped } = await import("../src/lib/track.js");
 const { PRODUCTS } = await import("../src/data/mockData.js");
 const { mergeOwnFlash } = await import("../src/lib/flashSale.js");
 const PM = await import("../src/data/partnerMock.js");
@@ -28,9 +28,14 @@ t("mergeCatalog: flashItems dari server menggantikan tanda flash bawaan; highlig
   assert.deepEqual(PRODUCTS.filter((p) => p.flash).map((p) => p.id), [id]);
   assert.deepEqual(catalogInfo.highlighted, ["m2"]); assert.equal(catalogInfo.flashItems.length, 1);
 });
-t("track: kunjungan/lihat/coba sekali per sesi per produk; klik beli & hubungi selalu dihitung", () => {
+t("track: kunjungan sekali per sesi; lihat/buka toko sekali per 30 menit; coba/beli/hubungi/wishlist SETIAP kali", () => {
   assert.equal(onceKey("view", "f1"), "tl_ev:view:f1"); assert.equal(onceKey("visit"), "tl_ev:visit:");
-  assert.equal(onceKey("buy", "f1"), null); assert.equal(onceKey("contact", "f1"), null);
+  for (const k of ["try", "buy", "contact", "wish"]) assert.equal(onceKey(k, "f1"), null, k);
+  const mem = new Map(), st = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  assert.equal(deduped("try", "f1", 0, st), false); assert.equal(deduped("try", "f1", 1, st), false, "coba berulang tetap dihitung");
+  assert.equal(deduped("view", "f1", 0 + 1, st), false); assert.equal(deduped("view", "f1", 10 * 60e3, st), true, "10 menit kemudian: tidak dihitung lagi");
+  assert.equal(deduped("view", "f1", 31 * 60e3, st), false, "lewat 30 menit: dihitung lagi");
+  assert.equal(deduped("visit", "", 1, st), false); assert.equal(deduped("visit", "", 99 * 3600e3, st), true);
 });
 t("mergeOwnFlash: frame Flash Sale Mitra yang sedang masuk ikut tampil (tanpa duplikat, batas per toko, aturan diskon)", () => {
   const [a, b, c] = PRODUCTS.filter((p) => p.merchantId === PRODUCTS[0].merchantId);

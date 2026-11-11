@@ -6,6 +6,19 @@ Status: **MVP Implementation — kepatuhan PRD Homepage** (Header, Hero Carousel
 
 ---
 
+## Update 45 — Analitik Mitra memakai data NYATA, grafis + insight, rentang 1 hari / 3 hari / 1 minggu / 1 bulan
+
+- **Masalah:** angka di dasbor Mitra (mis. "Cat Eye Slim Red 425 sesi") dibuat oleh rumus simulasi (`buildAnalytics`), jadi tidak pernah berubah walau frame dicoba berulang kali. Selain itu "coba virtual" sengaja hanya dihitung sekali per tab per frame.
+- **Sekarang:** Dashboard, Analitik (Ikhtisar, Pengunjung Toko, Performa Produk, Performa Try-On), dan Virtual Try-On → Analitik Try-On membaca `GET /api/stats/merchant/<id>?days=1|3|7|30` (PHP + Node). Data diperbarui otomatis tiap 20 detik, saat tab aktif lagi, dan lewat tombol "Perbarui". Label "Data nyata" / "Data contoh (simulasi)" selalu terlihat. Mode demo tanpa server tetap memakai angka contoh.
+- **Pencatatan:** coba virtual dihitung **setiap kali kamera menyala** (juga saat ganti frame). Kejadian baru: kunjungan halaman toko (`store`) dan frame masuk wishlist (`wish`). Lihat frame & buka toko dihitung sekali per 30 menit agar muat ulang tidak menggelembungkan angka. Tabel `stats_hour` menyimpan angka per jam WIB (95 hari) untuk grafik "1 hari" dan jam ramai.
+- **Tampilan:** kartu angka yang berhitung naik, garis tren kecil, perubahan dalam kata ("naik 12% dari 1 minggu sebelumnya"), grafik area beranimasi dengan tooltip, corong "dari 100 orang …", batang jam ramai (jam tersibuk disorot kuning), hari ramai, cincin persentase coba → beli/hubungi, daftar frame dengan batang beranimasi, dan kartu **insight berbahasa sehari-hari** dengan "Yang bisa dilakukan" (frame favorit, dilihat tapi belum dicoba, dicoba tapi belum dibeli, jam ramai, kunjungan naik/turun). Semua animasi mati bila pengguna memilih "kurangi gerak".
+- **Dihapus karena tidak pernah benar-benar diukur:** rata-rata durasi sesi, tangkapan layar, sumber pengunjung, perangkat, usia, jenis kelamin, kota, bentuk wajah. Ditulis jelas bahwa TryLens tidak mencatat data pribadi.
+- Ringkasan `/admin` juga menerima rentang 1 dan 3 hari.
+- **Batasan:** endpoint statistik toko bisa dibaca siapa pun yang tahu id tokonya (hanya angka teragregasi, tanpa data pribadi), karena akun Mitra belum ada di server. Akan dikunci ke login Mitra saat akun Mitra pindah ke server (Update 46).
+- Tes: Node 39, PHP 12 (statistik per toko, coba berulang, per jam, rentang), frontend `test:flash` (jendela de-duplikasi).
+
+---
+
 ## Update 44 — Flash Sale kembali tampil, paket VTO baru (Basic 5 / Pro 15) + slot tambahan, Flash Sale dari Mitra, foto tidak "tersangkut" SVG
 
 - **Flash Sale kembali tampil di situs live.** Setelah Update 43 daftar Flash Sale diatur admin dan masih kosong, sehingga section-nya hilang. Server kini mengisi daftar awal **sekali** (`seed_flash` PHP / `seedFlash` Node, dari `seed.json` → `flash`): 12 frame bertanda flash di data bawaan, harga kilat 20% di bawah harga jual saat itu, kuota 40. Bila admin mengosongkan daftar setelahnya, isi awal tidak muncul lagi.

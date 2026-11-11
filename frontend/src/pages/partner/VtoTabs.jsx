@@ -1,11 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FrameThumb } from "../../components/partner/FrameAssets.jsx";
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Tile, Toggle, inputCls } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount } from "../../store/usePartner.js";
 import { Meter, UpgradeLink } from "../../components/partner/ui.jsx";
 import { STYLE_LABELS } from "../../data/mockData.js";
-import { PLANS, buildAnalytics, fmtNum, kpiFor, vtoLimitOf } from "../../data/partnerMock.js";
+import { PLANS, fmtNum, vtoLimitOf } from "../../data/partnerMock.js";
+import { useStoreStats, rangeOf } from "../../lib/storeStats.js";
+import { BarList, KpiTile, Ring, TrendChart } from "../../components/partner/StatCharts.jsx";
+import { RangePicker, SourceNote } from "./AnalyticsTabs.jsx";
 import VtoSlotShop from "../../components/partner/VtoSlotShop.jsx";
 
 /* ------------------------------------------------------------ Pustaka Frame */
@@ -75,48 +78,37 @@ export function VtoLibraryTab() {
 export function VtoAnalyticsTab() {
   const acc = useAccount();
   const plan = acc.subscription.plan;
-  const data = useMemo(() => buildAnalytics(acc.email, acc.frames, plan), [acc.email, acc.frames, plan]);
-  const sessions = kpiFor(data.daily, 30, "vto");
-  const contacts = kpiFor(data.daily, 30, "contacts");
-  const rate = sessions.value ? (contacts.value / sessions.value) * 100 : 0;
-  const tiles = [
-    ["Sesi try-on (30 hari)", fmtNum(sessions.value)],
-    ["Rata-rata durasi sesi", "1m 42d"],
-    ["Try-on → hubungi toko", `${rate.toFixed(1).replace(".", ",")}%`]
-  ];
-  const top = [...data.topFrames].sort((a, b) => b.vto - a.vto).slice(0, 5);
-
+  const [days, setDays] = useState(7);
+  const { model: m, status, refresh } = useStoreStats(acc, days);
+  const unit = days === 1 ? "kemarin" : `${rangeOf(days).label} sebelumnya`;
+  const tried = m ? m.products.filter((f) => f.try > 0).length : 0;
+  const top = m ? [...m.products].sort((a, b) => b.try - a.try).slice(0, 5) : [];
   return (
     <Card>
-      <CardHeader title="Try-On Analytics" subtitle="Ringkasan penggunaan Virtual Try-On di toko Anda" />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        {tiles.map(([k, v]) => (
-          <Tile key={k} className="p-4">
-            <p className="text-[12.5px] text-ink-muted m-0 mb-1.5">{k}</p>
-            <p className="text-[24px] font-semibold text-ink tracking-tight m-0">{v}</p>
+      <CardHeader title="Analitik Try-On" subtitle={`Penggunaan Virtual Try-On di toko Anda, ${rangeOf(days).long}`} right={<RangePicker days={days} setDays={setDays} />} />
+      <div className="mb-4"><SourceNote status={status} model={m} refresh={refresh} /></div>
+      {!m ? <div className="h-28 rounded-2xl bg-surface-blue/60 animate-pulse" aria-busy="true" /> : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <KpiTile label="Sesi try-on" value={m.totals.try} prev={m.prev.try} unit={unit} spark={m.series.map((s) => s.try)} />
+            <KpiTile label="Frame yang dicoba" value={tried} desc={`dari ${acc.frames.filter((f) => f.vto).length} frame ber-VTO`} />
+            <div className="rounded-2xl border border-[#DDE8F4] bg-white p-4 flex items-center">
+              <Ring pct={m.totals.try ? ((m.totals.buy + m.totals.contact) / m.totals.try) * 100 : 0} label="Try-on → beli/hubungi" sub={`${fmtNum(m.totals.buy + m.totals.contact)} dari ${fmtNum(m.totals.try)} sesi`} />
+            </div>
+          </div>
+          <Tile className="p-4 mb-4">
+            <p className="text-[14px] font-semibold text-ink m-0 mb-2">Sesi try-on {days === 1 ? "per jam (WIB)" : "per hari"}</p>
+            <TrendChart series={m.series} metric="try" label="Sesi try-on" />
           </Tile>
-        ))}
-      </div>
-      <Tile className="p-4">
-        <p className="text-[14px] font-semibold text-ink m-0 mb-3">Frame paling sering dicoba</p>
-        {top.length === 0 ? (
-          <p className="text-[13px] text-ink-muted m-0">Belum ada data.</p>
-        ) : (
-          <ol className="list-none m-0 p-0 flex flex-col gap-2">
-            {top.map((f, i) => (
-              <li key={f.id} className="flex items-center gap-3 text-[13px]">
-                <span className="w-5 text-ink-muted">{i + 1}</span>
-                <span className="w-12 h-6 flex-shrink-0"><FrameThumb frame={f} /></span>
-                <span className="flex-1 truncate text-ink">{f.name}</span>
-                <span className="font-medium text-ink">{fmtNum(f.vto)} sesi</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Tile>
+          <Tile className="p-4">
+            <p className="text-[14px] font-semibold text-ink m-0 mb-3">Frame paling sering dicoba</p>
+            <BarList unit=" sesi" rows={top.map((f) => ({ id: f.id, label: f.name, frame: f.frame, value: f.try }))} empty="Belum ada frame yang dicoba pada periode ini." />
+          </Tile>
+        </>
+      )}
       {plan === "basic" && (
         <p className="text-[12.5px] text-ink-muted m-0 mt-3">
-          Rincian per gaya dan funnel try-on tersedia di <Link to="/partner/analytics/tryon" className="text-ink underline">Analitik → Try-On Performance</Link> (Pro).
+          Rincian per gaya dan perjalanan setelah try-on tersedia di <Link to="/partner/analytics/tryon" className="text-ink underline">Analitik → Performa Try-On</Link> (Pro).
         </p>
       )}
     </Card>
