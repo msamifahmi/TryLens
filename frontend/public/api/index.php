@@ -84,6 +84,7 @@ function db(): PDO {
     migrate_banners($pdo);
     seed_banners($pdo);
     apply_catalog_update($pdo);
+    seed_flash($pdo);
     return $pdo;
 }
 
@@ -149,6 +150,30 @@ function apply_catalog_update(PDO $pdo): void {
     }
 }
 
+/**
+ * Isi awal Flash Sale (Update 44): SEKALI, hanya bila daftar Flash Sale masih kosong — supaya section Flash Sale tidak hilang
+ * setelah pindah ke Flash Sale yang diatur admin. Mengosongkan daftar lewat /admin setelahnya tidak memunculkannya lagi.
+ */
+function seed_flash(PDO $pdo): void {
+    if ($pdo->query("SELECT 1 FROM counters WHERE name='flash_seeded'")->fetch()) return;
+    $f = __DIR__ . '/seed.json';
+    $seed = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    $empty = !$pdo->query('SELECT 1 FROM flash_items LIMIT 1')->fetch();
+    if ($empty && is_array($seed['flash'] ?? null)) {
+        $t = now();
+        $get = $pdo->prepare('SELECT price FROM products WHERE id=?');
+        $q = $pdo->prepare('INSERT OR IGNORE INTO flash_items(product_id,price,quota,sold,active,created_at,updated_at) VALUES(?,?,?,?,1,?,?)');
+        foreach ($seed['flash'] as $x) {
+            $get->execute([(string)$x['id']]); $reg = (int)($get->fetchColumn() ?: 0);
+            $pct = min(90, max(1, (int)($x['pct'] ?? 20)));
+            $price = (int)(round($reg * (100 - $pct) / 100 / 1000) * 1000);
+            if ($reg <= 0 || $price < 1000 || $price >= $reg) continue;
+            $quota = max(1, (int)($x['quota'] ?? 40)); $sold = min($quota - 1, max(0, (int)($x['sold'] ?? 0)));
+            $q->execute([(string)$x['id'], $price, $quota, $sold, $t, $t]);
+        }
+    }
+    $pdo->exec("INSERT OR IGNORE INTO counters(name,value) VALUES('flash_seeded',1)");
+}
 /** Update 43: kolom Highlighted Brand (tanggal terakhir tayang, zona WIB) di toko. Aman dijalankan berulang. */
 function migrate_v43(PDO $pdo): void {
     $cols = array_column($pdo->query('PRAGMA table_info(merchants)')->fetchAll(), 'name');

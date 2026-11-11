@@ -4,7 +4,7 @@ import { CreditCard, Landmark, QrCode, ShieldCheck, Smartphone } from "lucide-re
 import PartnerFlowShell from "../../components/partner/PartnerFlowShell.jsx";
 import { Btn, Tile } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount, stageOf, STAGE_PATH } from "../../store/usePartner.js";
-import { INTERVALS, addMonths, fmtDate, fmtRp, planLabel, planPrice, yearlySaving } from "../../data/partnerMock.js";
+import { INTERVALS, VTO_SLOT, addMonths, fmtDate, fmtRp, planLabel, planPrice, vtoSlotPrice, yearlySaving } from "../../data/partnerMock.js";
 
 const METHODS = [
   { id: "QRIS", label: "QRIS", desc: "Semua e-wallet & mobile banking", icon: QrCode },
@@ -31,8 +31,9 @@ export default function CheckoutPage() {
 
   if (!checkout) return done.current ? null : <Navigate to={STAGE_PATH[stageOf(acc)]} replace />;
 
-  const isAd = checkout.kind === "ad";
-  const total = isAd ? checkout.total : planPrice(checkout.plan, checkout.interval);
+  const isSlot = checkout.kind === "vtoSlots";
+  const isAd = checkout.kind === "ad" || isSlot; // sama-sama sekali bayar (bukan langganan)
+  const total = isSlot ? vtoSlotPrice(checkout.qty) : isAd ? checkout.total : planPrice(checkout.plan, checkout.interval);
   const title = isAd ? checkout.label : planLabel(checkout.plan, checkout.interval);
 
   function pay() {
@@ -58,7 +59,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <PartnerFlowShell step={1} title="Checkout" subtitle={isAd ? "Selesaikan pembayaran untuk mengaktifkan iklan Anda." : "Pilih metode pembayaran untuk mengaktifkan langganan."} width="max-w-[900px]">
+    <PartnerFlowShell step={1} title="Checkout" subtitle={isSlot ? "Selesaikan pembayaran untuk menambah slot Virtual Try-On." : isAd ? "Selesaikan pembayaran untuk mengaktifkan iklan Anda." : "Pilih metode pembayaran untuk mengaktifkan langganan."} width="max-w-[900px]">
       <div className="grid grid-cols-1 md:grid-cols-[1fr_330px] gap-5 items-start">
         <Tile className="p-5">
           <h2 className="text-[15px] font-semibold text-ink m-0 mb-3">Metode pembayaran</h2>
@@ -88,7 +89,11 @@ export default function CheckoutPage() {
             <span className="text-ink-text">{title}</span>
             <span className="font-medium text-ink whitespace-nowrap">{fmtRp(total)}</span>
           </div>
-          {isAd ? (
+          {isSlot ? (
+            <p className="text-[12px] text-ink-muted m-0 mb-3">
+              {checkout.qty} slot · {fmtRp(VTO_SLOT.unit)}/slot, setiap 5 slot {fmtRp(VTO_SLOT.packPrice)} (promo). Slot langsung menambah kuota frame try-on.
+            </p>
+          ) : isAd ? (
             <p className="text-[12px] text-ink-muted m-0 mb-3">
               {checkout.weeks} minggu × {fmtRp(checkout.unit)}
               {checkout.qty > 1 ? ` × ${checkout.qty} frame` : ""} · mulai {fmtDate(checkout.startsOn)}
@@ -106,7 +111,9 @@ export default function CheckoutPage() {
             <span className="text-[20px] font-extrabold text-ink">{fmtRp(total)}</span>
           </div>
           <p className="text-[12px] text-ink-muted m-0 mb-4">
-            {isAd
+            {isSlot
+              ? "Sekali bayar, permanen: slot tetap berlaku selama langganan aktif (tidak ada biaya bulanan tambahan)."
+              : isAd
               ? "Sekali bayar untuk periode tayang di atas; tidak diperpanjang otomatis."
               : `Perpanjangan otomatis berikutnya ${fmtDate(addMonths(new Date().toISOString(), INTERVALS[checkout.interval].months))}.${checkout.upgrade ? " Paket lama digantikan mulai hari ini (tanpa prorata)." : ""}`}
           </p>

@@ -1,6 +1,6 @@
 // Lapisan data: akun, frame, dan serialisasi ke bentuk yang dipakai front-end (usePartner).
 import { defaultDoc } from "./defaults.js";
-import { PLANS } from "./pricing.js";
+import { PLANS, vtoLimitOf } from "./pricing.js";
 import { vtoToDisable } from "./quota.js";
 
 export const FRAME_FIELDS = ["name", "description", "buy", "style", "colorKey", "category", "price", "oldPrice", "stock", "published", "vto", "size"];
@@ -62,10 +62,10 @@ export function Service(db) {
     enforceVto(accountId, preferIds = null) {
       const row = q.accById.get(accountId);
       if (!row) return [];
-      const plan = self.docOf(row).subscription?.plan;
+      const d = self.docOf(row), plan = d.subscription?.plan;
       if (!plan || !PLANS[plan]) return [];
       const frames = q.framesOf.all(accountId).reverse().map((r) => ({ id: r.id, vto: !!JSON.parse(r.data).vto }));
-      const off = vtoToDisable(frames, PLANS[plan].vtoLimit, preferIds);
+      const off = vtoToDisable(frames, vtoLimitOf(plan, d.vtoExtraSlots), preferIds);
       for (const id of off) {
         const r = q.frameById.get(id), d = JSON.parse(r.data);
         db.prepare("UPDATE frames SET data=?, updated_at=? WHERE id=?").run(JSON.stringify({ ...d, vto: false }), new Date().toISOString(), id);

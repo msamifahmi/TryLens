@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import { nextCounter } from "../db.js";
-import { AD_TYPES, INTERVALS, MAX_WEEKS, PLANS, addMonths, endsOn, planLabel, planPrice, todayStr } from "../pricing.js";
+import { AD_TYPES, INTERVALS, MAX_WEEKS, PLANS, VTO_SLOT, addMonths, endsOn, planLabel, planPrice, todayStr, vtoSlotPrice } from "../pricing.js";
 import { hmacHex, safeEqualHex } from "../security.js";
 import { bad, str, wrap } from "./util.js";
 import { requireAuth, sessionMiddleware } from "./auth.js";
@@ -23,6 +23,12 @@ export function billingRouter(ctx) {
       const cur = doc.subscription;
       if (cur?.status === "active" && cur.plan === plan && cur.interval === interval) throw Object.assign(new Error("Paket ini sudah aktif."), { status: 409 });
       return { amount: planPrice(plan, interval), payload: { kind: "subscription", plan, interval, label: planLabel(plan, interval) } };
+    }
+    if (b.kind === "vtoSlots") {
+      if (doc.subscription?.status !== "active") throw Object.assign(new Error("Langganan belum aktif."), { status: 402 });
+      const qty = Math.round(Number(b.qty));
+      if (!(qty >= 1 && qty <= VTO_SLOT.maxPerOrder)) throw Object.assign(new Error(`Jumlah slot 1–${VTO_SLOT.maxPerOrder}.`), { status: 400 });
+      return { amount: vtoSlotPrice(qty), payload: { kind: "vtoSlots", qty, label: `Slot Virtual Try-On tambahan × ${qty}` } };
     }
     if (b.kind !== "ad") throw Object.assign(new Error("Jenis pesanan tidak dikenal."), { status: 400 });
     if (doc.subscription?.status !== "active") throw Object.assign(new Error("Langganan belum aktif."), { status: 402 });
@@ -87,6 +93,9 @@ export function billingRouter(ctx) {
         const end = addMonths(iso, INTERVALS[p.interval].months);
         Object.assign(invoice, { kind: "subscription", label: p.label, plan: p.plan, amount: o.amount });
         doc.subscription = { plan: p.plan, interval: p.interval, status: "active", startedAt: iso, currentPeriodEnd: end, nextBillingAt: end, cancelAtPeriodEnd: false, pendingPlan: null };
+      } else if (p.kind === "vtoSlots") {
+        Object.assign(invoice, { kind: "vtoSlots", label: p.label, qty: p.qty, amount: o.amount, tab: "vto" });
+        doc.vtoExtraSlots = (doc.vtoExtraSlots || 0) + p.qty;
       } else {
         const T = AD_TYPES[p.adType];
         const ao = { id: `AO-${stampOf(iso)}-${num}`, type: p.adType, placement: p.placement, label: p.label, weeks: p.weeks, unit: p.unit, total: o.amount, startsOn: p.startsOn, endsOn: p.endsOn, status: "paid", frameIds: p.frameIds, slot: p.slot };

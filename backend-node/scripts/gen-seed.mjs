@@ -10,9 +10,12 @@ const out = path.join(root, "frontend", "public", "api");
 const pub = path.join(root, "frontend", "public", "products");
 const seed = {
   merchants: MERCHANTS.map(({ id, name, city, province, initials, color, whatsapp, phone, links }) => ({ id, name, city, province: province || "", initials, color, whatsapp: whatsapp || "", phone: phone || "", links: links || {} })),
+  // Isi awal Flash Sale (dipasang server SEKALI bila daftar Flash Sale belum pernah diisi): frame bertanda flash di data bawaan,
+  // harga kilat = harga jual SAAT ITU di server − pct% (dibulatkan ke ribuan), kuota 40, terjual sesuai persentase contoh.
+  flash: PRODUCTS.filter((p) => p.flash).map((p) => ({ id: p.id, pct: 20, quota: 40, sold: Math.round((p.flashSold / 100) * 40) })),
   products: PRODUCTS.map((p) => ({ id: p.id, merchantId: p.merchantId, name: p.name, style: p.style, colorKey: p.colorKey, cat: p.cat, price: p.price, oldPrice: p.oldPrice || null, vto: fs.existsSync(path.join(pub, p.id, "model.glb")) }))
 };
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, "seed.json"), JSON.stringify(seed, null, 1) + "\n");
 fs.copyFileSync(path.join(root, "backend-node", "public", "admin.html"), path.join(out, "admin.html"));
-console.log(`✓ seed.json (${seed.merchants.length} toko, ${seed.products.length} produk) + admin.html → frontend/public/api/`);
+console.log(`✓ seed.json (${seed.merchants.length} toko, ${seed.products.length} produk, ${seed.flash.length} flash) + admin.html → frontend/public/api/`);

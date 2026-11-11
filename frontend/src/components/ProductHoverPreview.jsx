@@ -37,7 +37,7 @@ export default function ProductHoverPreview({ product }) {
   return (
     <div className="absolute inset-0 z-[1] pointer-events-none bg-surface-blue tl-fade-in" aria-hidden="true">
       {list.map((v, n) => (
-        <img key={v} src={assetUrl(product.id, `${v}.jpg`)} alt="" className="absolute inset-0 w-full h-full object-contain p-[14%]"
+        <img key={v} src={assetUrl(product.id, `${v}.jpg`)} alt="" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} className="absolute inset-0 w-full h-full object-contain p-[14%]"
           style={{ opacity: n === i % list.length && !(rotating && modelReady) ? 1 : 0, transition: "opacity .35s ease" }} />
       ))}
       {rotating && (

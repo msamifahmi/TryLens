@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, X } from "lucide-react";
 import { Btn } from "./ui.jsx";
-import { PLANS, fmtDate } from "../../data/partnerMock.js";
+import { PLANS, fmtDate, vtoLimitOf } from "../../data/partnerMock.js";
+import { useAccount } from "../../store/usePartner.js";
 import { pickVtoKeep } from "../../data/quota.js";
 
 /**
- * Konfirmasi turun paket Pro → Basic. Katalog tidak dibatasi, tetapi hanya 20 frame yang boleh ber-VTO.
- * Mitra memilih: OTOMATIS (20 frame tertua) atau PILIH SENDIRI. Hasil: onConfirm({ ids | null }).
+ * Konfirmasi turun paket Pro → Basic. Katalog tidak dibatasi, tetapi hanya sebanyak kuota Basic (5 + slot tambahan) yang boleh ber-VTO.
+ * Mitra memilih: OTOMATIS (frame tertua sebanyak kuota Basic + slot tambahan) atau PILIH SENDIRI. Hasil: onConfirm({ ids | null }).
  * frames: urutan tampil (terbaru di atas) — "berurutan" berarti dari yang tertua.
  */
 export default function DowngradeModal({ open, frames, endsAt, onClose, onConfirm }) {
   const reduce = useReducedMotion();
-  const limit = PLANS.basic.limits.vto;
+  const limit = vtoLimitOf(useAccount(), "basic");
   const vtoFrames = useMemo(() => [...frames].reverse().filter((f) => f.vto), [frames]);
   const over = vtoFrames.length > limit;
   const auto = useMemo(() => pickVtoKeep(vtoFrames, limit), [vtoFrames, limit]);

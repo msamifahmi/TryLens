@@ -7,6 +7,7 @@ export function defaultDoc() {
     adOrders: [],
     invoices: [],
     notifRead: [],
+    vtoExtraSlots: 0, // slot VTO tambahan yang dibeli (permanen)
     vto: { enabled: true, share: true, tint: "clear" },
     storeSettings: {
       visible: true,

@@ -18,19 +18,33 @@ import { assetUrl } from "../lib/catalog.js";
  * the file exists and automatically switches from the illustration to your
  * real photo the moment it's placed in that folder.
  */
-export default function ProductImage({ productId, variant = "main", style, colorKey, className = "", alt = "" }) {
-  const src = assetUrl(productId, `${variant}.jpg`); // unggahan Mitra (/media) atau berkas bawaan (/products)
-  const [status, setStatus] = useState("loading"); // loading | photo | fallback
+const RETRY_MS = [2000, 8000];
 
+export default function ProductImage({ productId, variant = "main", style, colorKey, className = "", alt = "" }) {
+  const base = assetUrl(productId, `${variant}.jpg`); // unggahan Mitra (/media) atau berkas bawaan (/products)
+  const [status, setStatus] = useState("loading"); // loading | photo | fallback
+  const [src, setSrc] = useState(base);
+
+  // Gagal memuat (mis. sesaat ketika hosting sedang memperbarui berkas) → coba lagi 2× (2 dtk, 8 dtk) dengan alamat
+  // anti-cache, supaya kartu tidak "tersangkut" di ilustrasi SVG padahal fotonya ada.
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false, timer = null;
     setStatus("loading");
-    const img = new Image();
-    img.onload = () => { if (!cancelled) setStatus("photo"); };
-    img.onerror = () => { if (!cancelled) setStatus("fallback"); };
-    img.src = src;
-    return () => { cancelled = true; };
-  }, [src]);
+    setSrc(base);
+    const load = (attempt) => {
+      const url = attempt ? `${base}${base.includes("?") ? "&" : "?"}r=${attempt}` : base;
+      const img = new Image();
+      img.onload = () => { if (!cancelled) { setSrc(url); setStatus("photo"); } };
+      img.onerror = () => {
+        if (cancelled) return;
+        setStatus("fallback");
+        if (attempt < RETRY_MS.length) timer = setTimeout(() => load(attempt + 1), RETRY_MS[attempt]);
+      };
+      img.src = url;
+    };
+    load(0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [base]);
 
   if (status === "photo") {
     return <img src={src} alt={alt} className={`object-contain ${className}`} loading="lazy" />;

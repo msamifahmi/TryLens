@@ -2,6 +2,7 @@
 import { PRODUCTS } from "../data/mockData.js";
 import { usePartner } from "../store/usePartner.js";
 import { catalogInfo } from "./catalog.js";
+import { backend } from "../api/http.js";
 
 export const FLASH_DEFAULTS = { enabled: true, title: "Flash Sale", subtitle: "Diskon kilat frame pilihan dari optik lokal", theme: "brand", endsAt: null, minDiscount: 10, maxPerMerchant: 4 };
 
@@ -48,7 +49,12 @@ export function flashItems() {
   let accounts = {};
   try { accounts = usePartner.getState().accounts || {}; } catch { /* tanpa data Mitra */ }
   // Mode server: daftar dari admin (sudah disaring server: aktif, diskon ≥ minimum, kuota tersisa, batas per toko).
-  if (catalogInfo.source === "server" && Array.isArray(catalogInfo.flashItems)) return serverFlashItems(catalogInfo.flashItems);
+  if (catalogInfo.source === "server" && Array.isArray(catalogInfo.flashItems)) {
+    const list = serverFlashItems(catalogInfo.flashItems);
+    // Akun Mitra masih mode demo (server tanpa akun Mitra): frame yang didaftarkan Mitra yang sedang masuk ikut tampil
+    // di perangkatnya sendiri. Setelah akun Mitra ada di server (Update 45) pendaftaran ini dikirim ke server.
+    return backend.partner ? list : mergeOwnFlash(list, cfg);
+  }
   const accs = catalogInfo.source === "server" ? [] : Object.values(accounts).filter((a) => a?.store?.merchantId);
   const partnerMode = accs.some((a) => (a.frames || []).some((f) => f.flash));
   if (!partnerMode) return PRODUCTS.filter((p) => p.flash).sort((a, b) => b.flashSold - a.flashSold);
@@ -78,3 +84,24 @@ export function serverFlashItems(list, products = PRODUCTS) {
   }
   return out.sort((a, b) => b.flashSold - a.flashSold);
 }
+
+/** Tambahkan frame Flash Sale milik akun Mitra yang sedang masuk (mode demo) ke daftar server, tanpa duplikat, dengan batas per toko. */
+export function mergeOwnFlash(list, cfg = flashConfig(), state = safeState()) {
+  const acc = state?.session && state.accounts?.[state.session.email];
+  const mid = acc?.store?.merchantId;
+  if (!mid || !Array.isArray(acc.frames)) return list;
+  const have = new Set(list.map((p) => p.id));
+  let n = list.filter((p) => p.merchantId === mid).length;
+  const extra = [];
+  for (const fr of acc.frames) {
+    if (n >= cfg.maxPerMerchant) break;
+    if (have.has(fr.id) || !flashEligible(fr, cfg)) continue;
+    const p = PRODUCTS.find((x) => x.id === fr.id);
+    if (!p) continue;
+    const pct = flashPct(fr.price, fr.flash.price);
+    extra.push({ ...p, price: fr.flash.price, oldPrice: fr.price, flash: true, badge: `-${pct}%`, flashSold: Math.round((fr.flash.sold / fr.flash.quota) * 100), flashLeft: fr.flash.quota - fr.flash.sold, own: true });
+    n++;
+  }
+  return extra.length ? [...list, ...extra].sort((a, b) => b.flashSold - a.flashSold) : list;
+}
+function safeState() { try { return usePartner.getState(); } catch { return null; } }

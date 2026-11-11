@@ -1,4 +1,4 @@
-# HANDOFF TryLens — per Rabu 11 Nov 2026 (Update 43)
+# HANDOFF TryLens — per Rabu 11 Nov 2026 (Update 44)
 
 Tempel seluruh isi file ini sebagai pesan pertama di session baru.
 
@@ -22,11 +22,17 @@ Tempel seluruh isi file ini sebagai pesan pertama di session baru.
 - Update 43: lihat CHANGELOG. Statistik hanya mulai terisi setelah versi ini tayang.
 
 ## 4. TUGAS BERIKUTNYA (urut prioritas)
-### A. Update 44 — Dasbor Mitra memakai server PHP (disetujui user)
+### 0. Keputusan bisnis terbaru (Update 44)
+- Paket: katalog tanpa batas; VTO Basic 5, Pro 15; slot tambahan Rp30.000/slot, promo 5 slot Rp145.000 — **sekali bayar, permanen** selama langganan aktif (`VTO_SLOT`, `vtoSlotPrice`, `vtoLimitOf` di `backend-node/src/pricing.js` = `frontend/src/data/partnerMock.js`).
+- Flash Sale Mitra **langsung tayang** bila memenuhi aturan admin (tanpa antrean persetujuan); admin tetap bisa menonaktifkan.
+- Flash Sale diisi awal sekali dari `seed.json` → `flash` (counter `flash_seeded`).
+
+### A. Update 45 — Dasbor Mitra memakai server PHP (disetujui user)
 Saat ini server PHP (`frontend/public/api/index.php`) tidak punya akun Mitra → area `/partner` selalu mode demo (localStorage, `store/usePartner.js`). Rencana:
 1. Akun Mitra di PHP: tabel akun (password `password_hash`), sesi cookie HttpOnly + SameSite, batas percobaan login, `/api/auth/*` sesuai kontrak Node (`backend-node/src/routes/auth.js`) sehingga `usePartner.init()` otomatis memakai mode server.
 2. Akun dikaitkan ke toko (`merchants.id`); frame Mitra = baris `products` toko itu (bukan tabel terpisah), unggah foto/GLB lewat validasi yang sama dengan admin.
-3. Mitra mendaftarkan frame ke Flash Sale → baris `flash_items` (status menunggu/aktif); admin menyetujui dari tab Flash Sale.
+3. Mitra mendaftarkan frame ke Flash Sale → baris `flash_items` (langsung tayang bila memenuhi aturan; kolom pemilik/asal agar admin bisa membedakan). Kini masih lokal di perangkat Mitra (`mergeOwnFlash` di `lib/flashSale.js`).
+3b. Pembelian slot VTO (`kind: "vtoSlots"`) + kuota efektif di PHP, sama dengan Node `routes/billing.js`.
 4. Banner/iklan Mitra → antrean persetujuan di tab Iklan admin (ganti tombol "Setujui (simulasi admin)" di `PromotionTabs.jsx`).
 5. Analitik Mitra (`AnalyticsTabs.jsx`, kini "Data masih simulasi") membaca tabel `stats` milik produk tokonya.
 6. Admin: tab/daftar akun Mitra (aktif/nonaktif, reset password).

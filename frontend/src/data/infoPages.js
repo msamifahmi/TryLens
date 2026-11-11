@@ -124,12 +124,12 @@ export const INFO_PAGES = {
         { t: "Tambah frame", d: "Isi nama, gaya, warna, kategori, harga, stok, deskripsi, dan tautan e-commerce (Tokopedia, Shopee, Lazada, TikTok Shop, atau website toko). Katalog tidak dibatasi jumlahnya." },
         { t: "Isi ukuran asli frame", d: "Isi lebar lensa, tinggi lensa, jembatan, panjang gagang, dan lebar total (mm). Dengan ukuran ini frame tampil 1:1 di coba virtual. Bila dikosongkan, ukuran disesuaikan otomatis dengan wajah pengguna." },
         { t: "Unggah foto dan model 3D", d: "Foto JPEG maksimal 5 MB. Untuk coba virtual yang presisi, unggah model .glb dengan node standar TryLens (lihat Spesifikasi aset). Frame tanpa model tetap tampil dengan ilustrasi 2D." },
-        { t: "Aktifkan Virtual Try-On", d: "Atur frame mana yang bisa dicoba di menu Pustaka Frame. Ada batas jumlah frame ber-VTO per paket." }
+        { t: "Aktifkan Virtual Try-On", d: "Atur frame mana yang bisa dicoba di menu Pustaka Frame. Kuota frame ber-VTO: Basic 5, Pro 15. Perlu lebih? Tambah slot Rp30.000/slot (promo 5 slot Rp145.000), sekali bayar dan berlaku selama langganan aktif." }
       ] },
       { type: "h", text: "Paket" },
       { type: "plans" },
       { type: "h", text: "Bila turun paket dari Pro ke Basic" },
-      { type: "p", text: "Frame di katalog tidak berkurang. Hanya 20 frame yang tetap ber-VTO. Kamu bisa memilih otomatis (20 frame tertua) atau memilih sendiri frame mana yang tetap aktif. Penurunan berlaku saat periode langganan berakhir." },
+      { type: "p", text: "Frame di katalog tidak berkurang. Hanya 5 frame (ditambah slot tambahan yang sudah kamu beli) yang tetap ber-VTO. Kamu bisa memilih otomatis (frame tertua) atau memilih sendiri frame mana yang tetap aktif. Penurunan berlaku saat periode langganan berakhir." },
       { type: "h", text: "Spesifikasi model 3D" },
       { type: "list", items: [
         "Format .glb, berpusat di jembatan hidung, menghadap +Z.",

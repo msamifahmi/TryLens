@@ -14,7 +14,7 @@ import { SIZE_FIELDS, cleanSize, effectiveFrameWidthMm, sizeCode } from "../../d
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, Flash, Meter, Tile, Toggle, UpgradeLink, inputCls, useFlash } from "../../components/partner/ui.jsx";
 import { usePartner, useAccount, whenSynced } from "../../store/usePartner.js";
 import { FRAME_COLORS, STYLE_LABELS } from "../../data/mockData.js";
-import { PLANS, activeHighlight, fmtRp, sponsoredIds } from "../../data/partnerMock.js";
+import { PLANS, activeHighlight, fmtRp, sponsoredIds, vtoLimitOf, VTO_SLOT } from "../../data/partnerMock.js";
 import { InstagramIcon, XIcon, ShopBagIcon } from "../../components/icons/SocialIcons.jsx";
 
 /* ------------------------------------------------------------ Profil Toko */
@@ -46,7 +46,7 @@ export function ProductsTab() {
   const patch = usePartner((s) => s.patch);
   const plan = acc.subscription.plan;
   const limit = PLANS[plan].limits.frames;
-  const vtoLimit = PLANS[plan].limits.vto;
+  const vtoLimit = vtoLimitOf(acc);
   const vtoUsed = acc.frames.filter((f) => f.vto).length;
   const [form, setForm] = useState(null); // null = tertutup; {id?} = tambah/ubah
   const [assets, setAssets] = useState({ photos: [], glb: null });
@@ -160,8 +160,8 @@ export function ProductsTab() {
       </div>
       {vtoUsed >= vtoLimit && (
         <div className="rounded-xl border border-accent-yellow bg-surface-cream px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[13px] text-ink-text m-0">Kuota Virtual Try-On paket Basic ({vtoLimit} frame) penuh. Frame baru tetap tampil di katalog tanpa try-on. Upgrade ke Pro untuk try-on tanpa batas.</p>
-          <UpgradeLink size="sm" />
+          <p className="text-[13px] text-ink-text m-0">Kuota Virtual Try-On ({vtoLimit} frame) penuh. Frame baru tetap tampil di katalog tanpa try-on. Tambah slot ({fmtRp(VTO_SLOT.unit)}/slot, promo 5 slot {fmtRp(VTO_SLOT.packPrice)}){plan === "basic" ? " atau upgrade ke Pro (15 frame)" : ""}.</p>
+          <div className="flex gap-2"><Btn as={Link} to="/partner/vto/library" size="sm" variant="outline">Tambah slot</Btn>{plan === "basic" && <UpgradeLink size="sm" />}</div>
         </div>
       )}
 
